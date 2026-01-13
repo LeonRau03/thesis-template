@@ -1,81 +1,21 @@
 % Populärwissenschaftlicher Artikel über Agentic AI in der Softwareentwicklung
 % Zielgruppe: Leser einer Computerzeitschrift (interessierte Laien mit IT-Affinität)
 
-\section{Die nächste Stufe der KI-Revolution}
+\section{Einleitung}
 
-ChatGPT kann Gedichte schreiben, Copilot hilft beim Programmieren – doch die neueste KI-Generation geht einen entscheidenden Schritt weiter. Statt nur auf Anfragen zu reagieren, können sogenannte \emph{Agenten} eigenständig komplexe Aufgaben lösen~\cite{wang2023survey}. Sie analysieren Probleme, erstellen Pläne, nutzen Werkzeuge und korrigieren sich selbst – fast wie ein menschlicher Softwareentwickler. Wie Andrej Karpathy es formulierte: Das LLM wird zum Betriebssystem-Kernel, das Kontextfenster zum Arbeitsspeicher~\cite{karpathy2023intro}.
+Moderne webbasierte Informationssysteme werden zunehmend als verteilte, cloud-native Anwendungen realisiert, die aus einer Vielzahl lose gekoppelter Services bestehen. Diese Architekturen ermöglichen eine hohe Skalierbarkeit und schnelle Weiterentwicklung, erhöhen jedoch gleichzeitig die operative Komplexität im Produktionsbetrieb erheblich (Faseeha et al., 2025; Sakinala, 2025). Insbesondere Microservices-basierte Systeme sind durch verteilte Fehlerzustände, schwer nachvollziehbare Abhängigkeiten sowie eine hohe Dynamik gekennzeichnet, was klassische Monitoring-Ansätze an ihre Grenzen bringt (Fischer et al., 2024).
 
-Was steckt hinter diesem Hype? Und wie funktionieren diese digitalen Assistenten wirklich?
+Vor diesem Hintergrund gewinnt der Übergang von reinem Monitoring hin zu umfassender Observability zunehmend an Bedeutung. Observability zielt darauf ab, den internen Zustand eines Systems anhand seiner externen Ausgaben – insbesondere Metriken, Logs und Traces – nachvollziehbar zu machen und dadurch Ursachenanalyse, Fehlerdiagnose und proaktives Handeln zu ermöglichen (Sridharan, 2018; Faseeha et al., 2025). Zahlreiche aktuelle Studien zeigen, dass eine systematische Observability-Strategie ein zentraler Erfolgsfaktor für den stabilen Betrieb cloud-nativer Anwendungen ist und maßgeblich zur Reduktion von Incident-Reaktionszeiten sowie zur Erhöhung der Systemzuverlässigkeit beiträgt (Giamattei et al., 2024; Sakinala, 2025).
 
-\subsection{Vom Chatbot zum Agenten}
+Ein weithin anerkanntes konzeptionelles Fundament für effektives Monitoring stellen die von Google Site Reliability Engineering (SRE) definierten \emph{Four Golden Signals} dar: Latenz, Traffic, Fehler und Sättigung (Ewaschuk, o.\,J.). Diese vier Signale adressieren zentrale Aspekte der Nutzerwahrnehmung und Systemauslastung und dienen als minimaler, aber wirkungsvoller Satz an Kernmetriken für produktive Systeme. Google SRE betont dabei, dass insbesondere für verteilte Systeme eine Fokussierung auf wenige, aussagekräftige Signale notwendig ist, um ein günstiges Verhältnis zwischen Signal und Rauschen im Alerting zu gewährleisten (Ewaschuk, o.\,J.).
 
-Der Unterschied zwischen einem klassischen Chatbot und einem Agenten lässt sich am besten an einem Beispiel verdeutlichen:
+Die Open-Source-Anwendung \emph{frag.jetzt} weist bereits eine ausgereifte CI/CD-Pipeline auf, verfügt jedoch bislang über keine konsistente Observability-Strategie für den produktiven Betrieb. Metriken, Logs, Traces und Alerting sind nicht systematisch aufeinander abgestimmt, wodurch eine ganzheitliche Sicht auf das Laufzeitverhalten der Anwendung fehlt. Dies erschwert insbesondere die frühzeitige Erkennung von Performance-Degradationen, die Ursachenanalyse bei Incidents sowie die Ableitung handlungsrelevanter Informationen für unterschiedliche Stakeholder-Rollen wie DevOps, Entwickler oder Product Owner (Faseeha et al., 2025; Giamattei et al., 2024).
 
-\textbf{Chatbot:} Sie fragen nach einem Python-Skript zum Sortieren einer Liste. Der Bot liefert Code – ob dieser funktioniert, müssen Sie selbst prüfen.
+Ziel dieser Arbeit ist daher die Entwicklung einer umfassenden Observability-Strategie für \emph{frag.jetzt} auf Basis der Four Golden Signals. Dabei sollen die Golden Signals servicespezifisch für das PWA-Frontend, das Spring-Boot-Backend, die PostgreSQL-Datenbank sowie angebundene KI-Services konkretisiert und technisch instrumentiert werden. Ergänzend wird eine vergleichende Evaluation gängiger Observability-Stacks – insbesondere Prometheus/Grafana, ELK Stack und Jaeger – durchgeführt, um eine geeignete Tool-Kombination für die Anforderungen von \emph{frag.jetzt} abzuleiten (Banerjee et al., 2024; Giamattei et al., 2024).
 
-\textbf{Agent:} Sie beschreiben das Problem. Der Agent schreibt den Code, führt ihn aus, erkennt einen Fehler, analysiert die Ursache, korrigiert den Code und testet erneut – alles automatisch.
-
-Der Kern dieser Fähigkeit: Agenten können \emph{denken}, \emph{handeln} und \emph{reflektieren}. In Fachkreisen nennt man das \enquote{ReAct} – Reasoning and Acting~\cite{yao2023react}.
+Ein weiterer Schwerpunkt liegt auf der Konzeption eines intelligenten Alerting-Frameworks, das False Positives reduziert und rollenbasierte, handlungsorientierte Benachrichtigungen ermöglicht. Aktuelle Forschungsarbeiten zeigen, dass insbesondere priorisiertes Alerting und der Einsatz datengetriebener Ansätze, etwa zur Anomalieerkennung, einen wesentlichen Beitrag zur Vermeidung von Alert-Fatigue leisten können (Jalalvand et al., 2024). Abschließend sollen operative Runbooks entwickelt werden, die auf den definierten Alerts aufbauen und strukturierte Handlungsanweisungen für wiederkehrende Incident-Szenarien bereitstellen.
 
 
-\subsection{Die Evolution der KI-Assistenten}
-
-Um zu verstehen, wohin die Reise geht, lohnt ein Blick zurück. Tabelle~\ref{tab:evolution} zeigt die Entwicklung von einfachen Autovervollständigungen bis hin zu autonomen Agenten.
-
-\begin{table}[ht]
-\centering
-\footnotesize
-\begin{tabular}{@{}l l l@{}}
-\toprule
-\textbf{Generation} & \textbf{Beispiel} & \textbf{Fähigkeit} \\
-\midrule
-1 – Autovervollst. & IntelliSense & Wort vorhersagen \\
-2 – Generierung & Copilot & Code aus Kommentaren \\
-3 – Konversation & ChatGPT & Fragen beantworten \\
-4 – Agenten & Devin, Claude & Autonom lösen \\
-\bottomrule
-\end{tabular}
-\caption{Evolution der KI-Assistenten in der Softwareentwicklung}
-\label{tab:evolution}
-\end{table}
-
-Der Sprung von Generation~3 zu~4 ist fundamental: Erstmals übernimmt die KI nicht nur Teilaufgaben, sondern orchestriert komplette Arbeitsabläufe.
-
-
-\section{Wie ein KI-Agent denkt}
-
-Der Kern der Agenten-Technologie lässt sich in vier Schritten zusammenfassen: \textbf{Reasoning} (der Agent überlegt, welche Information fehlt), \textbf{Acting} (er führt eine Aktion aus), \textbf{Observing} (er analysiert das Ergebnis) und \textbf{Reflecting} (er bewertet seinen Fortschritt). In Fachkreisen nennt man dieses Muster \enquote{ReAct} – eine Abkürzung für \enquote{Reasoning and Acting}.
-
-Dieser Zyklus wiederholt sich, bis die Aufgabe erledigt ist oder der Agent erkennt, dass er Hilfe braucht. Das klingt simpel, ist aber ein fundamentaler Unterschied zu bisherigen KI-Systemen, die nur auf einzelne Anfragen reagieren.
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.7\columnwidth]{images/agent-workflow.png}
-\caption{Workflow eines KI-Agenten: Vom Ziel über Iteration zum Ergebnis}
-\label{fig:agent-workflow}
-\end{figure}
-
-\subsection{Ein Blick unter die Haube}
-
-Abbildung~\ref{fig:agent-workflow} zeigt den typischen Ablauf eines Agenten bei der Bearbeitung einer Programmieraufgabe. Der Prozess beginnt mit einer Zielbeschreibung und durchläuft dann mehrere Zyklen aus Planung, Werkzeugnutzung und Reflexion.
-
-Besonders bemerkenswert ist die Fähigkeit zur Selbstkorrektur~\cite{shinn2023reflexion}: Wenn ein Werkzeugaufruf fehlschlägt oder das Ergebnis nicht den Erwartungen entspricht, passt der Agent seine Strategie an – ganz ohne menschliches Eingreifen. Diese Autonomie unterscheidet moderne Agenten grundlegend von früheren Ansätzen, bei denen jeder Schritt manuell bestätigt werden musste. Der Agent entwickelt gewissermaßen ein eigenes Verständnis des Problems und kann alternative Lösungswege erkunden, wenn der erste Ansatz scheitert.
-
-\subsection{Das Gedächtnis des Agenten}
-
-Im Gegensatz zu einfachen Chatbots verfügen moderne Agenten über zwei Arten von Gedächtnis:
-
-\textbf{Episodisches Gedächtnis:} Speichert konkrete Ereignisse der aktuellen Sitzung. \enquote{Ich habe gerade den Test gestartet und er ist fehlgeschlagen.} Diese Informationen helfen dem Agenten, Zusammenhänge zu erkennen und aus Fehlern zu lernen.
-
-\textbf{Semantisches Gedächtnis:} Enthält abstraktes Wissen über die Codebasis. \enquote{Die Datenbankverbindung wird in der Datei config.py konfiguriert.} Dieses Wissen wird oft durch sogenannte Vektor-Datenbanken realisiert, die ähnliche Konzepte schnell auffinden können.
-
-\subsection{Chain-of-Thought: Schritt für Schritt denken}
-
-Eine Schlüsseltechnik moderner Agenten ist das \emph{Chain-of-Thought Prompting}~\cite{wei2022chain}: Statt direkt eine Antwort zu geben, wird das Sprachmodell angewiesen, seinen Denkprozess explizit zu formulieren.
-
-Der Unterschied ist frappierend. Auf die Frage \enquote{Ist 17 eine Primzahl?} antwortet ein Modell ohne Chain-of-Thought möglicherweise falsch. Mit der Anweisung \enquote{Denke Schritt für Schritt} durchläuft es systematisch die Teilbarkeit durch 2, 3, 5 usw. und kommt zuverlässiger zum korrekten Ergebnis.
-
-Für Programmieraufgaben bedeutet das: Der Agent analysiert erst das Problem, identifiziert relevante Dateien, plant seine Vorgehensweise – und führt dann erst Code aus. Diese Strukturierung reduziert Fehler erheblich und macht den Denkprozess nachvollziehbar. Entwickler können jeden Schritt nachverfolgen und bei Bedarf korrigierend eingreifen. Die Transparenz des Reasoning-Prozesses ist auch für das Debugging von Agenten-Fehlern unerlässlich.
 
 
 \section{Die Werkzeugkiste des Agenten}
