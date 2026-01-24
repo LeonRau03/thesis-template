@@ -229,14 +229,14 @@
 %%% ----------------------------------------------------------------------
 
 %%% Literaturverzeichnis (BibLaTeX mit Biber)
-\usepackage[style=alphabetic, backend=biber]{biblatex}
+\usepackage[style=apa, backend=biber]{biblatex}
 \addbibresource{bib/BibtexDatabase.bib}
 
 %%% Index, Abkürzungen, Nomenklatur
 % Use imakeidx for flexible index printing (supports columns)
 \usepackage{imakeidx}
 \usepackage[german]{nomencl}
-\usepackage[printonlyused]{acronym}
+\usepackage[printonlyused]{acronym} % Nur verwendete Abkürzungen im Verzeichnis
 
 %%% Intelligente Querverweise ("siehe Seite X")
 \usepackage[ngerman]{varioref}

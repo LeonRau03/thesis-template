@@ -1,480 +1,228 @@
-% Populärwissenschaftlicher Artikel über Agentic AI in der Softwareentwicklung
-% Zielgruppe: Leser einer Computerzeitschrift (interessierte Laien mit IT-Affinität)
+% Hauptinhalt der Arbeit
+
 
 \section{Einleitung}
 
-Moderne webbasierte Informationssysteme werden zunehmend als verteilte, cloud-native Anwendungen realisiert, die aus einer Vielzahl lose gekoppelter Services bestehen. Diese Architekturen ermöglichen eine hohe Skalierbarkeit und schnelle Weiterentwicklung, erhöhen jedoch gleichzeitig die operative Komplexität im Produktionsbetrieb erheblich (Faseeha et al., 2025; Sakinala, 2025). Insbesondere Microservices-basierte Systeme sind durch verteilte Fehlerzustände, schwer nachvollziehbare Abhängigkeiten sowie eine hohe Dynamik gekennzeichnet, was klassische Monitoring-Ansätze an ihre Grenzen bringt (Fischer et al., 2024).
+Moderne webbasierte Informationssysteme werden zunehmend als verteilte, cloud-native Anwendungen realisiert, die aus einer Vielzahl lose gekoppelter Services bestehen. Diese Architekturen ermöglichen eine hohe Skalierbarkeit und schnelle Weiterentwicklung, erhöhen jedoch gleichzeitig die operative Komplexität im Produktionsbetrieb erheblich \cite{faseeha2025observability,sakinala2025observability}. Insbesondere Microservices-basierte Systeme sind durch verteilte Fehlerzustände, schwer nachvollziehbare Abhängigkeiten sowie eine hohe Dynamik gekennzeichnet, was klassische Monitoring-Ansätze an ihre Grenzen bringt \cite{fischer2024microservice}.
 
-Vor diesem Hintergrund gewinnt der Übergang von reinem Monitoring hin zu umfassender Observability zunehmend an Bedeutung. Observability zielt darauf ab, den internen Zustand eines Systems anhand seiner externen Ausgaben – insbesondere Metriken, Logs und Traces – nachvollziehbar zu machen und dadurch Ursachenanalyse, Fehlerdiagnose und proaktives Handeln zu ermöglichen (Sridharan, 2018; Faseeha et al., 2025). Zahlreiche aktuelle Studien zeigen, dass eine systematische Observability-Strategie ein zentraler Erfolgsfaktor für den stabilen Betrieb cloud-nativer Anwendungen ist und maßgeblich zur Reduktion von Incident-Reaktionszeiten sowie zur Erhöhung der Systemzuverlässigkeit beiträgt (Giamattei et al., 2024; Sakinala, 2025).
+Vor diesem Hintergrund gewinnt der Übergang von reinem Monitoring hin zu umfassender Observability zunehmend an Bedeutung. Observability zielt darauf ab, den internen Zustand eines Systems anhand seiner externen Ausgaben – insbesondere Metriken, Logs und Traces – nachvollziehbar zu machen und dadurch Ursachenanalyse, Fehlerdiagnose und proaktives Handeln zu ermöglichen \cite{sridharan2018distributed,faseeha2025observability}. Zahlreiche aktuelle Studien zeigen, dass eine systematische Observability-Strategie ein zentraler Erfolgsfaktor für den stabilen Betrieb cloud-nativer Anwendungen ist und maßgeblich zur Reduktion von Incident-Reaktionszeiten sowie zur Erhöhung der Systemzuverlässigkeit beiträgt \cite{giamattei2024monitoring,sakinala2025observability}.
 
-Ein weithin anerkanntes konzeptionelles Fundament für effektives Monitoring stellen die von Google Site Reliability Engineering (SRE) definierten \emph{Four Golden Signals} dar: Latenz, Traffic, Fehler und Sättigung (Ewaschuk, o.\,J.). Diese vier Signale adressieren zentrale Aspekte der Nutzerwahrnehmung und Systemauslastung und dienen als minimaler, aber wirkungsvoller Satz an Kernmetriken für produktive Systeme. Google SRE betont dabei, dass insbesondere für verteilte Systeme eine Fokussierung auf wenige, aussagekräftige Signale notwendig ist, um ein günstiges Verhältnis zwischen Signal und Rauschen im Alerting zu gewährleisten (Ewaschuk, o.\,J.).
+Ein weithin anerkanntes konzeptionelles Fundament für effektives Monitoring stellen die von Google Site Reliability Engineering (SRE) definierten \emph{Four Golden Signals} dar: Latenz, Traffic, Fehler und Sättigung \cite{ewaschukMonitoringDistributedSystems}. Diese vier Signale adressieren zentrale Aspekte der Nutzerwahrnehmung und Systemauslastung und dienen als minimaler, aber wirkungsvoller Satz an Kernmetriken für produktive Systeme. Google SRE betont dabei, dass insbesondere für verteilte Systeme eine Fokussierung auf wenige, aussagekräftige Signale notwendig ist, um ein günstiges Verhältnis zwischen Signal und Rauschen im Alerting zu gewährleisten \cite{ewaschukMonitoringDistributedSystems}.
 
-Die Open-Source-Anwendung \emph{frag.jetzt} weist bereits eine ausgereifte CI/CD-Pipeline auf, verfügt jedoch bislang über keine konsistente Observability-Strategie für den produktiven Betrieb. Metriken, Logs, Traces und Alerting sind nicht systematisch aufeinander abgestimmt, wodurch eine ganzheitliche Sicht auf das Laufzeitverhalten der Anwendung fehlt. Dies erschwert insbesondere die frühzeitige Erkennung von Performance-Degradationen, die Ursachenanalyse bei Incidents sowie die Ableitung handlungsrelevanter Informationen für unterschiedliche Stakeholder-Rollen wie DevOps, Entwickler oder Product Owner (Faseeha et al., 2025; Giamattei et al., 2024).
+Die Open-Source-Anwendung \emph{frag.jetzt} weist bereits eine ausgereifte CI/CD-Pipeline auf, verfügt jedoch bislang über keine konsistente Observability-Strategie für den produktiven Betrieb. Metriken, Logs, Traces und Alerting sind nicht systematisch aufeinander abgestimmt, wodurch eine ganzheitliche Sicht auf das Laufzeitverhalten der Anwendung fehlt. Dies erschwert insbesondere die frühzeitige Erkennung von Performanceeinbußen, die Ursachenanalyse bei Incidents sowie die Ableitung handlungsrelevanter Informationen für unterschiedliche Stakeholder-Rollen wie DevOps, Entwickler oder Product Owner \cite{faseeha2025observability,giamattei2024monitoring}.
 
-Ziel dieser Arbeit ist daher die Entwicklung einer umfassenden Observability-Strategie für \emph{frag.jetzt} auf Basis der Four Golden Signals. Dabei sollen die Golden Signals servicespezifisch für das PWA-Frontend, das Spring-Boot-Backend, die PostgreSQL-Datenbank sowie angebundene KI-Services konkretisiert und technisch instrumentiert werden. Ergänzend wird eine vergleichende Evaluation gängiger Observability-Stacks – insbesondere Prometheus/Grafana, ELK Stack und Jaeger – durchgeführt, um eine geeignete Tool-Kombination für die Anforderungen von \emph{frag.jetzt} abzuleiten (Banerjee et al., 2024; Giamattei et al., 2024).
+Ziel dieser Arbeit ist daher die Entwicklung einer umfassenden Observability-Strategie für \emph{frag.jetzt} auf Basis der Four Golden Signals. Dabei sollen die Golden Signals servicespezifisch für das PWA-Frontend, das Spring-Boot-Backend, die PostgreSQL-Datenbank sowie angebundene KI-Services von \emph{frag.jetzt} konkretisiert und technisch instrumentiert werden. Ergänzend wird eine vergleichende Evaluation gängiger Observability-Stacks – insbesondere Prometheus/Grafana, ELK Stack und Jaeger – durchgeführt, um eine geeignete Tool-Kombination für die Anforderungen von \emph{frag.jetzt} abzuleiten \cite{banerjee2024comparative,giamattei2024monitoring}.
 
-Ein weiterer Schwerpunkt liegt auf der Konzeption eines intelligenten Alerting-Frameworks, das False Positives reduziert und rollenbasierte, handlungsorientierte Benachrichtigungen ermöglicht. Aktuelle Forschungsarbeiten zeigen, dass insbesondere priorisiertes Alerting und der Einsatz datengetriebener Ansätze, etwa zur Anomalieerkennung, einen wesentlichen Beitrag zur Vermeidung von Alert-Fatigue leisten können (Jalalvand et al., 2024). Abschließend sollen operative Runbooks entwickelt werden, die auf den definierten Alerts aufbauen und strukturierte Handlungsanweisungen für wiederkehrende Incident-Szenarien bereitstellen.
-
-
+Ein weiterer Schwerpunkt liegt auf der Konzeption eines intelligenten Alerting-Frameworks, das False Positives reduziert und rollenbasierte, handlungsorientierte Benachrichtigungen ermöglicht. Aktuelle Forschungsarbeiten zeigen, dass die Kombination aus priorisiertem Alerting und datenbasierten Analyseverfahren die Effektivität von Alerting-Systemen erhöht und die Anzahl irrelevanter Alarme reduziert. \cite{jalalvand2024alert}. Abschließend sollen operative Runbooks entwickelt werden, die auf den definierten Alerts aufbauen und strukturierte Handlungsanweisungen für wiederkehrende Incident-Szenarien bereitstellen.
 
 
-\section{Die Werkzeugkiste des Agenten}
 
-Ein Agent ist nur so gut wie seine Werkzeuge. Moderne Systeme können auf eine Vielzahl von Tools zugreifen:
+\section{Theoretische Fundierung: Monitoring und Observability in modernen Systemen}
+
+Moderne Softwaresysteme sind zunehmend durch verteilte Architekturen, Cloud-native Technologien und eine hohe Änderungsdynamik geprägt. Insbesondere Microservice-basierte Anwendungen mit Container-Orchestrierung und Continuous Deployment erhöhen die Komplexität des Betriebs erheblich \cite{sakinala2025observability}. Klassische Monitoring-Ansätze, die primär auf vordefinierte Metriken und statische Schwellwerte setzen, stoßen in solchen Umgebungen an ihre Grenzen, da sie häufig nur bekannte Fehlerzustände erfassen und wenig Unterstützung bei der Ursachenanalyse bieten \cite{sridharan2018distributed}.
+
+Vor diesem Hintergrund hat sich der Ansatz der \emph{Observability} als zentrales Konzept für den Betrieb moderner Systeme etabliert. Observability zielt darauf ab, den internen Zustand eines Systems anhand externer Signale nachvollziehbar zu machen und dadurch auch unbekannte oder unerwartete Fehlerszenarien analysierbar zu gestalten \cite{abieba2025advanced}.
+
+\subsection{Begriffliche Grundlagen: Monitoring und Observability}
+
+Der Begriff Observability stammt ursprünglich aus der System- und Regelungstheorie und beschreibt die Fähigkeit, interne Zustände eines Systems aus dessen Ausgaben abzuleiten. Übertragen auf Softwaresysteme bezeichnet Observability die Eigenschaft, Systemverhalten durch geeignete Telemetriedaten nachvollziehbar zu machen \cite{sridharan2018distributed}. 
+
+Monitoring und Observability sind dabei eng miteinander verbunden, jedoch nicht gleichzusetzen. Monitoring fokussiert sich auf die Überwachung bekannter Metriken und Ereignisse, um Abweichungen vom erwarteten Normalzustand zu erkennen. Observability erweitert diesen Ansatz, indem sie Kontextinformationen bereitstellt, die eine detaillierte Analyse von Ursachen und Zusammenhängen ermöglichen \cite{faseeha2025observability}. In der Literatur wird Observability daher häufig als Weiterentwicklung oder Übermenge des klassischen Monitorings beschrieben.
+
+Zentral für Observability ist die systematische Erfassung unterschiedlicher Telemetriearten. Erst durch die kombinierte Betrachtung verschiedener Signale wird es möglich, komplexe Systemzustände sowie Ursachen von Fehlern zuverlässig zu analysieren \cite{abieba2025advanced,sakinala2025observability}.
+
+\subsection{Zentrale Bausteine der Observability: Metriken, Logs, Traces und Alerting}
+
+In der Literatur werden vier zentrale Bausteine der Observability unterschieden: Metriken, Logs, Traces und Alerting. Diese Bausteine ergänzen sich gegenseitig und bilden gemeinsam die Grundlage für eine umfassende Analyse des Laufzeitverhaltens moderner Softwaresysteme \cite{abieba2025advanced,sakinala2025observability}.
+
+\textbf{Metriken} sind numerische Messwerte, die den Zustand oder das Verhalten eines Systems über die Zeit hinweg beschreiben, beispielsweise Antwortzeiten, Fehlerraten oder Ressourcenauslastung. Sie eignen sich besonders für Trendanalysen, Kapazitätsplanung und die Definition von Service-Level-Zielen. Aufgrund ihrer aggregierten Form ermöglichen Metriken eine effiziente Überwachung auch großer Systeme \cite{sakinala2025observability}.
+
+\textbf{Logs} bestehen aus ereignisbasierten Textinformationen, die detaillierte Einblicke in den Ablauf einzelner Systemkomponenten liefern. Sie enthalten kontextreiche Informationen, etwa Fehlermeldungen oder Zustandsänderungen, und sind insbesondere für die Ursachenanalyse und das Debugging relevant. Der Nachteil von Logs liegt in ihrem hohen Volumen und der vergleichsweise aufwändigen Auswertung \cite{abieba2025advanced}.
+
+\textbf{Traces} dienen der Nachverfolgung einzelner Anfragen über mehrere Services hinweg. Sie zeigen, welche Komponenten an der Verarbeitung beteiligt waren und wie viel Zeit in den jeweiligen Verarbeitungsschritten verbracht wurde. Distributed Tracing ist insbesondere in Microservice-Architekturen ein zentrales Mittel zur Identifikation von Latenzengpässen und Abhängigkeitsproblemen \cite{albuquerque2025tracing}.
+
+\textbf{Alerting} ergänzt die passive Beobachtung durch aktive Benachrichtigung bei kritischen Zuständen. Alerts werden typischerweise auf Basis von Metriken oder Log-Ereignissen ausgelöst und sollen Betreiber frühzeitig auf Probleme hinweisen. Eine zentrale Herausforderung besteht darin, Alarmregeln so zu gestalten, dass relevante Vorfälle erkannt werden, ohne eine hohe Anzahl an Fehlalarmen zu erzeugen \cite{jalalvand2024alert}.
+
+Erst das Zusammenspiel dieser vier Bausteine ermöglicht eine umfassende Observability. Während Metriken einen schnellen Überblick liefern, stellen Logs und Traces den notwendigen Detailgrad für die Ursachenanalyse bereit. Alerting sorgt schließlich dafür, dass relevante Abweichungen zeitnah erkannt und adressiert werden können.
+
+\subsection{Die Four Golden Signals nach Google SRE}
+
+Ein etabliertes Referenzmodell zur Strukturierung von Monitoring- und Observability-Daten sind die sogenannten \emph{Four Golden Signals}, die im Rahmen des Site Reliability Engineering (SRE) von Google definiert wurden \cite{ewaschukMonitoringDistributedSystems}. Dieses Modell identifiziert vier zentrale Signalbereiche, die den Gesundheitszustand eines Dienstes aus Nutzersicht abbilden:
 
 \begin{itemize}
-  \item \textbf{Code-Ausführung:} Python, JavaScript oder andere Sprachen direkt ausführen
-  \item \textbf{Dateioperationen:} Dateien lesen, schreiben, durchsuchen
-  \item \textbf{Webrecherche:} Aktuelle Informationen aus dem Internet abrufen
-  \item \textbf{Versionskontrolle:} Git-Befehle ausführen, Änderungen committen
-  \item \textbf{Test-Frameworks:} Automatische Tests starten und Ergebnisse analysieren
-  \item \textbf{APIs:} Mit externen Diensten kommunizieren
+\item \textbf{Latency}: Die Zeitspanne zur Bearbeitung einer Anfrage. Hohe oder stark schwankende Latenzen weisen auf Performanceprobleme hin.
+\item \textbf{Traffic}: Das Anfrage- oder Datenvolumen, das auf einen Dienst einwirkt, beispielsweise gemessen in Requests pro Sekunde.
+\item \textbf{Error}: Die Rate fehlgeschlagener Anfragen, etwa durch Serverfehler oder funktionale Fehlzustände.
+\item \textbf{Saturation}: Der Auslastungsgrad kritischer Ressourcen wie CPU, Speicher oder Warteschlangen.
 \end{itemize}
 
-Das Besondere: Der Agent entscheidet selbst, welches Werkzeug er wann einsetzt. Er muss nicht explizit programmiert werden – er lernt aus dem Kontext und der Beschreibung der verfügbaren Werkzeuge. Diese Fähigkeit zur dynamischen Werkzeugauswahl basiert auf dem sogenannten \emph{Function Calling}~\cite{schick2023toolformer}, einer Technik, bei der das Sprachmodell strukturierte Ausgaben erzeugt, die als Funktionsaufrufe interpretiert werden können.
+Google empfiehlt, diese vier Signale als primäre Beobachtungsgrößen zu verwenden, da sie eng mit der wahrgenommenen Servicequalität korrelieren und ein gezieltes Alerting ermöglichen \cite{ewaschukMonitoringDistributedSystems}. Im Gegensatz zu rein ressourcenorientierten Metriken helfen die Golden Signals, Monitoring auf nutzerrelevante Symptome zu fokussieren und unnötige Alarmierungen zu vermeiden.
 
-\subsection{Werkzeug-Schnittstellen im Detail}
+\subsection{Die Plattform \textit{frag.jetzt} und ihre Systemarchitektur}
 
-Damit ein Agent ein Werkzeug nutzen kann, muss dieses nach einem standardisierten Schema beschrieben werden. Tabelle~\ref{tab:tools} zeigt beispielhaft, wie typische Entwicklerwerkzeuge für Agenten aufbereitet werden.
+Die vorliegende Arbeit bezieht sich exemplarisch auf die Q\&A-Plattform \textit{frag.jetzt}, eine Cloud-native Webanwendung mit serviceorientierter Architektur. Die Plattform wurde an der Technischen Hochschule Mittelhessen entwickelt und dient der Durchführung interaktiver Fragerunden. Neben klassischer Frage-Antwort-Funktionalität integriert \textit{frag.jetzt} auch KI-gestützte Assistenzfunktionen zur automatisierten Beantwortung von Nutzeranfragen.
 
-\begin{table}[ht]
-\centering
-\footnotesize
-\begin{tabular}{@{}lp{1.5cm}p{2cm}@{}}
-\toprule
-\textbf{Tool} & \textbf{Input} & \textbf{Output} \\
-\midrule
-run\_tests & Modul & Testergebnis \\
-read\_file & Pfad & Dateiinhalt \\
-search & Begriff & Codestellen \\
-exec\_cmd & Befehl & Ausgabe \\
-create\_file & Pfad+Inhalt & OK/Fehler \\
-\bottomrule
-\end{tabular}
-\caption{Typische Agenten-Werkzeuge}
-\label{tab:tools}
-\end{table}
+Zur Einordnung der späteren Observability-Strategie wird im Folgenden ein Überblick über die zentralen technischen Komponenten der Plattform gegeben:
 
-Die Standardisierung ermöglicht es, neue Werkzeuge einfach hinzuzufügen – der Agent lernt automatisch, sie zu nutzen, basierend auf der Beschreibung.
-
-\subsection{Wie entscheidet der Agent?}
-
-Die Werkzeugauswahl ist eine der Kernfähigkeiten eines Agenten. Der Prozess läuft vereinfacht so ab:
-
-\begin{enumerate}
-  \item Der Agent analysiert die aktuelle Aufgabe
-  \item Er generiert eine Liste möglicher Werkzeuge
-  \item Für jedes Werkzeug bewertet er die Erfolgswahrscheinlichkeit
-  \item Das vielversprechendste Werkzeug wird aufgerufen
-  \item Das Ergebnis fließt in die nächste Entscheidung ein
-\end{enumerate}
-
-Dabei kann der Agent auch \emph{Ketten} von Werkzeugen planen: \enquote{Erst suche ich die relevante Datei, dann lese ich sie, dann analysiere ich den Fehler, dann schreibe ich den Fix.}
-
-Diese Fähigkeit zur vorausschauenden Planung unterscheidet leistungsfähige Agenten von einfachen Systemen, die nur reaktiv auf einzelne Anfragen reagieren.
-
-
-\section{Praxisbeispiel: Fehlersuche im Code}
-
-Stellen Sie sich vor, ein Entwickler bemerkt, dass drei von hundert automatischen Tests fehlschlagen. Klassisch würde er nun:
-
-\begin{enumerate}
-  \item Die Fehlermeldungen analysieren
-  \item Den betroffenen Code finden
-  \item Die Ursache verstehen
-  \item Eine Lösung entwickeln
-  \item Testen, ob die Lösung funktioniert
-\end{enumerate}
-
-Ein KI-Agent durchläuft exakt diese Schritte – nur automatisch:
-
-\begin{quote}
-\textit{\enquote{Ich sehe 3 fehlgeschlagene Tests in der Datei test\_login.py. Lass mich die Fehlermeldung genauer anschauen... Es scheint ein Problem mit der Datenbankverbindung zu sein. Ich überprüfe die Konfiguration... Hier fehlt ein Timeout-Parameter. Ich füge ihn hinzu und starte die Tests erneut... Alle Tests bestanden!}}
-\end{quote}
-
-\subsection{Erfolgsraten in der Praxis}
-
-Wie gut funktionieren diese Systeme wirklich? Die Wissenschaft hat dafür standardisierte Benchmarks entwickelt. Der bekannteste ist \emph{SWE-bench}~\cite{jimenez2023swe}, der über 2.000 echte Programmierprobleme aus GitHub-Projekten enthält. Spezialisierte Systeme wie SWE-agent~\cite{yang2024sweagent} und Agentless~\cite{zhang2024agentless} haben gezeigt, dass optimierte Agent-Computer-Interfaces die Erfolgsraten deutlich steigern können.
-
-\begin{table}[ht]
-\centering
-\small
-\begin{tabular}{@{}lcc@{}}
-\toprule
-\textbf{System} & \textbf{Erfolgsrate} & \textbf{Jahr} \\
-\midrule
-Naive Prompting & 3--5\,\% & 2023 \\
-SWE-agent & 12,5\,\% & 2024 \\
-Agentless & 27\,\% & 2024 \\
-OpenAI o1 + Tools & 48\,\% & 2025 \\
-Claude 3.5 Sonnet & 49\,\% & 2025 \\
-Devin 2.0 & 55\,\% & 2025 \\
-\bottomrule
-\end{tabular}
-\caption{Erfolgsraten auf dem SWE-bench Benchmark (Stand: Ende 2025)}
-\label{tab:benchmark}
-\end{table}
-
-Die Zahlen in Tabelle~\ref{tab:benchmark} zeigen den rasanten Fortschritt: Innerhalb von zwei Jahren hat sich die Erfolgsrate verzehnfacht. Dennoch bleibt die Hälfte aller Aufgaben ungelöst – ein Hinweis darauf, dass die Technologie noch am Anfang steht. Besonders bei komplexen, mehrschichtigen Problemen mit vielen Abhängigkeiten zwischen Komponenten stoßen aktuelle Systeme an ihre Grenzen. Die Benchmark-Ergebnisse sollten daher als Momentaufnahme verstanden werden, die sich mit jeder neuen Modellgeneration verbessert.
-
-\subsection{Welche Aufgaben eignen sich?}
-
-Nicht jede Programmieraufgabe ist gleich gut für Agenten geeignet. Tabelle~\ref{tab:eignung} gibt eine Orientierung:
-
-\begin{table}[ht]
-\centering
-\small
-\begin{tabular}{@{}lcc@{}}
-\toprule
-\textbf{Aufgabentyp} & \textbf{Eignung} & \textbf{Erfolgsrate} \\
-\midrule
-Lint-Fehler beheben & Sehr gut & 80--90\,\% \\
-Unit-Tests schreiben & Gut & 70--80\,\% \\
-Einfache Bug-Fixes & Gut & 60--75\,\% \\
-Refactoring & Mittel & 50--70\,\% \\
-Feature-Implementierung & Mittel & 40--60\,\% \\
-Architektur-Design & Gering & 20--30\,\% \\
-\bottomrule
-\end{tabular}
-\caption{Eignung verschiedener Aufgaben für KI-Agenten}
-\label{tab:eignung}
-\end{table}
-
-Faustregel: Je klarer definiert und begrenzter eine Aufgabe, desto besser die Erfolgsaussichten. Offene, kreative Probleme bleiben vorerst Menschensache.
-
-\subsection{Ein konkretes Beispiel aus der Praxis}
-
-Um die Arbeitsweise eines Agenten greifbarer zu machen, hier ein protokollierter Durchlauf bei einer typischen Bug-Fix-Aufgabe:
-
-\begin{quote}
-\footnotesize
-\textbf{Aufgabe:} \enquote{Fix failing test in user\_auth}
-
-\textbf{1. Denken:} \enquote{Welcher Test schlägt fehl?}\\
-\textbf{2. Aktion:} \texttt{run\_tests("user\_auth")}\\
-\textbf{3. Beobachtung:} \enquote{test\_login\_timeout: Timeout}\\
-\textbf{4. Denken:} \enquote{Timeout-Problem. Konfiguration?}\\
-\textbf{5. Aktion:} \texttt{read\_file("config/db.py")}\\
-\textbf{6. Beobachtung:} \texttt{timeout = 5}\\
-\textbf{7. Denken:} \enquote{Zu niedrig für Tests.}\\
-\textbf{8. Aktion:} \texttt{edit\_file(..., timeout=30)}\\
-\textbf{9. Aktion:} \texttt{run\_tests("user\_auth")}\\
-\textbf{10. Beobachtung:} \enquote{15 Tests bestanden}\\
-\textbf{Fazit:} Timeout war zu niedrig konfiguriert.
-\end{quote}
-
-Dieser protokollierte Ablauf zeigt die charakteristische Abfolge aus Denken, Handeln und Beobachten. Bemerkenswert ist die Fähigkeit, aus Fehlermeldungen auf mögliche Ursachen zu schließen und gezielt nach Lösungen zu suchen.
-
-
-\section{Architektur moderner Agenten}
-
-Hinter jedem leistungsfähigen Agenten steckt eine durchdachte Architektur. Die wichtigsten Komponenten sind:
-
-\begin{description}
-  \item[Agent-Controller:] Das \enquote{Gehirn} des Systems. Hier laufen Planung und Entscheidungsfindung zusammen. Der Controller ruft das Sprachmodell auf und interpretiert dessen Antworten.
-  
-  \item[Werkzeug-Registry:] Eine Datenbank aller verfügbaren Tools mit ihren Beschreibungen und Parametern. Der Agent wählt daraus das passende Werkzeug für jede Situation.
-  
-  \item[Gedächtnis-Manager:] Verwaltet Kurz- und Langzeitgedächtnis. Entscheidet, welche Informationen gespeichert und welche vergessen werden.
-  
-  \item[Sicherheitsschicht:] Prüft jeden Werkzeugaufruf auf Zulässigkeit. Verhindert gefährliche Operationen und protokolliert alle Aktionen.
-\end{description}
-
-Diese modulare Struktur~\cite{wu2023autogen} ermöglicht es, einzelne Komponenten auszutauschen oder zu verbessern, ohne das gesamte System neu entwickeln zu müssen. In der Praxis bedeutet das: Ein Unternehmen kann mit einem einfachen Agenten starten und diesen schrittweise um weitere Werkzeuge und Fähigkeiten erweitern. Die offene Architektur fördert auch die Entwicklung spezialisierter Agenten für bestimmte Domänen wie Frontend-Entwicklung, Datenbankoptimierung oder Security-Audits.
-
-\subsection{Vergleich: Cloud vs. Lokal}
-
-Agenten können entweder in der Cloud oder lokal auf dem eigenen Rechner laufen. Beide Ansätze haben Vor- und Nachteile:
-
-\begin{table}[ht]
-\centering
-\footnotesize
-\begin{tabular}{@{}lcc@{}}
-\toprule
-\textbf{Aspekt} & \textbf{Cloud} & \textbf{Lokal} \\
-\midrule
-Leistung & Hoch & Begrenzt \\
-Kosten & Pay-per-Use & Hardware \\
-Datenschutz & Transfer & Lokal \\
-Latenz & Netzwerk & Schnell \\
-Offline & Nein & Ja \\
-Wartung & Anbieter & Selbst \\
-\bottomrule
-\end{tabular}
-\caption{Cloud vs. lokale Agenten}
-\label{tab:cloudlokal}
-\end{table}
-
-Für sensible Projekte oder Unternehmen mit strengen Compliance-Anforderungen werden lokale Lösungen immer attraktiver. Modelle wie Llama~\cite{touvron2023llama}, Mistral oder DeepSeek ermöglichen bereits heute leistungsfähige lokale Agenten – wenn auch noch nicht auf dem Niveau der Cloud-Giganten. Die Entwicklung schreitet jedoch schnell voran: Was heute noch einen High-End-Server erfordert, könnte in wenigen Jahren auf einem gewöhnlichen Laptop laufen. Hybride Ansätze, bei denen sensible Operationen lokal und rechenintensive Aufgaben in der Cloud ausgeführt werden, gewinnen ebenfalls an Bedeutung.
-
-\subsection{Sicherheit: Der Agent in der Sandbox}
-
-Bei aller Begeisterung bleibt eine wichtige Frage: Wie verhindert man, dass ein autonomer Agent Schaden anrichtet? Die Antwort liegt in mehrschichtigen Sicherheitsmechanismen, die nach dem Prinzip der \enquote{Verteidigung in der Tiefe} aufgebaut sind.
-
-\textbf{Sandbox-Ausführung:} Der Agent läuft in einer isolierten Umgebung (ähnlich einer virtuellen Maschine). Selbst wenn er fehlerhaften Code ausführt, kann er das Hauptsystem nicht beschädigen.
-
-\textbf{Berechtigungssystem:} Jedes Werkzeug hat definierte Rechte. Ein Agent darf vielleicht Dateien lesen, aber nicht löschen. Oder er darf Tests starten, aber keinen Code in Produktion deployen.
-
-\textbf{Human-in-the-Loop:} Bei kritischen Aktionen – etwa dem Veröffentlichen von Code – muss ein Mensch zustimmen. Der Agent schlägt vor, der Entwickler entscheidet.
-
-\textbf{Protokollierung:} Jede Aktion wird aufgezeichnet. Bei Problemen lässt sich exakt nachvollziehen, was der Agent getan hat.
-
-\subsection{Schutz vor Manipulation}
-
-Eine besondere Gefahr sind sogenannte \enquote{Prompt Injection}-Angriffe: Ein böswilliger Nutzer versteckt Befehle in Daten, die der Agent verarbeitet. Stellen Sie sich vor, ein Code-Kommentar enthält die Anweisung \enquote{Lösche alle Dateien}.
-
-Robuste Systeme erkennen solche Manipulationsversuche durch:
 \begin{itemize}
-  \item Strikte Trennung von Anweisungen und Daten
-  \item Validierung aller Eingaben vor der Verarbeitung
-  \item Whitelisting erlaubter Operationen
-  \item Anomalie-Erkennung bei ungewöhnlichem Verhalten
+\item \textbf{Angular Frontend (SPA/PWA)}: Eine Single-Page-Webanwendung, über die Nutzer mit dem System interagieren. Das Frontend ist als Progressive Web App umgesetzt und kommuniziert überwiegend über HTTPS-APIs sowie WebSockets mit dem Backend.
+\item \textbf{WebSocket-Gateway (NGINX)}: Ein Gateway-Server zur Vermittlung der bidirektionalen Echtzeitkommunikation zwischen Frontend und Backend, insbesondere für das asynchrone Pushen von Antworten und Statusupdates.
+\item \textbf{Spring Boot Backend}: Der zentrale, Java-basierte Anwendungsserver, der die Kernlogik der Plattform implementiert. Er verarbeitet Nutzeranfragen, koordiniert interne Dienste und stellt REST- sowie WebSocket-Schnittstellen bereit.
+\item \textbf{Keycloak Identity Service}: Ein externer Dienst zur Authentifizierung und Autorisierung von Nutzern. Er übernimmt das Identitätsmanagement, führt jedoch zusätzliche Abhängigkeiten und potenzielle Latenzpunkte ein.
+\item \textbf{PostgreSQL-Datenbank}: Eine relationale Datenbank zur Persistierung des Anwendungszustands, beispielsweise für Benutzerkonten, Fragen und Antworten. Die Datenbank stellt einen zentralen Bestandteil der Plattform dar und kann bei hoher Last zu einem kritischen Engpass werden.
+\item \textbf{KI-Backend (Langchain \& FastAPI)}: Ein eigenständiger Microservice, der über Python (FastAPI) und die Langchain-Bibliothek Anfragen an externe Large-Language-Modelle weiterleitet, um KI-generierte Antworten zu erzeugen. Die Abhängigkeit von externen KI-APIs bringt variable Antwortzeiten und zusätzliche Fehlerquellen mit sich.
+\item \textbf{RabbitMQ Message Broker}: Ein Message-Broker zur asynchronen Entkopplung von Backend- und KI-Komponenten. RabbitMQ ermöglicht das Puffern und Weiterleiten von Antwortnachrichten und unterstützt so eine entkoppelte und skalierbare Verarbeitung.
 \end{itemize}
 
-In Tests erreichen gut abgesicherte Systeme eine Abwehrrate von über 99\,\% gegen bekannte Angriffsmuster.
+Diese verteilten Komponenten bilden gemeinsam den durchgängigen Anfragepfad der Plattform. Eine Nutzerfrage durchläuft typischerweise mehrere Dienste, bevor eine Antwort an das Frontend zurückgegeben wird. Dadurch entstehen zahlreiche Schnittstellen und potenzielle Fehlerquellen. Eine Observability-Strategie für \textit{frag.jetzt} muss daher sicherstellen, dass entlang dieses gesamten Pfades geeignete Metriken, Logs und Traces erfasst werden, um Performanceprobleme und Ausfälle nachvollziehbar analysieren zu können \cite{faseeha2025observability}.
 
+\subsection{Werkzeuge für Monitoring und Observability}
 
-\section{Kosten und Effizienz}
+Zur Umsetzung von Monitoring- und Observability-Konzepten steht eine Vielzahl spezialisierter Open-Source-Werkzeuge zur Verfügung, die in modernen Cloud- und Microservice-Architekturen etabliert sind. Diese Werkzeuge adressieren unterschiedliche Aspekte der Telemetrieerfassung und -auswertung und werden häufig in Kombination eingesetzt \cite{banerjee2024comparative}.
 
-KI-Agenten sind nicht kostenlos. Jeder API-Aufruf an GPT-4 oder Claude kostet Geld – und ein Agent kann für eine einzige Aufgabe Dutzende solcher Aufrufe benötigen.
-
-\subsection{Was kostet ein Agent?}
-
-Tabelle~\ref{tab:kosten} zeigt typische Kosten für verschiedene Aufgabentypen. Die Werte basieren auf aktuellen API-Preisen und können je nach Anbieter variieren.
-
-\begin{table}[ht]
-\centering
-\small
-\begin{tabular}{@{}lcc@{}}
-\toprule
-\textbf{Aufgabe} & \textbf{API-Aufrufe} & \textbf{ca. Kosten} \\
-\midrule
-Einfache Code-Korrektur & 3--5 & 0,02--0,05\,€ \\
-Test-Debugging & 8--15 & 0,08--0,15\,€ \\
-Feature-Implementierung & 20--50 & 0,20--0,50\,€ \\
-Komplexes Refactoring & 50--100 & 0,50--1,00\,€ \\
-\bottomrule
-\end{tabular}
-\caption{Typische Kosten für KI-Agenten-Aufgaben (Stand: 2025)}
-\label{tab:kosten}
-\end{table}
-
-Verglichen mit Entwicklerstunden sind diese Kosten gering – ein Entwickler mit 80\,€ Stundensatz, der 30 Minuten für eine einfache Korrektur braucht, kostet 40\,€. Der Agent erledigt dieselbe Aufgabe für wenige Cent.
-
-\subsection{Token-Optimierung}
-
-Der größte Kostenfaktor ist der \enquote{Kontext} – also alle Informationen, die der Agent für seine Arbeit benötigt. Eine große Codebasis mit 100.000 Zeilen kann nicht komplett an das Sprachmodell übergeben werden.
-
-Clevere Agenten nutzen daher Techniken wie:
 \begin{itemize}
-  \item \textbf{Chunking:} Code wird in kleinere Abschnitte unterteilt
-  \item \textbf{Retrieval:} Nur relevante Dateien werden geladen
-  \item \textbf{Zusammenfassung:} Lange Ausgaben werden komprimiert
+\item \textbf{Prometheus}: Ein Open-Source-System zur Erfassung und Speicherung zeitbasierter Metriken. Prometheus arbeitet mit einem Pull-basierten Ansatz, bei dem Metrik-Endpunkte regelmäßig abgefragt werden. Die integrierte Abfragesprache PromQL erlaubt detaillierte Analysen von Zeitreihendaten und bildet die Grundlage für regelbasierte Alerting-Mechanismen. Prometheus ist als CNCF-Projekt weit verbreitet und insbesondere für dynamische Cloud-Umgebungen geeignet \cite{banerjee2024comparative}.
+\item \textbf{Grafana}: Eine Plattform zur Visualisierung und Analyse von Observability-Daten aus unterschiedlichen Datenquellen. Grafana dient häufig als zentrales Dashboard-Werkzeug, in dem Metriken, Logs und Traces gemeinsam dargestellt und korreliert werden können. Dadurch unterstützt Grafana die visuelle Analyse von Systemzuständen und Trends \cite{giamattei2024monitoring}.
+\item \textbf{Elastic Stack (ELK)}: Der Elastic Stack kombiniert Elasticsearch, Logstash und Kibana und wird vor allem für die zentrale Aggregation und Analyse von Logdaten eingesetzt. Die Stärke des Stacks liegt in der skalierbaren Speicherung unstrukturierter Daten sowie in leistungsfähigen Such- und Analysefunktionen. Neben Logs unterstützt Elastic auch Metriken und Tracing, erfordert jedoch vergleichsweise hohe Systemressourcen \cite{banerjee2024comparative}.
+\item \textbf{Jaeger}: Ein verteiltes Tracing-System zur Nachverfolgung von Anfragen über Service-Grenzen hinweg. Jaeger ermöglicht die Analyse von End-to-End-Latenzen und unterstützt die Identifikation von Performanceengpässen sowie Abhängigkeitsbeziehungen in Microservice-Architekturen \cite{albuquerque2025tracing}.
+\item \textbf{OpenTelemetry}: Ein herstellerneutraler Standard zur Instrumentierung von Anwendungen. OpenTelemetry stellt ein einheitliches API und SDK zur Erfassung von Metriken, Logs und Traces bereit und erlaubt die Weiterleitung dieser Daten an unterschiedliche Backends. Dadurch wird die Telemetrieerfassung von der Wahl konkreter Observability-Werkzeuge entkoppelt \cite{albuquerque2025tracing}.
 \end{itemize}
 
-Diese Optimierungen können die Kosten um 40--60\,\% reduzieren, ohne die Qualität wesentlich zu beeinträchtigen.
+Die Auswahl geeigneter Werkzeuge erfolgt typischerweise anhand mehrerer Bewertungskriterien, darunter die unterstützten Telemetriearten, Integrationsfähigkeit, Skalierbarkeit, Analyse- und Visualisierungsfunktionen sowie der Reifegrad der jeweiligen Lösung \cite{giamattei2024monitoring}. Diese Kriterien bilden die Grundlage für eine spätere vergleichende Analyse im Rahmen der Methodik.
 
 
-\section{Grenzen der Technologie}
 
-So beeindruckend die Fortschritte sind – KI-Agenten sind keine Wunderlösung:
+\section{Methodik / Forschungsdesign}
 
-\textbf{Große Projekte:} Bei Millionen Zeilen Code (wie dem Linux-Kernel) stoßen aktuelle Agenten an ihre Grenzen. Der Kontext ist schlicht zu groß, um ihn vollständig zu erfassen.
+Die Arbeit folgt einem artefaktorientierten Forschungsdesign mit konzeptionellen und prototypischen Anteilen. Ziel ist die Entwicklung einer nachvollziehbaren Observability-Strategie für \emph{frag.jetzt} auf Basis der Four Golden Signals sowie die Ableitung und Implementierung zentraler Artefakte (Observability-Plattform, Dashboards, Alerting-Ansatz, Runbooks). Die Methodik gliedert sich in sechs aufeinander aufbauende Arbeitsschritte, die sich direkt aus der Aufgabenstellung und den Forschungsfragen ableiten.
 
-\textbf{Kreative Aufgaben:} Neue Algorithmen erfinden oder revolutionäre Architekturen entwerfen – das bleibt vorerst menschliche Domäne. Agenten sind gut im Anwenden bekannter Muster, weniger im Erfinden neuer.
+\subsection{Schritt 1: Service-spezifische Konkretisierung der Four Golden Signals}
+Im ersten Schritt werden die Four Golden Signals (Latency, Traffic, Errors, Saturation) als Referenzmodell herangezogen und für die Zielarchitektur von \emph{frag.jetzt} präzisiert. Dazu werden die Signalbereiche pro Service (PWA-Frontend, Spring Boot Backend, PostgreSQL, KI-Services) konkret definiert und in messbare Indikatoren überführt. Der Fokus liegt auf der Ableitung geeigneter Kennzahlen, die nutzerrelevante Symptome abbilden und als Grundlage für Dashboards und Alerting dienen.
 
-\textbf{Zwischenmenschliches:} Anforderungen verstehen, mit Stakeholdern kommunizieren, Prioritäten setzen – hier ist menschliche Intelligenz unersetzlich. Ein Agent kann technisch perfekten Code liefern, der am eigentlichen Bedarf vorbeigeht.
+\subsection{Schritt 2: Vergleichende Evaluation von Observability-Stack-Kombinationen}
+Im zweiten Schritt erfolgt eine strukturierte Evaluation gängiger Observability-Stacks, insbesondere Prometheus/Grafana, ELK Stack sowie Jaeger (ggf. ergänzt um OpenTelemetry als Instrumentierungsstandard). Der Vergleich erfolgt anhand nachvollziehbarer Kriterien wie Signalabdeckung (Metriken/Logs/Traces), Integrationsfähigkeit, Skalierbarkeit, Abfrage- und Visualisierungsmöglichkeiten, Betriebsaufwand sowie Reifegrad/Ökosystem.
 
-\textbf{Halluzinationen:} Sprachmodelle können \enquote{halluzinieren} – also plausibel klingende, aber falsche Informationen generieren. Bei Agenten kann das zu subtilen Bugs führen, die schwer zu finden sind.
+\subsection{Schritt 3: Instrumentierung mit OpenTelemetry}
+Der dritte Schritt umfasst die geplante Instrumentierung der relevanten Services von \emph{frag.jetzt}. Dabei werden Metriken, Logs und Distributed Tracing so umgesetzt, dass eine konsistente Telemetrie entlang des End-to-End-Anfragepfads möglich wird. OpenTelemetry dient als einheitliche Instrumentierungsschicht zur Erfassung und Weitergabe der Telemetrie an die ausgewählten Backends.
 
-\begin{infobox}[Wann Agenten scheitern]
-Typische Fälle, in denen aktuelle Agenten an ihre Grenzen stoßen:
-\begin{itemize}
-  \item Legacy-Code ohne Dokumentation
-  \item Domänenspezifisches Fachwissen (Medizin, Recht)
-  \item Aufgaben mit mehrdeutigen Anforderungen
-  \item Systeme mit komplexen Abhängigkeiten
-\end{itemize}
-\end{infobox}
+\subsection{Schritt 4: Rollenbasierte Dashboards}
+Im vierten Schritt werden Grafana-Dashboards konzipiert und umgesetzt, die sich an den Informationsbedürfnissen verschiedener Rollen orientieren (DevOps, Entwickler, Product Owner). Ziel ist eine übersichtliche, rollenbezogene Darstellung zentraler Golden-Signal-Indikatoren sowie Drill-Down-Möglichkeiten zur Ursachenanalyse (z. B.  von Metrik-Auffälligkeiten zu Traces/Logs).
 
+\subsection{Schritt 5: Alerting-Framework mit Fokus auf False-Positive-Reduktion}
+Im fünften Schritt wird ein Alerting-Framework entworfen, das die Ableitung handlungsorientierter Alerts aus Golden-Signal-Indikatoren ermöglicht. Neben klassischen regelbasierten Alerts werden Konzepte zur Reduktion von False Positives und zur Priorisierung adressiert. Zusätzlich wird die Einbindung datengetriebener Verfahren (z. B.  Anomalieerkennung) als Ansatzpunkt für „intelligentes Alerting“ beschrieben.
 
-\section{Die Zukunft: Mensch und Maschine}
+\subsection{Schritt 6: Entwicklung operativer Runbooks}
+Im sechsten Schritt werden exemplarische Runbooks für wiederkehrende Incident-Szenarien erstellt. Runbooks verknüpfen Alerts mit klaren Diagnose- und Handlungsanweisungen und dienen dazu, Reaktionszeiten zu verkürzen und die operative Qualität der Störungsbearbeitung zu erhöhen.
 
-Die spannendste Frage ist nicht \enquote{Ersetzt KI den Programmierer?}, sondern \enquote{Wie arbeiten beide zusammen?}
-
-\subsection{Hybride Workflows}
-
-Die Praxis zeigt: Am effektivsten sind hybride Workflows. Der Agent übernimmt repetitive Aufgaben – Bugs fixen, Code formatieren, Tests schreiben. Der Mensch konzentriert sich auf das Wesentliche: Architekturentscheidungen, Nutzererlebnis, kreative Problemlösung.
-
-Ein typischer Workflow könnte so aussehen:
-\begin{enumerate}
-  \item Entwickler definiert Feature-Anforderung
-  \item Agent erstellt ersten Entwurf mit Tests
-  \item Entwickler reviewt und gibt Feedback
-  \item Agent überarbeitet basierend auf Feedback
-  \item Entwickler nimmt finale Anpassungen vor
-  \item Agent führt Qualitätsprüfungen durch
-\end{enumerate}
-
-\subsection{Neue Berufsbilder}
-
-Mit der Technologie entstehen auch neue Rollen:
-
-\textbf{Agent-Trainer:} Spezialisieren Agenten auf bestimmte Domänen durch Feintuning und Prompt-Engineering.
-
-\textbf{Agent-Orchestrator:} Entwerfen komplexe Workflows, in denen mehrere Agenten zusammenarbeiten.
-
-\textbf{AI-Auditor:} Prüfen die Sicherheit und Zuverlässigkeit von Agenten-Systemen.
-
-Erste Unternehmen setzen solche Systeme bereits produktiv ein. GitHub Copilot X, Amazon CodeWhisperer, Google Gemini Code Assist – die großen Tech-Konzerne investieren massiv.
+\subsection{Ergebnisartefakte}
+Aus den beschriebenen Schritten ergeben sich die geplanten Ergebnisse: (1) ein wissenschaftlicher Bericht zur Strategie, Toolauswahl und Alerting-Konzeption, (2) eine lauffähige Observability-Plattform (z. B.  Prometheus/Grafana), (3) rollenbasierte Dashboards sowie (4) beispielhafte Runbooks für Incident-Situationen.
 
 
-\section{Praktische Tipps: So starten Sie}
 
-Möchten Sie selbst mit KI-Agenten experimentieren? Hier einige Empfehlungen für den Einstieg:
-
-\subsection{Einfache Werkzeuge zum Ausprobieren}
-
-Für erste Experimente brauchen Sie keine komplexe Infrastruktur:
-
-\textbf{GitHub Copilot:} Der bekannteste KI-Assistent für Entwickler. Integriert sich nahtlos in VS Code und andere IDEs. Die Agentic-Features (Copilot Chat, Copilot Workspace) ermöglichen bereits einfache automatisierte Workflows.
-
-\textbf{Cursor:} Ein Fork von VS Code mit nativer KI-Integration. Besonders gut für Experimente mit kontextbezogener Code-Generierung und automatischen Refactorings.
-
-\textbf{Claude/ChatGPT mit Code Interpreter:} Die Weboberflächen der großen Sprachmodelle bieten bereits rudimentäre Agenten-Fähigkeiten. Code wird ausgeführt, Dateien können hochgeladen und analysiert werden.
-
-\subsection{Für Fortgeschrittene: Open-Source-Frameworks}
-
-Wer tiefer einsteigen möchte, findet in der Open-Source-Community leistungsstarke Werkzeuge:
-
-\begin{table}[ht]
-\centering
-\small
-\begin{tabular}{@{}lp{5cm}@{}}
-\toprule
-\textbf{Framework} & \textbf{Stärken} \\
-\midrule
-LangChain & Größtes Ökosystem, viele Integrationen \\
-AutoGPT & Autonome Aufgabenbearbeitung \\
-CrewAI & Multi-Agenten-Kollaboration \\
-LangGraph & Zustandsbasierte Workflows \\
-\bottomrule
-\end{tabular}
-\caption{Populäre Open-Source-Frameworks für Agenten-Entwicklung}
-\label{tab:frameworks}
-\end{table}
-
-\subsection{Best Practices}
-
-Aus der Praxis haben sich einige Empfehlungen herauskristallisiert:
+\section{Geplante Gliederung (konzeptionell)}
 
 \begin{enumerate}
-  \item \textbf{Klein anfangen:} Starten Sie mit klar definierten, begrenzten Aufgaben. Komplexe Projekte überfordern aktuelle Agenten schnell.
-  
-  \item \textbf{Immer prüfen:} Vertrauen Sie KI-generiertem Code nie blind. Code-Reviews bleiben unverzichtbar – erst recht bei automatisch erzeugten Änderungen.
-  
-  \item \textbf{Tests sind Pflicht:} Automatische Tests sind die beste Absicherung gegen fehlerhafte Agenten-Outputs. Je höher die Testabdeckung, desto sicherer der Einsatz.
-  
-  \item \textbf{Kosten überwachen:} API-Aufrufe können sich schnell summieren. Setzen Sie Budgetgrenzen und überwachen Sie den Verbrauch.
-  
-  \item \textbf{Dokumentieren:} Halten Sie fest, welche Teile Ihres Codes von Agenten generiert wurden. Das erleichtert spätere Wartung.
+  \item \textbf{Einleitung} \\
+  Problemstellung, Motivation, Zielsetzung und Forschungsfragen; Einordnung der Arbeit in den Kontext cloud-nativer Systeme und moderner Observability.
+
+  \item \textbf{Theoretische Fundierung} \\
+  Grundlagen zu Monitoring und Observability (Metriken, Logs, Traces, Alerting); Four Golden Signals als Referenzmodell; Überblick relevanter Observability-Tools und Toolklassen.
+
+  \item \textbf{Untersuchungsgegenstand: Architektur von \emph{frag.jetzt}} \\
+  Beschreibung der Systemarchitektur (PWA-Frontend, Spring Boot Backend, PostgreSQL, KI-Services sowie relevante Schnittstellen/Kommunikationspfade); Ableitung der Observability-Anforderungen je Service.
+
+  \item \textbf{Methodik / Forschungsdesign} \\
+  Vorgehensmodell der Arbeit; Operationalisierung der Golden Signals; Kriterienkatalog für Tool-/Stack-Evaluation; Instrumentierungs- und Evaluationsplan; Validitäts- und Abgrenzungsaspekte.
+
+  \item \textbf{Evaluation von Observability-Stacks} \\
+  Vergleich Prometheus/Grafana, ELK Stack, Jaeger (und OpenTelemetry als Instrumentierungsstandard); Ergebnisdarstellung anhand definierter Kriterien; begründete Auswahl einer geeigneten Stack-Kombination.
+
+  \item \textbf{Konzeption der Observability-Strategie für \emph{frag.jetzt}} \\
+  Service-spezifische Golden-Signal-Definitionen; Messkonzept (Metriken/Logs/Traces) entlang des Anfragepfads; Telemetrie- und Korrelationserfordernisse.
+
+  \item \textbf{Umsetzung: Instrumentierung und Observability-Plattform} \\
+  Umsetzung der Telemetrie-Erfassung; Konfiguration der Plattformkomponenten; Nachweis der End-to-End-Sicht (Metrik–Trace–Log-Korrelation).
+
+  \item \textbf{Dashboards und Alerting-Konzept} \\
+  Rollenbasierte Dashboards; Alerting-Regeln nach Golden Signals; Ansatz zur False-Positive-Reduktion und Priorisierung; Einbindung von Anomalieerkennung (konzeptionell/prototypisch).
+
+  \item \textbf{Runbooks und Incident-Playbooks} \\
+  Erstellung exemplarischer Runbooks; Verknüpfung von Alerts mit Diagnose- und Handlungsschritten; typische Incident-Szenarien.
+
+  \item \textbf{Diskussion} \\
+  Einordnung der Ergebnisse, Grenzen der Umsetzung, Trade-offs (z. B.  Aufwand vs. Nutzen, Datenvolumen/Kardinalität, Abhängigkeit externer KI-Services).
+
+  \item \textbf{Fazit und Ausblick} \\
+  Zusammenfassung der zentralen Ergebnisse; Ausblick auf Weiterentwicklung (z. B.  Reifegradsteigerung, SLO-basierte Steuerung, weitere Automatisierung).
 \end{enumerate}
 
 
-\section{Ethische Fragen und Verantwortung}
 
-Mit der Verbreitung von KI-Agenten entstehen auch neue ethische Herausforderungen, die Entwickler und Unternehmen adressieren müssen.
+\section*{Abkürzungsverzeichnis}
 
-\subsection{Urheberrecht und Lizenzfragen}
+\begin{tabular}{p{1.5cm} p{11cm}}
+API        & Application Programming Interface \\
+CI/CD      & Continuous Integration /\\
+           & Continuous Deployment \\
+CPU        & Central Processing Unit \\
+ELK        & Elasticsearch, Logstash, Kibana \\
+HTTP       & Hypertext Transfer Protocol \\
+HTTPS     & Hypertext Transfer Protocol Secure \\
+KI         & Künstliche Intelligenz \\
+NLP        & Natural Language Processing \\
+OTel      & OpenTelemetry \\
+PWA       & Progressive Web App \\
+Q\&A      & Question and Answer \\
+REST      & Representational State Transfer \\
+SLA       & Service Level Agreement \\
+SLI       & Service Level Indicator \\
+SLO       & Service Level Objective \\
+SPA       & Single-Page Application \\
+SRE       & Site Reliability Engineering \\
+UI        & User Interface \\
+\end{tabular}
 
-Sprachmodelle wurden auf Milliarden von Codezeilen trainiert – darunter auch urheberrechtlich geschützter Code. Wenn ein Agent Code generiert, der einem existierenden Projekt stark ähnelt, stellt sich die Frage: Ist das eine Urheberrechtsverletzung?
+% \begin{acronym}[CI/CD]
+%   \acro{API}{Application Programming Interface}
+%   \acro{CI/CD}{Continuous Integration / Continuous Deployment}
+%   \acro{CPU}{Central Processing Unit}
+%   \acro{ELK}{Elasticsearch, Logstash, Kibana}
+%   \acro{HTTP}{Hypertext Transfer Protocol}
+%   \acro{HTTPS}{Hypertext Transfer Protocol Secure}
+%   \acro{KI}{Künstliche Intelligenz}
+%   \acro{NLP}{Natural Language Processing}
+%   \acro{OTel}{OpenTelemetry}
+%   \acro{PWA}{Progressive Web App}
+%   \acro{Q&A}{Question and Answer}
+%   \acro{REST}{Representational State Transfer}
+%   \acro{SLA}{Service Level Agreement}
+%   \acro{SLI}{Service Level Indicator}
+%   \acro{SLO}{Service Level Objective}
+%   \acro{SPA}{Single-Page Application}
+%   \acro{SRE}{Site Reliability Engineering}
+%   \acro{UI}{User Interface}
+% \end{acronym}
 
-Erste Gerichtsverfahren laufen bereits. Bis Rechtssicherheit besteht, empfiehlt sich:
-\begin{itemize}
-  \item Generierten Code auf Ähnlichkeiten prüfen
-  \item Lizenzkompatibilität sicherstellen
-  \item Im Zweifel manuell umschreiben
-\end{itemize}
+% \section*{Glossar}
 
-\subsection{Verantwortung für Fehler}
-
-Wer haftet, wenn KI-generierter Code einen Bug enthält, der Schaden verursacht? Der Entwickler, der den Agenten eingesetzt hat? Das Unternehmen, das den Agenten entwickelt hat? Oder die Firma, deren Produkt betroffen ist?
-
-Aktuell liegt die Verantwortung beim Anwender – wer KI-generierten Code in Produktion bringt, muss ihn auch verantworten. Das unterstreicht die Notwendigkeit gründlicher Reviews und Tests.
-
-\subsection{Arbeitsplätze und Qualifikation}
-
-Die Sorge, KI könnte Entwickler ersetzen, ist weit verbreitet. Die Realität ist differenzierter:
-
-\textbf{Routineaufgaben} werden zunehmend automatisiert. Einfache Bug-Fixes, Boilerplate-Code, Standard-Tests – hier übernehmen Agenten bereits Arbeit.
-
-\textbf{Komplexe Aufgaben} bleiben menschlich. Architekturentscheidungen, Nutzerforschung, Teamführung, kreative Problemlösung – diese Fähigkeiten werden eher wichtiger.
-
-\textbf{Neue Rollen} entstehen. Wer Agenten effektiv einsetzen, trainieren und überwachen kann, wird gefragt sein.
-
-Die Empfehlung: Verstehen Sie KI-Tools als Multiplikatoren Ihrer eigenen Fähigkeiten, nicht als Ersatz.
-
-
-\section{Ein Blick in die Kristallkugel}
-
-Wohin entwickelt sich die Technologie in den nächsten Jahren? Einige Trends zeichnen sich ab:
-
-\subsection{Multi-Agenten-Systeme}
-
-Statt eines einzelnen Agenten arbeiten mehrere spezialisierte Agenten zusammen: Ein \enquote{Architekt} entwirft die Struktur, ein \enquote{Entwickler} implementiert Code, ein \enquote{Tester} prüft die Qualität, ein \enquote{Reviewer} gibt Feedback. Das Framework \emph{MetaGPT}~\cite{hong2023metagpt} implementiert genau diesen Ansatz und simuliert ein komplettes Software-Team mit definierten Rollen und strukturierten Übergaben. Diese Arbeitsteilung verspricht bessere Ergebnisse bei komplexen Aufgaben.
-
-\subsection{Längerer Kontext}
-
-Aktuelle Modelle können etwa 100.000 Tokens verarbeiten – grob 75.000 Wörter oder ein mittelgroßes Buch. Zukünftige Modelle werden Millionen von Tokens erfassen können. Das ermöglicht Agenten, die ganze Codebasen \enquote{verstehen}, ohne auf Zusammenfassungen angewiesen zu sein.
-
-\subsection{Spezialisierte Modelle}
-
-Statt Allzweck-Modelle werden für Softwareentwicklung optimierte Modelle dominant. Diese verstehen Programmierkonzepte tiefer und machen weniger Fehler bei technischen Aufgaben.
-
-\subsection{Integration in Entwicklungsumgebungen}
-
-Die Grenzen zwischen IDE und Agent verschwimmen. Zukünftige Entwicklungsumgebungen werden Agenten-Fähigkeiten nahtlos integrieren – automatische Refactorings, kontinuierliche Code-Analyse, proaktive Verbesserungsvorschläge.
-
-
-\section{Fazit: Revolution in Zeitlupe}
-
-KI-Agenten in der Softwareentwicklung sind keine Science-Fiction mehr – sie sind Realität. Noch nicht perfekt, noch nicht allwissend, aber bereits nützlich.
-
-Die Technologie entwickelt sich rasant weiter. Was heute 50\,\% der Aufgaben löst, könnte morgen 80\,\% schaffen. Gleichzeitig entstehen neue Fragen: Wer ist verantwortlich für Fehler im KI-generierten Code? Wie schützen wir uns vor bösartigen Agenten? Wie verändern sich Berufsbilder?
-
-Für Entwickler bedeutet das: Wer diese Werkzeuge versteht und effektiv nutzt, wird produktiver. Wer sie ignoriert, riskiert den Anschluss zu verlieren.
-
-Eines ist sicher: Die Art, wie wir Software entwickeln, steht vor einem grundlegenden Wandel. Wer heute die Grundlagen versteht, ist für morgen gerüstet.
-
-\begin{infobox}[Zum Weiterlesen]
-\begin{itemize}
-  \item \textbf{ReAct-Paper:} Das wissenschaftliche Fundament der Agenten-Technologie~\cite{yao2023react}
-  \item \textbf{SWE-bench:} Der Standard-Benchmark für Code-Agenten~\cite{jimenez2023swe}
-  \item \textbf{LangChain:} Populäres Open-Source-Framework für Agentenentwicklung~\cite{chase2023langchain}
-\end{itemize}
-\end{infobox}
-
-
-\section*{Glossar}
-
-\begin{description}
-  \item[Agent:] Ein KI-System, das eigenständig Ziele verfolgt, Pläne erstellt und Werkzeuge nutzt – im Gegensatz zu passiven Chatbots.
+% \begin{description}
+%   \item[Agent:] Ein KI-System, das eigenständig Ziele verfolgt, Pläne erstellt und Werkzeuge nutzt – im Gegensatz zu passiven Chatbots.
   
-  \item[Chain-of-Thought:] Technik, bei der ein Sprachmodell angewiesen wird, seinen Denkprozess explizit zu formulieren, was zu besseren Ergebnissen führt.
+%   \item[Chain-of-Thought:] Technik, bei der ein Sprachmodell angewiesen wird, seinen Denkprozess explizit zu formulieren, was zu besseren Ergebnissen führt.
   
-  \item[Halluzination:] Das Phänomen, dass Sprachmodelle plausibel klingende, aber faktisch falsche Informationen generieren.
+%   \item[Halluzination:] Das Phänomen, dass Sprachmodelle plausibel klingende, aber faktisch falsche Informationen generieren.
   
-  \item[LLM (Large Language Model):] Großes Sprachmodell wie GPT-4 oder Claude, das auf riesigen Textmengen trainiert wurde.
+%   \item[LLM (Large Language Model):] Großes Sprachmodell wie GPT-4 oder Claude, das auf riesigen Textmengen trainiert wurde.
   
-  \item[Prompt Injection:] Angriffstechnik, bei der schädliche Anweisungen in Eingabedaten versteckt werden, um ein KI-System zu manipulieren.
+%   \item[Prompt Injection:] Angriffstechnik, bei der schädliche Anweisungen in Eingabedaten versteckt werden, um ein KI-System zu manipulieren.
   
-  \item[RAG (Retrieval-Augmented Generation):] Methode, bei der ein Sprachmodell vor der Antwortgenerierung relevante Informationen aus einer Datenbank abruft.
+%   \item[RAG (Retrieval-Augmented Generation):] Methode, bei der ein Sprachmodell vor der Antwortgenerierung relevante Informationen aus einer Datenbank abruft.
   
-  \item[ReAct:] \enquote{Reasoning and Acting} – Methodik, bei der Agenten explizit zwischen Denken und Handeln alternieren.
+%   \item[ReAct:] \enquote{Reasoning and Acting} – Methodik, bei der Agenten explizit zwischen Denken und Handeln alternieren.
   
-  \item[Sandbox:] Isolierte Ausführungsumgebung, die verhindert, dass Code das umgebende System beeinflusst.
+%   \item[Sandbox:] Isolierte Ausführungsumgebung, die verhindert, dass Code das umgebende System beeinflusst.
   
-  \item[Token:] Grundeinheit der Textverarbeitung in Sprachmodellen – grob entspricht ein Token 0,75 Wörtern.
+%   \item[Token:] Grundeinheit der Textverarbeitung in Sprachmodellen – grob entspricht ein Token 0,75 Wörtern.
   
-  \item[Vektor-Datenbank:] Spezielle Datenbank zur Speicherung und schnellen Suche von semantisch ähnlichen Texten oder Code.
-\end{description}
+%   \item[Vektor-Datenbank:] Spezielle Datenbank zur Speicherung und schnellen Suche von semantisch ähnlichen Texten oder Code.
+% \end{description}
