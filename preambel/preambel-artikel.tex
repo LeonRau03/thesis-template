@@ -115,6 +115,9 @@
 \usepackage{array}
 \usepackage{colortbl}
 \usepackage{wrapfig}            % Text um Abbildungen fließen lassen
+\usepackage{tabularx}
+\usepackage{ragged2e}
+
 
 \definecolor{rowcolorgray}{gray}{0.90}
 \definecolor{headercolor}{RGB}{120,150,180}
@@ -126,6 +129,10 @@
 \usepackage{float}
 \usepackage{flafter}
 \usepackage[section]{placeins}
+
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.9}
 
 %%% Beschriftungen
 \usepackage{caption}
@@ -139,6 +146,11 @@
    singlelinecheck = true,
    position = bottom
 }
+
+% Optional: etwas elegantere Caption-Abstände (verhindert „gequetscht“)
+\captionsetup[table]{skip=4pt}
+
+
 \DeclareCaptionOption{parskip}[]{}
 \DeclareCaptionOption{parindent}[]{}
 
