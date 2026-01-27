@@ -1,168 +1,195 @@
 % Hauptinhalt der Arbeit
-\section{Einleitung: Die Vitalzeichen einer Plattform}
 
-Eine Frage wird abgeschickt, die Oberfläche wirkt kurz wie eingefroren, und irgendwo im Hintergrund beginnt eine Kette aus Diensten zu arbeiten. Kommt die Antwort in Sekunden -- oder bleibt der Nutzer vor einem Ladeindikator hängen? In cloud-nativen Systemen entscheidet sich die Qualität einer Anwendung nicht nur im Quellcode, sondern im Betrieb: in Lastspitzen, in Randfällen, an Schnittstellen zu externen Diensten. Genau dort steigt die Komplexität, weil verteilte Architekturen zwar flexibel skalieren und Komponenten unabhängig weiterentwickeln lassen, zugleich aber die Überwachung und Fehlersuche spürbar erschweren \cite{faseeha2025observability,sakinala2025observability}. Besonders Microservices erzeugen Fehlerbilder, deren Ursache nicht mehr eindeutig „einem“ Baustein zugeordnet werden kann, weil Abhängigkeiten und Nebenwirkungen über Service-Grenzen hinweg wirken \cite{fischer2024microservice}.
+\section{Notaufnahme für den Code: Warum wir den Puls von frag.jetzt sichtbar machen müssen}
 
-Hier setzt Observability an: Nicht als neues Buzzword, sondern als Versuch, den inneren Zustand eines Systems aus seinen messbaren „Ausgaben“ zu verstehen. Dazu werden Metriken, Logs und Traces gemeinsam betrachtet, um Verhalten, Fehler und Leistungsmerkmale in Beziehung zu setzen \cite{sridharan2018distributed,faseeha2025observability}. Empirische Arbeiten aus dem Umfeld cloud-nativer Anwendungen berichten, dass strukturierte Observability-Praktiken die Incident-Analyse unterstützen und Reaktionszeiten verkürzen können \cite{giamattei2024monitoring,sakinala2025observability}. Die zentrale Frage lautet also: Welche „Vitalzeichen“ zeigen zuverlässig, ob ein Dienst gesund ist -- und welche Daten helfen tatsächlich, wenn es kritisch wird?
+Stellen Sie sich folgende Szene vor: Ein vollbesetzter Hörsaal, 500 Studierende starren auf die Leinwand. Der Dozent hat gerade eine interaktive Frage über \emph{frag.jetzt} gestartet. 500 Daumen tippen auf Smartphones. Absenden.
 
-Diese Arbeit trägt den Titel: \textit{Die Vitalzeichen einer Plattform: Wie man mit Observability den Gesundheitszustand von frag.jetzt überwacht}. Im Mittelpunkt steht die Open-Source-Plattform \textit{frag.jetzt}, deren Kernwert im produktiven Betrieb davon abhängt, dass Nutzerfragen entlang eines verteilten Anfragepfads schnell, korrekt und nachvollziehbar beantwortet werden \cite{fragjetztRepo}. Trotz einer soliden Entwicklungs- und Deployment-Infrastruktur fehlt derzeit ein durchgängiges Observability-Konzept, das Metriken, Logs, Traces und Alarmierung konsistent entlang dieser End-to-End-Kette verbindet \cite{fragjetztRepo,giamattei2024monitoring}. Dadurch bleiben Zusammenhänge zwischen Nutzererlebnis, Backend-Verarbeitung und externen Abhängigkeiten nur eingeschränkt sichtbar.
+Und dann: \textbf{Stille}.
+
+Auf der Leinwand dreht sich der Ladebalken. Sekunden vergehen, die sich wie Minuten anfühlen. Ist das WLAN der Uni zusammengebrochen? Hat sich der Datenbank-Pool erschöpft? Oder wartet das Backend gerade vergeblich auf eine Antwort der externen KI-Schnittstelle?
+
+In der „guten alten Zeit“ monolithischer Software hätte man in eine Log-Datei geschaut und die Antwort gefunden. Doch \emph{frag.jetzt} ist heute ein cloud-natives Nervensystem: Ein Angular-Frontend spricht mit einem NGINX-WebSocket-Gateway, das Anfragen an ein Spring-Boot-Backend weiterreicht; dort wird zur Identitätsprüfung ein externer Dienst (Keycloak) kontaktiert, Nachrichten werden über RabbitMQ verteilt, und komplexe Berechnungen landen schließlich in einem Python-basierten KI-Backend, das wiederum externe LLM-APIs einbindet \cite{fragjetztRepo}. Was früher ein einzelner Fehler war, ist nun häufig eine Kettenreaktion.
+
+Wenn hier etwas hakt, ist das System selten komplett „tot“ --- es ist „krank“. Es leidet an unsichtbaren Entzündungen: Ein einzelner Service antwortet \emph{beispielhaft} 200 Millisekunden zu spät, und aus dieser Verzögerung wird in der Summe ein Stillstand, der beim Nutzer als totale Blockade ankommt \cite{fischer2024microservice}.
+
+Das Problem: Herkömmliches Monitoring sagt uns oft nur: „Der Server ist an.“ Es sagt nicht, \emph{warum} sich die Anwendung für den Nutzer zäh anfühlt. Hier wechseln wir die Strategie --- von reiner Überwachung zu \textbf{Observability}. Wir wollen nicht nur wissen, ob das Herz noch schlägt, sondern ob der Patient wirklich stabil ist. Dafür nutzen wir die \emph{Four Golden Signals} als medizinische Vitalwerte \cite{ewaschukMonitoringDistributedSystems}.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.92\columnwidth]{images/fragjetzt-request-path.png}
-\caption{Vereinfachter Anfragepfad bei \textit{frag.jetzt}: Von der Nutzerfrage bis zur Antwort über mehrere Komponenten hinweg. Quelle: Eigene Darstellung in Anlehnung an die Architekturübersicht im Projekt-Repository \cite{fragjetztRepo}.}
-\label{fig:request-path}
+\includegraphics[width=\linewidth]{images/fragjetzt-request-path.png}
+\caption{Das „Nervensystem“ des Patienten: Der vereinfachte Anfragepfad bei frag.jetzt. Eigene Darstellung nach \cite{fragjetztRepo}.}
+\label{fig:requestpath}
 \end{figure}
+\noindent
+Dieser Artikel zeigt, wie \emph{frag.jetzt} in die Diagnose-Röhre geschoben wird, damit aus stummen Daten sprechende Antworten werden --- und warum „Ich glaube, es hängt“ keine gültige Fehlerbeschreibung mehr ist.
 
-\subsection{Warum gerade jetzt? Drei Beobachtungen aus dem Forschungsstand}
+\section{Vier Golden Signals: Der Gesundheits-Check statt Symptom-Raten}
 
-Erstens: Die Literatur beschreibt wiederkehrend, dass klassische Monitoring-Ansätze in dynamischen, verteilten Umgebungen an Grenzen stoßen, weil sie vor allem bekannte Fehlerzustände mit statischen Schwellenwerten überwachen, aber bei unbekannten Störungen wenig Hilfestellung liefern \cite{sridharan2018distributed,sakinala2025observability}. Zweitens: Moderne Observability wird in Studien als Kombination mehrerer Telemetriearten verstanden -- erst ihr Zusammenspiel ermöglicht robuste Ursachenanalyse \cite{abieba2025advanced,sakinala2025observability}. Drittens: Alarmierung gilt als besondere Schwachstelle, weil zu viele Fehlalarme („Alarmmüdigkeit“) operative Entscheidungen verschlechtern; daher werden Priorisierung und datenbasierte Verfahren zur Reduktion irrelevanter Alarme als Forschungsschwerpunkte diskutiert \cite{jalalvand2024alert}.
+Wenn ein Patient in die Notaufnahme kommt, misst der Arzt nicht „alles“. Er schaut auf wenige Vitalwerte, die schnell Auskunft geben. In der Welt der Google Site Reliability Engineers (SRE) haben sich dafür vier universelle Messkategorien etabliert, die sogenannten \emph{Four Golden Signals} \cite{ewaschukMonitoringDistributedSystems}. Für \emph{frag.jetzt} markieren sie die Grenze zwischen „Ich hoffe, es läuft“ und „Ich weiß, was los ist“.
 
-Damit rückt eine pragmatische Leitfrage nach vorn: Welche Signale helfen im Alltag der Plattform wirklich -- für DevOps, Entwicklung und Produktverantwortliche gleichermaßen?
+\subsection{Latenz: Die Zeit zwischen Klick und Erlösung}
 
-\section{Vier Golden Signals als Vitalzeichen: hilfreich, aber nicht selbsterklärend}
+Es ist egal, dass die Datenbank eine Anfrage intern in \emph{beispielhaften} 5 Millisekunden verarbeitet, wenn der Nutzer im Hörsaal über schwaches WLAN erst nach drei Sekunden eine Antwort sieht. Latenz ist die Zeit, die eine Anfrage insgesamt braucht, um bedient zu werden.
 
-Ein oft genutzter Startpunkt sind die \textit{Four Golden Signals} aus Googles Site Reliability Engineering: \textit{Latency}, \textit{Traffic}, \textit{Errors} und \textit{Saturation} \cite{ewaschukMonitoringDistributedSystems}. Sie wirken wie ein medizinischer Schnellcheck: Sie liefern Symptome, aber noch keine Diagnose. Genau diese Stärke macht sie so attraktiv, denn sie sind universell genug, um auf nahezu jeden nutzerorientierten Dienst angewandt zu werden \cite{ewaschukMonitoringDistributedSystems}. Gleichzeitig wird betont, dass ihre Wirksamkeit davon abhängt, wie sie in Alarmierung, Entscheidungsprozesse und betriebliche Abläufe eingebettet werden \cite{ewaschukMonitoringDistributedSystems}.
+\textbf{Der Trugschluss:} Der Durchschnitt beruhigt. Wenn 90\,\% der Anfragen schnell sind, aber die langsamsten 10\,\% (die Dozenten-Fragen, die gerade alle sehen) hängen, haben wir ein Problem. Deshalb wird nicht nur der Mittelwert betrachtet, sondern insbesondere die \emph{Tail Latency} --- also wie lange die langsamsten Anfragen dauern \cite{sridharan2018distributed}. Genau dort entsteht Frust, und genau dort verstecken sich die harten Fälle.
 
-\begin{itemize}
-  \item \textbf{Latenz:} Wie lange dauert es, bis eine Anfrage bearbeitet ist? Hohe oder schwankende Zeiten deuten auf Engpässe hin \cite{ewaschukMonitoringDistributedSystems}.
-  \item \textbf{Traffic:} Wie viel Last trifft auf einen Dienst? Einbrüche können ebenso verdächtig sein wie Spitzen \cite{ewaschukMonitoringDistributedSystems}.
-  \item \textbf{Fehler:} Wie viele Anfragen schlagen fehl -- technisch oder funktional? \cite{ewaschukMonitoringDistributedSystems}
-  \item \textbf{Sättigung:} Wie ausgelastet sind limitierende Ressourcen wie CPU, Speicher, I/O oder Warteschlangen? \cite{ewaschukMonitoringDistributedSystems}
-\end{itemize}
+\subsection{Traffic: Der Herzschlag des Hörsaals}
 
-Die entscheidende Zuspitzung lautet: Ein korrekt gemessener Wert ist noch keine handlungsrelevante Information. Ein Alarm, der niemandem sagt, \textit{wer} betroffen ist, \textit{wie stark} der Schaden ausfällt und \textit{welche} nächsten Schritte plausibel sind, bleibt nur Lärm \cite{jalalvand2024alert}.
+Wie viel Last trifft unser System gerade? Bei \emph{frag.jetzt} ist das kein stetiges Rauschen, sondern manchmal ein Tsunami.
 
-\section{Der Patient: \textit{frag.jetzt} als verteiltes System mit kritischem Pfad}
+\textbf{Das Szenario:} Die Vorlesung beginnt. 500 Studierende öffnen gleichzeitig die App. Der Traffic schießt \emph{beispielhaft} von 0 auf 500 Anfragen pro Sekunde. Ein plötzlicher Abfall auf Null ist hier übrigens genauso verdächtig wie eine Überlastung: Er bedeutet oft nicht „Feierabend“, sondern „Netzwerkfehler“ oder „Gateway hängt“ \cite{ewaschukMonitoringDistributedSystems}.
 
-\textit{frag.jetzt} ist eine Cloud-native Q\&A-Plattform, die interaktive Fragerunden unterstützt und zusätzlich KI-gestützte Assistenzfunktionen integriert \cite{fragjetztRepo}. Der zentrale Pfad ist aus Nutzersicht simpel: \textit{Frage stellen} $\rightarrow$ \textit{Antwort erhalten}. Technisch wird dieser Ablauf jedoch über mehrere Komponenten umgesetzt, darunter ein Angular-Frontend (SPA/PWA), ein WebSocket-Gateway (NGINX), ein Spring-Boot-Backend, Authentifizierung über Keycloak, Persistenz in PostgreSQL sowie ein KI-Backend (u.\,a.\ FastAPI/Langchain) mit externen LLM-Abhängigkeiten; asynchrone Entkopplung kann über RabbitMQ erfolgen \cite{fragjetztRepo}. Jeder zusätzliche Hop ist ein potenzieller Latenzpunkt, jeder externe Dienst eine Fehlerquelle, und jede Warteschlange kann sich unbemerkt füllen -- bis es für Nutzer sichtbar wird.
+\subsection{Fehler: Wenn das Schweigen laut wird}
 
-\subsection{Welche Fragen muss ein Betriebsteam in Sekunden beantworten können?}
+Klassische Fehler sind einfach: Ein HTTP-Code 500 (Internal Server Error) ist ein Schrei nach Hilfe. Doch in verteilten Systemen lauern die gefährlicheren Varianten im Flüsterton.
 
-Statt Telemetrie als Selbstzweck zu sammeln, beginnt Observability mit Fragen. Für \textit{frag.jetzt} drängen sich insbesondere diese Fragen auf:
+\textbf{Die Tücke:} Viel bedrohlicher sind die „leisen“ Fehler. Wenn das Backend zwar „Code 200 OK“ antwortet, aber der Inhalt leer ist oder falsche Daten liefert, merkt das klassische Monitoring nichts --- der Nutzer aber alles. Observability bedeutet hier, tief genug in die Antwort zu schauen, um auch funktionale Pannen zu erkennen \cite{ewaschukMonitoringDistributedSystems}. Das kann bedeuten, dass semantische Checks (z.\,B. „Antwort enthält mindestens X Elemente“) instrumentiert und als Fehlerrate sichtbar gemacht werden.
 
-\begin{itemize}
-  \item \textbf{Nutzererlebnis:} Wird die Antwort schnell genug sichtbar -- oder entsteht „gefühlte“ Langsamkeit im Frontend?
-  \item \textbf{Fehlerlokalisierung:} Liegt das Problem im Spring-Boot-Backend, in der Datenbank, im Auth-Flow oder in der externen KI-API?
-  \item \textbf{Abhängigkeiten:} Verursacht eine schwankende externe KI-Latenz Kaskadeneffekte, etwa Stau in Queues oder erschöpfte Verbindungspools?
-  \item \textbf{Priorisierung:} Betrifft die Störung wenige Anfragen oder das Kernfeature? Ist sofortiges Eingreifen nötig?
-\end{itemize}
+\subsection{Sättigung: Der Stau vor der Kasse}
 
-Gerade diese Verbindung aus Technik und Nutzungskontext wird in der Literatur als Hebel beschrieben, um Observability im Betrieb wirksam zu machen \cite{abieba2025advanced,giamattei2024monitoring}.
+Sättigung misst, wie „voll“ Ressourcen sind: CPU, Speicher, Thread-Pools, Datenbank-Connection-Pools. Sie ist oft der wichtigste Indikator für das, was als Nächstes passiert \cite{ewaschukMonitoringDistributedSystems}.
 
-\section{Werkzeuge als Diagnosegeräte: Metriken, Logs, Traces -- und der Streit um den Stack}
+\textbf{Die Analogie:} Stellen Sie sich die Warteschlange in der Mensa vor. Solange die Schlange sich bewegt, ist alles im Rahmen. Aber wenn die Mensa zu 99\,\% gefüllt ist, reicht eine einzige weitere Person, und alles kommt zum Stillstand. Sättigung warnt \emph{bevor} das System langsam wird --- sie ist ein Frühwarnsystem \cite{ewaschukMonitoringDistributedSystems}.
 
-In der Praxis existiert kein „ein“ Observability-Tool. Vielmehr werden spezialisierte Bausteine kombiniert: Metriken liefern Trends und Grenzwerte, Logs zeigen Ereignisdetails, Traces rekonstruieren den Weg einzelner Anfragen durch verteilte Systeme \cite{abieba2025advanced,sakinala2025observability}. Distributed Tracing wird dabei besonders für Microservices als essenziell beschrieben, weil es Latenzengpässe und Abhängigkeiten entlang des gesamten Anfragepfads sichtbar macht \cite{albuquerque2025tracing}.
+\subsection{Fazit der Diagnose: Vier Werte, eine Geschichte}
 
-Für die Werkzeugauswahl stehen in Open-Source-Ökosystemen mehrere etablierte Optionen bereit:
+Ein einzelner Messwert ist fast immer missverständlich. Hohe Latenz kann an hoher Sättigung liegen --- oder an einem Netzwerkproblem. Erst wenn wir diese vier Vitalwerte übereinanderlegen (Korrelation), wird aus Daten echtes Wissen \cite{ewaschukMonitoringDistributedSystems}. Und erst dann wird Debugging weniger Ratespiel und mehr Detektivarbeit mit Beweismitteln.
 
-\begin{itemize}
-  \item \textbf{Prometheus} zur Erfassung und Abfrage zeitbasierter Metriken (inkl.\ regelbasiertem Alerting) \cite{banerjee2024comparative}.
-  \item \textbf{Grafana} zur Visualisierung und Korrelation verschiedener Datenquellen \cite{giamattei2024monitoring}.
-  \item \textbf{Elastic Stack (ELK)} als verbreitete Lösung für zentrale Log-Aggregation und Analyse \cite{banerjee2024comparative}.
-  \item \textbf{Jaeger} für Distributed Tracing und End-to-End-Latenzanalyse \cite{albuquerque2025tracing}.
-  \item \textbf{OpenTelemetry} als herstellerneutraler Standard zur Instrumentierung für Metriken, Logs und Traces \cite{albuquerque2025tracing}.
-\end{itemize}
-
-Vergleichsstudien diskutieren diese Toolklassen entlang von Kriterien wie Telemetrieabdeckung, Integrationsfähigkeit, Skalierbarkeit und Betriebsaufwand \cite{giamattei2024monitoring,banerjee2024comparative}. Daraus ergibt sich eine praktische, aber forschungsnahe Auswahlfrage: Welche Kombination passt am besten zu den Anforderungen und Ressourcen von \textit{frag.jetzt}? \\
-
-\captionsetup{type=table}
-\begin{minipage}{\columnwidth}
+\begin{table}[t]
 \centering
-\footnotesize
-\setlength{\tabcolsep}{3.5pt}
-\renewcommand{\arraystretch}{1.2}
-\begin{tabularx}{\columnwidth}{@{}>{\RaggedRight\arraybackslash}p{0.36\columnwidth} >{\RaggedRight\arraybackslash}X@{}}
+\small
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\columnwidth}{@{}l X@{}}
 \toprule
-\textbf{Entscheidungsfrage} & \textbf{Warum sie zählt} \\
+\textbf{Signal} & \textbf{frag.jetzt: Messpunkt \& Alarm-Beispiel} \\
 \midrule
-Metriken-first oder Logs-first? & Metriken zeigen Trends, Logs liefern Details — beeinflusst Kosten und Diagnosezeit. \cite{abieba2025advanced} \\
-Tracing-Pflicht? & Ohne End-to-End-Traces bleiben Engpässe und Abhängigkeiten in Microservices schwer greifbar. \cite{albuquerque2025tracing} \\
-Instrumentierung mit Standard? & OpenTelemetry entkoppelt Erfassung vom Backend und reduziert Risiko eines Vendor Lock-ins. \cite{albuquerque2025tracing} \\
+Latenz &
+p95/p99 Antwortzeit für „Frage senden“ im Gateway/Backend; Alarm bei anhaltender p99-Erhöhung (Symptom, nicht Ursache) \cite{ewaschukMonitoringDistributedSystems,sridharan2018distributed}. \\
+Traffic &
+Requests/s (HTTP/WebSocket), Queue-Throughput; Alarm bei abruptem Abfall auf 0 oder unplausiblen Peaks \cite{ewaschukMonitoringDistributedSystems}. \\
+Fehler &
+5xx, Timeouts, semantische Checks (z.\,B. leere/inkonsistente Antwort); Alarm bei signifikanter Fehlerquote \cite{ewaschukMonitoringDistributedSystems}. \\
+Sättigung &
+CPU/RAM, Connection-Pool, Queue-Lag; Alarm bei dauerhaftem Annähern an Limits bzw. wachsendem Lag \cite{ewaschukMonitoringDistributedSystems}. \\
 \bottomrule
 \end{tabularx}
-\caption{Leitfragen zur Stack-Auswahl für Observability. Quelle: Eigene Darstellung auf Basis der Literatur \cite{abieba2025advanced,albuquerque2025tracing,giamattei2024monitoring}.}
-\label{tab:stack-questions}
-\end{minipage}
+\caption{Four Golden Signals als „Vitalwerte“: kompaktes Mapping auf \emph{frag.jetzt}.}
+\label{tab:golden-mapping}
+\end{table}
 
-\section{Forschungsfragen: Von Vitalzeichen zu Entscheidungen}
+\section{Werkzeug-Tetris: Die Suche nach dem passenden Stack}
 
-Aus Problemstellung, Architektur und Forschungsstand leiten sich drei Forschungsfragen ab:
+Wer heute „Observability Tools“ in eine Suchmaschine eingibt, wird von einer Lawine begraben. Es gibt hunderte Dienste, vom teuren Enterprise-SaaS bis zum selbstgebauten Skript. Für ein Open-Source-Projekt wie \emph{frag.jetzt} ist klar: Wir können uns keine Lizenzkosten leisten, aber wir können uns auch keine blinden Flecken leisten \cite{giamattei2024monitoring}.
+
+Wir standen vor der klassischen Frage: Was brauchen wir wirklich --- einen Detektiv, einen Wächter oder ein Navigationssystem? Die Antwort lautet: alles drei, aber in der richtigen Dosierung \cite{giamattei2024monitoring}.
+
+\subsection{Der Wächter: Prometheus für den Puls}
+
+Unsere erste Wahl fiel auf \textbf{Prometheus}. Warum? Weil Logs teuer sind: Jede Zeile Text zu speichern, kostet Speicherplatz und Rechenleistung. Metriken hingegen sind kompakt, weil sie Zahlenreihen darstellen. Prometheus speichert keine Romane, sondern Messwerte wie „CPU bei 80\,\%“ oder „50 Anfragen pro Sekunde“ \cite{banerjee2024comparative}. Das ist wie ein EKG: Es zeigt Stress, aber nicht zwangsläufig die Ursache.
+
+Für \emph{frag.jetzt} bedeutet das: Der Puls wird überall fühlbar gemacht --- an den Schnittstellen, an kritischen Pools, an den Endpunkten, die Nutzer wirklich spüren.
+
+\subsection{Der Detektiv: Logs (aber bitte gezielt)}
+
+Wenn Prometheus Alarm schlägt, braucht das Team Details. Hier kommt klassisch der \textbf{ELK-Stack} (Elasticsearch, Logstash, Kibana) ins Spiel. Aber Vorsicht: In verteilten Systemen explodieren Logs förmlich; „alles loggen“ ist selten nachhaltig \cite{giamattei2024monitoring}.
+
+Wir haben gelernt: „Log everything“ ist keine Strategie, sondern ein Weg, die Festplatte zu verstopfen. Sinnvoller ist es, Logs dort zu setzen, wo Entscheidungen getroffen werden: bei Fehlermeldungen, bei Zustandswechseln, beim Start der Anwendung --- nicht bei jedem Herzschlag \cite{abieba2025advanced}. So wird der Detektiv nicht zum Messie.
+
+\subsection{Das Navi: Distributed Tracing mit Jaeger}
+
+Hier wurde es für \emph{frag.jetzt} kritisch. Metriken und Logs sind mächtig, aber ohne Kontext oft isoliert. Sie sagen: „Die Datenbank ist langsam“ und „Das Frontend wartet“. Aber sie beantworten nicht: \emph{Worauf} wartet das Frontend eigentlich, und \emph{welcher} Call hat den Stau ausgelöst?
+
+In einer Microservice-Architektur wie unserer verliert man ohne \textbf{Tracing} den Faden \cite{albuquerque2025tracing}. Deshalb wurde Jaeger eingesetzt, um den Weg einer einzelnen Anfrage über Gateway, Spring Boot und KI-Backend nachzuzeichnen. Erst Tracing macht aus einzelnen Bauteilen eine zusammenhängende Geschichte \cite{albuquerque2025tracing}.
+
+\subsection{Die Geheimwaffe: OpenTelemetry gegen blinde Flecken}
+
+Das größte Risiko bei der Tool-Auswahl ist der „Vendor Lock-in“. Was, wenn morgen von Jaeger zu Tempo gewechselt wird? Oder von Prometheus zu einer Cloud-Lösung? Eine Observability-Strategie sollte nicht auf Werkzeug-Markennamen beruhen, sondern auf austauschbaren Standards.
+
+Hier setzt \textbf{OpenTelemetry (OTel)} an: als universeller Adapter, der Instrumentierung vom Backend bis zum Gateway neutral hält und Daten an die Tools der Wahl verteilt \cite{albuquerque2025tracing}. Statt Code mit einer Prometheus-spezifischen Bibliothek zu „verdrahten“, wird alles über OTel gesammelt und exportiert. Das reduziert Abhängigkeiten und erleichtert spätere Entscheidungen \cite{albuquerque2025tracing}.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\columnwidth}{@{}l X@{}}
+\toprule
+\textbf{Rolle} & \textbf{Baustein \& Fokus} \\
+\midrule
+Wächter &
+Prometheus + Grafana: Trends, Ausreißer, Ressourcendruck; Alarme auf Nutzer-Symptome \cite{banerjee2024comparative,ewaschukMonitoringDistributedSystems}. \\
+Detektiv &
+ELK/Logs: Ursachenanalyse, Zustandswechsel, Fehlerkontext; Logging sparsam und strukturiert \cite{giamattei2024monitoring,abieba2025advanced}. \\
+Navi &
+Jaeger/Tracing: End-to-End-Requestpfad; Engpässe lokalisieren, Korrelation sichern \cite{albuquerque2025tracing}. \\
+Klebstoff &
+OpenTelemetry: einheitliche Instrumentierung, weniger Lock-in, konsistente Attribute \cite{albuquerque2025tracing}. \\
+\bottomrule
+\end{tabularx}
+\caption{Observability-Stack als Team: Rollen statt Tool-Fetisch.}
+\label{tab:stack-roles}
+\end{table}
+
+\section{Schluss mit dem digitalen Wecker: Warum Stille Gold ist}
+
+Hand aufs Herz: Nichts ruiniert die Moral eines Teams schneller als ein Telefon, das nachts um 3 Uhr vibriert, nur um zu melden: „CPU-Auslastung bei 85\,\%“ --- und fünf Minuten später springt der Wert von selbst wieder auf „OK“.
+
+Dieses Phänomen hat einen Namen: \textbf{Alarmmüdigkeit} (Alert Fatigue) \cite{jalalvand2024alert}. Wenn alles ein Notfall ist, ist nichts mehr ein Notfall. In der frühen Phase von \emph{frag.jetzt} neigten wir dazu, auf alles zu lauschen: Ein Service antwortet nicht sofort? Alarm. Die Datenbank schreibt viele Logs? Alarm. Das Ergebnis: Benachrichtigungen wurden ignoriert, wie man das Rauschen einer Klimaanlage irgendwann ausblendet. Und genau dann passierte der echte Ausfall.
+
+Also wurde das Alarm-Konzept radikal umgestellt --- weg von „Rauschen“, hin zu „Handlung“. Drei Regeln haben sich dabei als Leitplanken bewährt, weil sie Alarme zu Entscheidungen machen und nicht zu Nervenkrieg \cite{ewaschukMonitoringDistributedSystems} \cite{jalalvand2024alert}:
 
 \begin{enumerate}
-\item Wie können die Four Golden Signals für die spezifischen Services von \textit{frag.jetzt} (PWA-Frontend, Spring Boot Backend, PostgreSQL, KI-Services) konkret definiert und instrumentiert werden? \cite{ewaschukMonitoringDistributedSystems,faseeha2025observability}
-\item Welche Observability-Stack-Kombination (Prometheus/Grafana, ELK Stack, Jaeger) ist am besten geeignet für die Monitoring-Anforderungen von \textit{frag.jetzt}? \cite{giamattei2024monitoring,banerjee2024comparative}
-\item Wie kann ein intelligentes Alert-System entwickelt werden, das False Positives minimiert und handlungsorientierte Einblicke für verschiedene Rollen (DevOps, Entwicklung, Product Owner) bereitstellt? \cite{jalalvand2024alert}
+\item \textbf{Weck mich nur, wenn der Nutzer leidet.} Ein hoher CPU-Wert ist kein Grund zur Panik, solange die Antworten schnell kommen. Alarmiert wird auf \emph{Symptome}, nicht auf bloße Ursachen \cite{ewaschukMonitoringDistributedSystems}. \emph{Schlecht:} „Server Node 4 hat hohe Last.“ \emph{Gut:} „Die p99-Latenz beim Absenden von Fragen ist (beispielhaft) über 2 Sekunden gestiegen“ \cite{sridharan2018distributed}\cite{ewaschukMonitoringDistributedSystems}.
+
+\item \textbf{Die „Luft-anhalten“-Strategie.} Netzwerke haben Schluckauf. Das ist normal. Statt bei jedem verlorenen Paket sofort „Feuer!“ zu schreien, wird zeitlich geglättet. Besteht das Problem länger als eine definierte Dauer (z.\,B.\ zwei Minuten), wird die Nachricht erst dann aktiv. Das eliminiert nervöse Fehlalarme („Flapping“) fast vollständig \cite{ewaschukMonitoringDistributedSystems}.
+
+\item \textbf{Kein Alarm ohne Spielbuch.} Ein Alarm, der nur sagt „Es ist kaputt“, ist wertlos. Er erzeugt Stress, aber keine Lösung. Deshalb werden \textbf{Runbooks} direkt mit Alerts verknüpft: Wenn der „Datenbank-Pool erschöpft“-Alarm kommt, liefert er die Anleitung gleich mit: „(1) Offene Verbindungen prüfen, (2) Service X neu starten, (3) Lastspitze korrelieren“ \cite{ewaschukMonitoringDistributedSystems}\cite{jalalvand2024alert}.
 \end{enumerate}
 
-\section{Methodik als Storyline: Sechs Schritte vom Symptom zur Therapie}
+\subsection{Ein kurzer Einschub: Warum das mehr ist als Tool-Kosmetik}
 
-Die Arbeit folgt einem artefaktorientierten Forschungsdesign mit konzeptionellem und prototypischem Schwerpunkt. Statt jeden Baustein bis ins letzte Detail zu erklären, wird eine nachvollziehbare „Diagnosekette“ aufgebaut -- von der Definition der Vitalzeichen bis zu Runbooks, die im Incident-Fall konkrete Schritte liefern.
+Ein gutes Observability-System ist wie ein guter Rauchmelder: Es schweigt die meiste Zeit. Aber wenn es sich meldet, dann schnappt man sich den Feuerlöscher --- und nicht die Ohropax. Diese Logik wird nicht durch „mehr Daten“ erreicht, sondern durch \emph{bessere} Daten, durch Korrelation und durch Alarme, die Handlung erzwingen statt Ablenkung produzieren \cite{ewaschukMonitoringDistributedSystems}\cite{jalalvand2024alert}.
 
-\subsection{Schritt 1: Golden Signals pro Komponente konkretisieren}
+\section{Fazit: Wenn aus Stille Vertrauen wird}
 
-Die Golden Signals werden für jedes Teilsystem so interpretiert, dass sie sowohl aus Technik- als auch aus Nutzungsperspektive verständlich sind \cite{ewaschukMonitoringDistributedSystems}. Für ein PWA-Frontend kann „Latenz“ etwa als wahrgenommene Antwortzeit erscheinen, während im Backend zusätzliche Perspektiven (API-Latenz, Queue-Wartezeiten, Datenbank-Response) relevant werden \cite{faseeha2025observability}.
+Kehren wir zurück in Hörsaal 1. Wieder zücken 500 Studierende ihre Smartphones. Wieder stellt der Dozent eine Frage über \emph{frag.jetzt}. Und wieder gibt es im Hintergrund vielleicht ein technisches Problem --- eine Datenbankabfrage dauert \emph{beispielhaft} 200 Millisekunden zu lang.
 
-\subsection{Schritt 2: Tool-Stacks vergleichen und begründet auswählen}
+Der Unterschied zu früher? Niemand merkt es.
 
-Da eine vollständige praktische Erprobung aller Werkzeuge im Rahmen der Arbeit unrealistisch ist, wird der Vergleich primär theoretisch-konzeptionell durchgeführt. Bewertet werden u.\,a.\ Telemetrieabdeckung, Integrationsfähigkeit, Betriebsaufwand und Reifegrad \cite{giamattei2024monitoring,banerjee2024comparative}. Ergebnis ist eine begründete Stack-Empfehlung für \textit{frag.jetzt}.
+Bevor der Ladebalken auf der Leinwand überhaupt ins Stocken gerät, hat der Observability-Stack das Symptom („Latenz steigt am Backend“) bereits erfasst. Prometheus hat den Trend erkannt, noch bevor ein Grenzwert gerissen wurde \cite{banerjee2024comparative}. Ein Blick in die Tracing-Ansicht zeigt: „Aha, der Connection-Pool zur Datenbank läuft voll“ \cite{albuquerque2025tracing}. Und das Runbook liefert die Lösung, noch bevor der erste Nutzer frustriert die App schließen kann \cite{ewaschukMonitoringDistributedSystems}\cite{jalalvand2024alert}.
 
-\subsection{Schritt 3: Instrumentierung entlang des Anfragepfads}
+Das ist der Kern von Observability: Es geht nicht um bunte Dashboards an der Wand, die beeindruckend aussehen. Es geht darum, „Unbekannte Unbekannte“ beherrschbar zu machen \cite{sridharan2018distributed}. Fehler in verteilten Systemen werden nicht vollständig verhindert werden können --- Systeme \emph{werden} ausfallen \cite{ewaschukMonitoringDistributedSystems}. Aber wir können entscheiden, wie schnell wir verstehen, was passiert, und wie schnell wir wieder stabil sind.
 
-OpenTelemetry dient als einheitliche Instrumentierungsschicht, um Metriken, Logs und Traces konsistent zu erfassen und korrelierbar zu machen \cite{albuquerque2025tracing}. Entscheidend ist dabei nicht die Menge an Daten, sondern die Fähigkeit, eine Nutzeranfrage über Systemgrenzen hinweg wiederzufinden.
+\subsection{Der nächste Schritt: Von „Best Effort“ zu Service Level Objectives (SLOs)}
 
-\subsection{Schritt 4: Dashboards, die Rollen statt Datenquellen abbilden}
+Sind wir fertig? Nein. Observability ist kein Projekt, sondern ein Prozess. Aktuell wird gemessen, was \emph{ist}. Der nächste Schritt ist die Definition dessen, was \emph{sein darf}. Mit \textbf{Service Level Objectives (SLOs)} wird festgelegt, welche Nutzererfahrung als „gut genug“ gilt, etwa: „99\,\% aller Fragen müssen in unter 500 ms beantwortet sein“ \cite{ewaschukMonitoringDistributedSystems}. Das zwingt dazu, Technik nicht nur technisch zu betrachten, sondern vom Nutzer her zu denken. Und es schafft eine klare Konsequenz: Wenn das Ziel verfehlt wird, werden neue Features gestoppt und Stabilität priorisiert \cite{ewaschukMonitoringDistributedSystems}.
 
-Dashboards werden rollenbasiert konzipiert, damit nicht jede Zielgruppe dieselben Rohdaten interpretieren muss. Während DevOps eine schnelle Systemübersicht benötigt, interessiert die Entwicklung oft der Drilldown bis zum Trace, und Product Owner benötigen eine Sicht auf Nutzerwirkung und Priorität \cite{giamattei2024monitoring}.
+Am Ende ist \emph{frag.jetzt} mehr als Code. Es ist die Interaktion zwischen Menschen. Und die Aufgabe einer Observability-Strategie besteht darin, sicherzustellen, dass die Technik dieser Interaktion niemals im Weg steht.
 
-\subsection{Schritt 5: Alarmierung, die Relevanz und Dringlichkeit kennt}
+% \section*{Abkürzungsverzeichnis}
 
-Ein Alerting-Ansatz wird entworfen, der sich an den Golden Signals orientiert und zugleich Mechanismen zur Reduktion irrelevanter Alarme berücksichtigt, etwa Aggregation mehrerer Signale, zeitliche Glättung und einfache Anomalieerkennung \cite{jalalvand2024alert}. Ziel ist eine Alarmierung, die nicht nur „etwas ist anders“ ruft, sondern beantwortet: \textit{Ist Handeln nötig, wen betrifft es, und was ist der nächste sinnvolle Schritt?}
-
-\subsection{Schritt 6: Runbooks als operationalisierte Erfahrung}
-
-Runbooks werden für wiederkehrende Incident-Szenarien erstellt und verknüpfen Alerts mit Diagnose- und Handlungsanweisungen. Damit wird Wissen aus der Telemetrie in operative Routine überführt, was in Observability-Ansätzen als wichtiger Baustein zur Verkürzung der Reaktionszeit gilt \cite{giamattei2024monitoring,sakinala2025observability}.
-
-\section{Ergebnisartefakte: Was am Ende „in der Hand“ liegt}
-
-Aus den Schritten ergeben sich vier geplante Artefakte:
-\begin{enumerate}
-  \item ein wissenschaftlicher Bericht zur Strategie, Toolauswahl und Alarmierungskonzeption,
-  \item eine lauffähige Observability-Plattform (z.\,B.\ Prometheus/Grafana) für \textit{frag.jetzt},
-  \item rollenbasierte Dashboards,
-  \item exemplarische Runbooks für typische Incident-Situationen.
-\end{enumerate}
-
-\section{Fazit und Ausblick: Wenn Vitalzeichen zu Vertrauen werden}
-
-Observability ist dann gelungen, wenn aus Telemetrie Vertrauen entsteht: Vertrauen, dass Nutzer nicht im Dunkeln warten, dass Fehler nicht nur entdeckt, sondern erklärt werden können, und dass Betriebsteams handlungsfähig bleiben, auch wenn externe Abhängigkeiten schwanken. Die Literatur zeigt, dass gerade in cloud-nativen Systemen strukturierte Observability-Praktiken die Analyse von Störungen unterstützen und operative Reaktionszeiten verkürzen können \cite{giamattei2024monitoring,sakinala2025observability}. Für \textit{frag.jetzt} wird dieser Gedanke in eine konkrete Strategie übersetzt, die Golden Signals als Einstieg nutzt, aber durch Kontext, Tracing-Korrelation, rollenbasierte Sichten und priorisierte Alarmierung in Richtung betrieblicher Nutzbarkeit erweitert \cite{ewaschukMonitoringDistributedSystems,albuquerque2025tracing,jalalvand2024alert}.
-
-Im Ausblick bieten sich insbesondere SLO-basierte Steuerung und eine schrittweise Reifegradsteigerung an, um technische Symptome noch konsequenter mit Nutzerwirkung zu verbinden \cite{ewaschukMonitoringDistributedSystems,giamattei2024monitoring}. Damit würden aus vier Vitalzeichen nicht nur Messwerte, sondern ein belastbarer Gesundheitscheck für eine Plattform, die von Interaktion lebt.
-
-
-\section*{Abkürzungsverzeichnis}
-
-\begin{tabular}{p{1.5cm} p{11cm}}
-API        & Application Programming Interface \\
-CI/CD      & Continuous Integration /\\
-           & Continuous Deployment \\
-CPU        & Central Processing Unit \\
-ELK        & Elasticsearch, Logstash, Kibana \\
-HTTP       & Hypertext Transfer Protocol \\
-HTTPS     & Hypertext Transfer Protocol Secure \\
-KI         & Künstliche Intelligenz \\
-NLP        & Natural Language Processing \\
-OTel      & OpenTelemetry \\
-PWA       & Progressive Web App \\
-Q\&A      & Question and Answer \\
-REST      & Representational State Transfer \\
-% SLA       & Service Level Agreement \\
-% SLI       & Service Level Indicator \\
-SLO       & Service Level Objective \\
-SPA       & Single-Page Application \\
-SRE       & Site Reliability Engineering \\
-UI        & User Interface \\
-\end{tabular}
+% \begin{tabular}{p{1.5cm} p{11cm}}
+% API        & Application Programming Interface \\
+% CI/CD      & Continuous Integration /\\
+%            & Continuous Deployment \\
+% CPU        & Central Processing Unit \\
+% ELK        & Elasticsearch, Logstash, Kibana \\
+% HTTP       & Hypertext Transfer Protocol \\
+% HTTPS     & Hypertext Transfer Protocol Secure \\
+% KI         & Künstliche Intelligenz \\
+% NLP        & Natural Language Processing \\
+% OTel      & OpenTelemetry \\
+% PWA       & Progressive Web App \\
+% Q\&A      & Question and Answer \\
+% REST      & Representational State Transfer \\
+% % SLA       & Service Level Agreement \\
+% % SLI       & Service Level Indicator \\
+% SLO       & Service Level Objective \\
+% SPA       & Single-Page Application \\
+% SRE       & Site Reliability Engineering \\
+% UI        & User Interface \\
+% \end{tabular}
 
 % \begin{acronym}[CI/CD]
 %   \acro{API}{Application Programming Interface}
