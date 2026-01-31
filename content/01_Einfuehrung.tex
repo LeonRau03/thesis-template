@@ -1,60 +1,30 @@
-\chapter{Einführung}
-\index{Agentic AI}%
-\index{Software Engineering}%
+% !TEX root = ../Thesis.tex
 
-% Längeres abgesetztes Zitat
-\begin{quote}
-\textit{\textquote[\cite{karpathy2023intro}]{Wir erleben die Entstehung eines neuen Betriebssystems: Das LLM fungiert als Kernel-Prozess, das Kontextfenster als Arbeitsspeicher und externe Werkzeuge als E/A-Schnittstellen. Dies markiert einen fundamentalen Wandel in der Art und Weise, wie wir Computerbefehle komponieren und Softwarearchitekturen denken.}}
-\smallskip
-\begin{flushright}
-— Andrej Karpathy, \textit{Intro to Large Language Models}, 2023
-\end{flushright}
-\end{quote}
+\chapter{Einleitung}
+\label{ch:einleitung}%
+\index{Observability}%
+\index{Four Golden Signals}%
+\index{frag.jetzt}%
 
-\section{Motivation und Relevanz}
+Webbasierte Anwendungssysteme werden heute häufig als verteilte, cloud-native Anwendungen umgesetzt, die aus mehreren lose gekoppelten Services bestehen. Diese Architekturform erlaubt eine unabhängige Weiterentwicklung einzelner Komponenten sowie eine flexible Skalierung, erhöht jedoch zugleich den Aufwand für Betrieb, Überwachung und Fehleranalyse im Produktivsystem \cite{faseeha2025observability,sakinala2025observability}. Insbesondere bei Microservices entstehen verteilte Fehlerzustände und komplexe Abhängigkeiten zwischen Diensten, wodurch Ursachen von Störungen nicht mehr eindeutig einzelnen Komponenten zugeordnet werden können \cite{fischer2024microservice}.
 
-Software Engineering erlebt derzeit einen Paradigmenwechsel: \emph{agentic AI} \textendash{} also KI-Systeme, die Ziele verstehen, Pläne erstellen, Werkzeuge verwenden und Ergebnisse eigenständig verifizieren \textendash{} ergänzt klassische Automatisierung um adaptive, mehrschrittige Problemlösung.\footnote{Der Begriff \emph{Agentic AI} wird derzeit von führenden Forschungsteams geprägt und bezieht sich auf Systeme, die über mehrere Schritte selbstständig komplexe Aufgaben bewältigen können.}
- 
-Darüber hinaus verlangt die praktische Anwendung agentischer Systeme oft einen ausgewogenen Kompromiss zwischen Automatisierung und menschlicher Kontrolle. In vielen Entwicklungsprozessen sind Schritte, die bisher rein manuell durchgeführt wurden (Code-Reviews, Testgenerierung, Release-Checks), gute Kandidaten für assistierte Workflows. Agenten können Routinearbeit übernehmen, erlauben dadurch jedoch auch neue Prüfpfade: So müssen Validierungsstrategien entworfen werden, die automatisierte Entscheidungen nachvollziehbar machen und menschliche Reviewer bei Bedarf schnell eingreifen lassen. Die Arbeit nimmt genau den Balanceakt in den Blick und liefert pragmatische Designprinzipien für den produktiven Einsatz.
-Wie Richards und Ford betonen, \textquote[\cite{richards2020fundamentals}]{müssen Architekturprinzipien auf Skalierbarkeit und Wartbarkeit ausgelegt sein}, um praktischen Anforderungen gerecht zu werden.
-Für Informatikstudierende der Fachrichtung \enquote{Software Engineering mit agentic AI} eröffnet das neue Architektur- und Methodikfragen: Wie entwirft man robuste Agenten-Workflows? Wie orchestriert man Tool-Nutzung, Gedächtnis und Langkontext? Und wie integriert man Sicherheit, Nachvollziehbarkeit und Tests in agentische Systeme?\footnote{Praktische Orchestrierung bedeutet hier die Koordination von Planungsschritten, Werkzeugaufrufen und Gedächtniszugriffen in einer strukturierten Abfolge.}
+Vor diesem Hintergrund gewinnt Observability als Erweiterung klassischer Monitoring-Konzepte an Bedeutung. Ziel von Observability ist es, den internen Zustand eines Systems anhand extern erfassbarer Anzeichen nachvollziehen zu können. Dazu werden Metriken, Logs und Traces kombiniert, um Zusammenhänge zwischen Systemverhalten, Fehlern und Leistungsmerkmalen sichtbar zu machen \cite{sridharan2018distributed,faseeha2025observability}. Empirische Untersuchungen aus dem Bereich cloud-nativer Anwendungen zeigen, dass ein strukturierter Einsatz von Observability-Praktiken die Analyse von Incidents unterstützt und die Reaktionszeit im Betrieb verkürzen kann \cite{giamattei2024monitoring,sakinala2025observability}.
 
-\section{Problemstellung}
+Ein häufig verwendeter Orientierungsrahmen zur Strukturierung servicebezogener Beobachtungsdaten sind die von Google im Kontext des Site Reliability Engineering (SRE) beschriebenen \emph{Four Golden Signals}: Latenz, Traffic, Fehler und Sättigung \cite{ewaschukMonitoringDistributedSystems}. Diese Signalarten erfassen grundlegende technische Symptome eines Dienstes und eignen sich als Ausgangspunkt zur Ableitung erster Monitoring-Indikatoren. Für den produktiven Betrieb liefern sie jedoch primär Rohinformationen, die erst durch Kontext, Interpretation und Bewertung für Menschen handlungsrelevant werden. Google SRE weist selbst darauf hin, dass die Wirksamkeit solcher Signale maßgeblich davon abhängt, wie sie in Alerting, Entscheidungsprozesse und betriebliche Abläufe eingebettet sind \cite{ewaschukMonitoringDistributedSystems}.
 
-Vor dem Hintergrund adressiert die Arbeit exemplarisch die Entwicklung und Evaluation eines agentischen Systems für Softwareentwicklungsaufgaben (z.\,B. Refactoring, Code-Review, Generierung von Tests). Zentrale Fragen sind:
+Die Open-Source-Plattform \emph{frag.jetzt} verfügt über eine solide Entwicklungs- und Deployment-Infrastruktur, jedoch ist die Erfassung und Auswertung von Betriebsdaten derzeit nicht als durchgängiges Observability-Konzept ausgelegt. Metriken, Logs, Traces und Alerting werden nicht konsistent entlang des gesamten Anfragepfads betrachtet, wodurch Zusammenhänge zwischen Nutzerverhalten, Backend-Verarbeitung und externen Abhängigkeiten nur eingeschränkt nachvollziehbar sind. Diese Einschätzung stützt sich auf die öffentlich verfügbare Projektdokumentation und Architekturübersicht des frag.jetzt-Repositories \cite{fragjetztRepo} sowie auf allgemeine Beobachtungen zu typischen Defiziten in vergleichbaren Systemen \cite{giamattei2024monitoring}.
 
-\begin{itemize}
-  \item Wie lassen sich Agentenstrategien (Planen, Werkzeugaufrufe, Selbstkritik) systematisch modellieren?
-  \item Wie werden externe Werkzeuge (VCS, CI, Linter, Issue-Tracker) sicher und nachvollziehbar eingebunden?
-  \item Welche Metriken messen Fortschritt, Qualität und Sicherheit realistisch?
-\end{itemize}
- 
-Die hier formulierten Probleme sind sowohl konzeptioneller als auch praktischer Natur: Es geht nicht nur um abstrakte Modellierung von Strategien, sondern ebenso um konkrete Implementierungsfragen (Schnittstellen, Serialisierung, Fehlerbehandlung) und Evaluationsdesign (Benchmarks, Messgrößen, Reproduzierbarkeit). Die Ergebnisse sollen Entwicklerteams konkrete Handlungsempfehlungen geben, wie agentische Automatisierung schrittweise, sicher und messtechnisch abgesichert eingeführt werden kann.\index{Evaluation}
-\section{Zielsetzung}
+Ziel dieser Arbeit ist die Entwicklung einer Observability-Strategie für \emph{frag.jetzt}, bei der technische Messgrößen systematisch mit nutzungsbezogenen Fragestellungen verknüpft werden. Die Four Golden Signals dienen dabei als unterstützender Referenzrahmen zur Strukturierung der Beobachtungsdaten, nicht jedoch als alleinige Grundlage für betriebliche Entscheidungen. Die Signale werden servicespezifisch für das PWA-Frontend, das Spring-Boot-Backend, die PostgreSQL-Datenbank sowie angebundene KI-Dienste konkretisiert und in messbare Indikatoren überführt. Ergänzend wird untersucht, welche Open-Source-Observability-Werkzeuge die Anforderungen von \emph{frag.jetzt} im Hinblick auf Erfassung und betriebliche Nutzbarkeit am besten erfüllen.
 
-Die Ziele der Arbeit sind auf die Spezialisierung \enquote{Software Engineering mit agentic AI} zugeschnitten:\footnote{Siehe auch~\cite{wang2023survey} für verwandte Arbeiten zu Agentenarchitekturen.}
+Ein weiterer Schwerpunkt der Arbeit liegt auf der Ausgestaltung eines Alerting-Ansatzes, der Auffälligkeiten innerhalb der Plattform mit Fragen der Relevanz und Dringlichkeit verknüpft. Dabei steht nicht allein die Detektion von Abweichungen im Vordergrund, sondern insbesondere die Bewertung, ob eine Handlung erforderlich ist, wen ein Problem betrifft und welche Auswirkungen es auf die Nutzung der Plattform hat. Forschungsarbeiten zeigen, dass eine Kombination aus priorisiertem Alerting und datenbasierten Analyseverfahren dazu beitragen kann, irrelevante Alarmierungen zu reduzieren und menschliche Entscheidungsprozesse im Betrieb zu unterstützen \cite{jalalvand2024alert}. Aufbauend auf den definierten Alerts werden Runbooks konzipiert, die strukturierte Diagnose- und Handlungsschritte für wiederkehrende Incident-Szenarien bereitstellen.
+
+\section{Forschungsfragen}
+\label{sec:forschungsfragen}
+
+Die Forschungsfragen dieser Arbeit lauten:
 
 \begin{enumerate}
-  \item Analyse des Forschungsstands zu agentischen Architekturen und Orchestrierungsframeworks
-  \item Entwurf einer referenzierbaren Agentenarchitektur für Software-Engineering-Aufgaben
-  \item Implementierung eines prototypischen Agenten mit Werkzeuganbindung und Gedächtnis
-  \item Evaluation anhand reproduzierbarer Benchmarks (Qualität, Kosten, Laufzeit, Sicherheit)
+    \item Wie können die Four Golden Signals für die spezifischen Services von \emph{frag.jetzt} (PWA-Frontend, Spring Boot Backend, PostgreSQL, KI-Services) konkret definiert und instrumentiert werden?
+    \item Welche Observability-Stack-Kombination (Prometheus/Grafana, ELK Stack, Jaeger) ist am besten geeignet für die Monitoring-Anforderungen von \emph{frag.jetzt}?
+    \item Wie kann ein intelligentes Alert-System entwickelt werden, das False Positives minimiert und actionable insights für verschiedene Stakeholder-Rollen (DevOps, Entwickler, Product Owner) bereitstellt?
 \end{enumerate}
- 
-Kurz gefasst zielt die Arbeit darauf ab, aus Praxisproblemen generalisierbare Lösungen abzuleiten: Neben einem lauffähigen Prototyp steht die Frage im Vordergrund, welche Architekturmuster sich zuverlässig übertragen lassen und welche Messgrößen praktikabel den Mehrwert gegenüber manuellen Prozessen quantifizieren. Damit richtet sich die Arbeit an Praktiker und Forschende gleichermaßen.
-\section{Abgrenzung des Themas}
-
-Die Arbeit fokussiert Agenten für Softwareentwicklungsaufgaben. Nicht im Fokus sind z.\,B. Reinforcement Learning from Human Feedback (RLHF) im Detail, Trainingsmethoden auf Rohdaten oder proprietäre Interna von Foundation Models. Ebenso werden Domänen außerhalb der Softwareentwicklung (z.\,B. Robotik) nicht betrachtet.
-
-\begin{itemize}
-  \item Zu komplexe Spezialfälle, die für die Arbeit nicht relevant sind
-  \item Historische Entwicklungen vor einem bestimmten Zeitpunkt
-  \item Randbereiche, die außerhalb des Fokus liegen
-\end{itemize}
- 
-Die Konzentration auf pragmatische, reproduzierbare Ergebnisse erlaubt es, bewusst auf tiefe ML-Trainingsfragen zu verzichten; stattdessen wird die Interaktion mit bestehenden Foundation Models über APIs und Adapterlösungen untersucht. Die Fokussierung erleichtert die Nachvollziehbarkeit der Ergebnisse und erhöht die direkte Anwendbarkeit in typischen Software-Engineering-Umgebungen.
-\section{Aufbau der Arbeit}
-
-Der Aufbau der Arbeit folgt einem pragmatischen Workflow: Zunächst werden in Kapitel~\ref{ch:hintergrund} die relevanten Grundlagen und verwandte Arbeiten zusammengetragen, um die fachliche Basis zu legen. Darauf aufbauend beschreibt Kapitel~\ref{ch:konzept} die entworfene Referenzarchitektur mit Fokus auf Zustandsmodellierung, Policy-Design und Schnittstellen. Kapitel~\ref{ch:realisierung} dokumentiert die Implementierung des Prototyps, zeigt zentrale Code-Beispiele und erläutert Integrationsdetails. Abschließend fasst Kapitel~\ref{ch:abschluss} die Ergebnisse zusammen, diskutiert Limitationen und gibt einen Ausblick auf weiterführende Forschungs- und Entwicklungsfragen.
-
-Insgesamt soll die Arbeit nicht nur eine theoretische Diskussion bieten, sondern konkrete, übertragbare Architekturentscheidungen und Metriken bereitstellen, die in produktiven Entwicklungsumgebungen einsetzbar sind.\index{Agentenarchitektur}

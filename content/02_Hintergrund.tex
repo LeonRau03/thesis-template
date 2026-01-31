@@ -1,222 +1,80 @@
 % !TEX root = ../Thesis.tex
 
-\chapter{Theoretischer Hintergrund}
-\label{ch:hintergrund}%
-\index{Agenten-Architektur}%
-\index{Tool-Nutzung}%
-\index{Langkontext}%
+\chapter{Theoretische Fundierung}
+\label{ch:theorie}
 
-\section{Grundkonzepte}
+Moderne Softwarelösungen sind zunehmend durch verteilte Architekturen, Cloud-native Technologien und eine hohe Änderungsdynamik geprägt. Insbesondere Microservice-basierte Anwendungen mit Container-Orchestrierung und Continuous Deployment erhöhen die Komplexität des Betriebs erheblich \cite{sakinala2025observability}. Klassische Monitoring-Ansätze, die primär auf vordefinierte Metriken und statische Schwellwerte setzen, stoßen in solchen Umgebungen an ihre Grenzen, da sie häufig nur bekannte Fehlerzustände erfassen und wenig Unterstützung bei der Ursachenanalyse bieten \cite{sridharan2018distributed}.
 
-Das Kapitel führt in Grundbegriffe agentischer Systeme ein und bildet die theoretische Basis für Konzept und Implementierung.\footnote{Die Grundbegriffe basieren auf etablierten Konzepten aus der KI-Forschung, werden aber im Kontext von Software Engineering neu interpretiert.}
+Vor diesem Hintergrund hat sich der Ansatz der \emph{Observability} als wichtiges Konzept für den Betrieb moderner Systeme etabliert. Observability zielt darauf ab, den internen Zustand eines Systems anhand externer Messwerte nachvollziehbar zu machen und dadurch auch unbekannte oder unerwartete Fehlerszenarien analysierbar zu gestalten \cite{abieba2025advanced}.
 
-\subsection{Large Language Models: Grundlagen}
+\section{Begriffliche Grundlagen: Monitoring und Observability}
+\label{sec:grundlagen}
 
-Large Language Models (LLMs)\index{Large Language Models!Grundlagen} sind neuronale Netze, die auf großen Textkorpora\index{Textkorpora!Training} trainiert wurden und menschenähnliche Textgenerierung ermöglichen~\cite{OpenAI2024GPT4,touvron2023llama}. Basierend auf der Transformer-Architektur\index{Transformer!Architektur}~\cite{vaswani2017attention} nutzen sie Selbstaufmerksamkeits-Mechanismen\index{Self-Attention} (Self-Attention), um kontextuelle Zusammenhänge über lange Sequenzen hinweg zu erfassen.
+Der Begriff Observability stammt ursprünglich aus der System- und Regelungstheorie und beschreibt die Fähigkeit, interne Zustände eines Systems aus dessen Ausgaben abzuleiten. Übertragen auf heutige Softwareanwendungen bezeichnet Observability die Eigenschaft, das Verhalten einer Application durch geeignete Telemetriedaten nachvollziehbar zu machen \cite{sridharan2018distributed}.
 
-Moderne LLMs wie GPT-4, Claude 3.5 oder Llama 3 verfügen über Milliarden von Parametern und können durch \emph{Few-Shot-Learning}\index{Few-Shot-Learning} und \emph{In-Context-Learning}\index{In-Context-Learning} Aufgaben lösen, ohne explizit darauf trainiert zu werden. Das bildet die Grundlage für agentische Anwendungen\index{Agentische Anwendungen}.
+Monitoring und Observability sind dabei eng miteinander verbunden, jedoch nicht gleichzusetzen. Monitoring fokussiert sich auf die Überwachung bekannter Metriken und Ereignisse, um Abweichungen vom erwarteten Normalzustand zu erkennen. Observability erweitert diesen Ansatz, indem sie Kontextinformationen bereitstellt, die eine detaillierte Analyse von Ursachen und Zusammenhängen ermöglichen \cite{faseeha2025observability}. In der Literatur wird Observability daher häufig als Weiterentwicklung oder Übermenge des klassischen Monitorings beschrieben.
 
-\subsection{Von LLMs zu Agenten: Der Paradigmenwechsel}
+Zentral für Observability ist die systematische Erfassung unterschiedlicher Telemetriearten. Erst durch die kombinierte Betrachtung verschiedener Daten wird es möglich, komplexe Systemzustände sowie Ursachen von Fehlern zuverlässig zu analysieren \cite{abieba2025advanced,sakinala2025observability}.
 
-Während klassische LLMs primär auf Textvervollständigung spezialisiert sind, zeichnen sich \emph{agentische Systeme} durch erweiterte Fähigkeiten aus~\cite{wang2023survey}. Zentral ist das \textbf{zielgerichtete Handeln}\index{Agent!Zielgerichtetheit}: Der Agent versteht übergeordnete Ziele und plant systematisch Schritte zur Zielerreichung\index{Zielerreichung}. Die \textbf{Werkzeugnutzung}\index{Externe Tools} ermöglicht die Integration externer Tools wie APIs, Datenbanken und Code-Ausführung\index{Code-Ausführung}, wodurch die Fähigkeiten über reine Textgenerierung hinausgehen. Ein persistentes \textbf{Gedächtnis}\index{Kontextpersistierung} speichert Kontextinformationen über mehrere Interaktionen hinweg und ermöglicht kontextbewusstes Arbeiten. Durch \textbf{Reflexion}\index{Selbstbewertung} erfolgt eine selbstkritische Bewertung eigener Outputs mit iterativer Verbesserung. Schließlich unterstützt \textbf{mehrschrittige Planung}\index{Task-Dekomposition} die Dekomposition komplexer Aufgaben in ausführbare Teilschritte.
+\section{Kernbausteine der Observability}
+\label{sec:kernbausteine}
 
-\subsection{Agentic AI: Begriffe und Bausteine}
+In der Literatur werden vier Hauptelemente der Observability unterschieden: Metriken, Logs, Traces und Alerting. Diese Bausteine ergänzen sich gegenseitig und bilden gemeinsam die Grundlage für eine umfassende Analyse des Laufzeitverhaltens moderner Softwaresysteme \cite{abieba2025advanced,sakinala2025observability}.
 
-Kernbausteine agentischer Systeme sind \cite{weng2023prompt,yao2023react}:
+\textbf{Metriken} sind numerische Messwerte, die den Zustand oder das Verhalten einer Anwendung über die Zeit hinweg beschreiben, beispielsweise Antwortzeiten, Fehlerraten oder Ressourcenauslastung. Sie eignen sich besonders für Trendanalysen, Kapazitätsplanung und die Definition von Service-Level-Zielen. Aufgrund ihrer aggregierten Form ermöglichen Metriken eine effiziente Überwachung auch großer Softwaresysteme \cite{sakinala2025observability}.
 
-\begin{description}
-  \item[Zustand (State):] Umfasst aktuellen Kontext\index{State Management}, Ziele, Erinnerungen und Tool-Status\index{Tool-Status}. Der Zustand wird dynamisch aktualisiert\index{Zustandsaktualisierungen}.
-  
-  \item[Policy:] Steuert Entscheidungsprozesse (Planung, Aktion, Selbstkritik)\index{Policy!Entscheidungsfindung}. Kann regelbasiert\index{Regelbasierte Policy} oder LLM-gesteuert\index{LLM-gesteuerte Policy} sein.
-  
-  \item[Werkzeuge (Tools):] Externe Funktionen wie Code-Ausführung, Websuche\index{Websuche}, Dateizugriff, VCS-Operationen\index{VCS-Operationen}. Tools erweitern die Fähigkeiten des Agenten über reine Textgenerierung hinaus~\cite{schick2023toolformer,qin2023tool}.
-  
-  \item[Gedächtnis (Memory):] Speichert episodische (konkrete Ereignisse) und semantische (abstraktes Wissen) Informationen. Kann durch Vektor-Datenbanken oder strukturierte Speicher realisiert werden.
-\end{description}
+\textbf{Logs} bestehen aus ereignisbasierten Textinformationen, die detaillierte Einblicke in den Ablauf einzelner Systemkomponenten liefern. Sie enthalten kontextreiche Informationen, etwa Fehlermeldungen oder Zustandsänderungen, und sind insbesondere für die Ursachenanalyse und das Debugging grundlegend. Der Nachteil von Logs liegt in ihrem hohen Volumen und der vergleichsweise aufwändigen Auswertung \cite{abieba2025advanced}.
 
-Orchestrierung koordiniert diese Komponenten durch Planung (z.\,B. ReAct-Pattern), Tool-Auswahl, Fehlerbehandlung und Reflexion~\cite{yao2023react}. Typische Artefakte in SE-Workflows sind strukturierte Schnittstellen über \textbf{JSON} und \textbf{YAML}, Datenpersistenz mittels \textbf{SQL}-Datenbanken sowie sichere Remote-Operationen über \textbf{SSH}. Darüber hinaus basieren viele Komponenten auf \textbf{ML}-Methoden und \textbf{NLP} für Code- und Textverstehen; Wissensrepräsentation erfolgt in \textbf{KB} (Wissensdatenbanken) und \textbf{KG} (Wissensgraphen). API-Interaktionen erfolgen üblicherweise über \textbf{HTTP} und \textbf{REST}, teils mit Fallbacks auf \textbf{XML}.
+\textbf{Traces} dienen der Nachverfolgung einzelner Anfragen über mehrere Services hinweg. Sie zeigen, welche Komponenten an der Verarbeitung beteiligt waren und wie viel Zeit in den jeweiligen Verarbeitungsschritten verbracht wurde. Distributed Tracing ist insbesondere in Microservice-Architekturen ein essenzielles Mittel zur Identifikation von Latenzengpässen und Abhängigkeitsproblemen \cite{albuquerque2025tracing}.
 
-\subsection{Chain-of-Thought und Reasoning-Patterns}
+\textbf{Alerting} ergänzt die passive Beobachtung durch aktive Benachrichtigung bei kritischen Zuständen. Alerts werden typischerweise auf Basis von Metriken oder Log-Ereignissen ausgelöst und sollen Betreiber frühzeitig auf Probleme hinweisen. Eine zentrale Herausforderung besteht darin, Alarmregeln so zu gestalten, dass relevante Vorfälle erkannt werden, ohne eine hohe Anzahl an Fehlalarmen zu erzeugen \cite{jalalvand2024alert}.
 
-\emph{Chain-of-Thought (CoT)} Prompting~\cite{wei2022chain} ermöglicht es LLMs, Zwischenschritte explizit zu formulieren. Das verbessert die Reasoning-Qualität erheblich:
+Erst das Zusammenspiel dieser vier Bausteine ermöglicht eine umfassende Observability. Während Metriken einen schnellen Überblick liefern, stellen Logs und Traces den notwendigen Detailgrad für die Ursachenanalyse bereit. Alerting sorgt schließlich dafür, dass Abweichungen zeitnah erkannt und adressiert werden können.
 
-\begin{quote}
-\textit{\enquote{Let's think step by step}} — Typischer CoT-Prompt, der schrittweises Denken anregt
-\end{quote}
+\section{Die Four Golden Signals nach Google SRE}
+\label{sec:golden-signals}
 
-Erweiterte Muster umfassen:
-\begin{itemize}
-  \item \textbf{ReAct} (Reasoning + Acting): Kombiniert Gedankenketten mit Tool-Aufrufen~\cite{yao2023react}
-  \item \textbf{Tree-of-Thought}: Exploriert mehrere Reasoning-Pfade parallel
-  \item \textbf{Reflexion}: Self-critique und iterative Verbesserung~\cite{shinn2023reflexion}
-\end{itemize}
-
-\subsection{Tool-Nutzung in LLMs}
-
-Die Fähigkeit von LLMs, externe Werkzeuge zu nutzen, ist zentral für praktische Anwendungen. \emph{Toolformer}~\cite{schick2023toolformer} zeigte, dass LLMs lernen können, wann und wie Tools aufzurufen sind. ToolLLM~\cite{qin2023tool} erweiterte dies auf über 16.000 reale APIs.
-
-Typischer Tool-Calling-Flow:
-\begin{enumerate}
-  \item Agent identifiziert Bedarf für externes Tool
-  \item Generierung strukturierter Tool-Aufruf-Parameter (meist JSON)
-  \item Ausführung durch Host-System
-  \item Integration des Ergebnisses in Kontext
-  \item Fortsetzung der Aufgabe
-\end{enumerate}
-
-\subsection{Etablierte Frameworks und Plattformen}
-
-Praxisnahe Frameworks bieten Abstraktionen für agentische Systeme~\cite{wu2023autogen}:\footnote{\emph{ReAct} steht für \enquote{Reasoning and Acting} und ist eines der einflussreichsten Muster für agentische Systeme in der neueren Literatur.}
+Die \emph{Four Golden Signals} stellen ein technisches Referenzmodell zur Beobachtung von Diensten dar und wurden im Rahmen des Site Reliability Engineering von Google entwickelt \cite{ewaschukMonitoringDistributedSystems}. Sie beschreiben vier wesentliche technische Messgrößen, anhand derer sich Symptome von Leistungs- oder Stabilitätsproblemen identifizieren lassen:
 
 \begin{itemize}
-  \item \textbf{LangChain}~\cite{chase2023langchain}: Modulare Komponenten für Chains, Agents, Memory
-  \item \textbf{AutoGPT/BabyAGI}: Autonome Task-Decomposition und -Execution
-  \item \textbf{MetaGPT}~\cite{hong2023metagpt}: Rollenbasierte Multi-Agent-Kollaboration
-  \item \textbf{Generative Agents}~\cite{park2023generative}: Simulation menschlichen Verhaltens
+    \item \textbf{Latency}: Die Zeitspanne zur Bearbeitung einer Anfrage. Hohe oder stark schwankende Latenzen weisen auf Performanceprobleme hin.
+    \item \textbf{Traffic}: Das Anfrage- oder Datenvolumen, das auf einen Dienst einwirkt, beispielsweise gemessen in Requests pro Sekunde.
+    \item \textbf{Error}: Die Rate fehlgeschlagener Anfragen, etwa durch Serverfehler oder funktionale Fehlzustände.
+    \item \textbf{Saturation}: Der Auslastungsgrad kritischer Ressourcen wie CPU, Speicher oder Warteschlangen.
 \end{itemize}
 
-\section{Verwandte Arbeiten}
+Google empfiehlt, diese Signale als erste Orientierung im Monitoring zu nutzen, betont jedoch zugleich, dass ihre Aussagekraft stark vom jeweiligen Nutzungskontext abhängt \cite{ewaschukMonitoringDistributedSystems}. Insbesondere für Alerting und operative Entscheidungen ist eine Ergänzung durch Kontextinformationen erforderlich, etwa zur aktuellen Nutzungssituation, zur betroffenen Nutzergruppe oder zur zeitlichen Relevanz eines Problems. Ohne diese Einbettung besteht die Gefahr, dass technisch korrekte Anzeichen zu unnötigen oder nicht handlungsrelevanten Alarmierungen führen.
 
-Es existiert umfangreiche Literatur zu agentischen Systemen im Allgemeinen und ihrer Anwendung im Software Engineering im Besonderen. Der Abschnitt strukturiert relevante Arbeiten nach thematischen Schwerpunkten.
+\section{Die Plattform frag.jetzt und ihre Systemarchitektur}
+\label{sec:fragjetzt}
 
-\subsection{Reasoning-and-Acting-Patterns}
+Die vorliegende Arbeit bezieht sich exemplarisch auf die Q\&A-Plattform \textit{frag.jetzt}, eine Cloud-native Webanwendung mit serviceorientierter Architektur. Die Plattform wurde an der Technischen Hochschule Mittelhessen entwickelt und dient der Durchführung interaktiver Fragerunden. Neben klassischer Frage-Antwort-Funktionalität integriert \textit{frag.jetzt} auch KI-gestützte Assistenzfunktionen zur automatisierten Beantwortung von Nutzeranfragen \cite{fragjetztRepo}.
 
-\textbf{ReAct}~\cite{yao2023react} etablierte das grundlegende Pattern, bei dem LLMs explizit zwischen Reasoning-Schritten (Denken) und Acting-Schritten (Tool-Aufrufe) alternieren. Das Paper demonstrierte signifikante Verbesserungen bei question-answering und decision-making Tasks.
-\textbf{ReAct}~\cite{yao2023react} etablierte das grundlegende Pattern, bei dem LLMs explizit zwischen Reasoning-Schritten (Denken) und Acting-Schritten (Tool-Aufrufe) alternieren. Das Paper demonstrierte signifikante Verbesserungen bei Question-Answering und Decision-Making-Tasks.
-
-\textquote[\cite{yao2023react}]{Die Kombination von reasoning und acting führt zu robusteren und transparenteren Systemen, die besser nachvollziehbare Entscheidungen treffen.}
-
-Die Vorteile umfassen:
-\begin{itemize}
-  \item Erhöhte Transparenz durch explizite Reasoning-Traces
-  \item Bessere Fehlerdiagnose bei fehlgeschlagenen Tool-Aufrufen
-  \item Möglichkeit zur Intervention und Korrektur
-\end{itemize}
-
-Grenzen sind längere Latenzen durch zusätzliche LLM-Aufrufe und potentielle Halluzinationen in Reasoning-Schritten.
-
-\textbf{Reflexion}~\cite{shinn2023reflexion} erweitert ReAct um Self-Critique: Der Agent bewertet seine eigenen Outputs und lernt aus Fehlern durch verbale Bestärkung. Das verbessert die Erfolgsrate bei komplexen Tasks um bis zu \pct{20}.
-
-\subsection{Software Engineering Agents}
-
-Speziell für Software Engineering wurden mehrere agentische Systeme entwickelt:
-
-\textbf{SWE-bench}~\cite{jimenez2023swe} ist ein Benchmark mit über 2.000 realen GitHub-Issues aus Python-Projekten. Es misst, ob Agenten eigenständig Pull Requests erstellen können, die die Issues lösen. Baseline-Systeme erreichen nur \pct{3}--\pct{5} Erfolgsrate, was die Schwierigkeit unterstreicht.
-
-\textbf{SWE-agent}~\cite{yang2024sweagent} demonstrierte, dass optimierte Agent-Computer-Interfaces (ACIs) die Erfolgsrate auf \pct{12.5} steigern können. Zentral sind:
-\begin{itemize}
-  \item Spezialisierte Tools für Navigation, Suche und Editieren
-  \item Kontextoptimierte Feedback-Formate
-  \item Iterative Verfeinerungsschleifen
-\end{itemize}
-
-\textbf{Agentless}~\cite{zhang2024agentless} verfolgte einen minimalistischen Ansatz ohne persistentes Gedächtnis oder komplexe Planung und erreichte dennoch \pct{27} Erfolgsrate durch fokussierte Lokalisierung und Patching-Strategien. Das zeigt, dass nicht immer maximale Komplexität optimal ist.
-
-\subsection{Multi-Agent-Systeme}
-
-Mehrere Ansätze nutzen rollenbasierte Kollaboration zwischen spezialisierten Agenten:
-
-\textbf{MetaGPT}~\cite{hong2023metagpt} simuliert ein Software-Team mit Rollen wie Produktmanager, Architekt, Entwickler und QS. Agents produzieren strukturierte Artefakte (PRDs, Designdokumente, Code, Tests) und folgen einem definierten Workflow.
-
-\textbf{Generative Agents}~\cite{park2023generative} fokussierte auf realistische Simulation menschlichen Verhaltens durch episodisches Gedächtnis, Reflexion und Planung. Obwohl primär für Simulationen konzipiert, sind die Gedächtnis-Mechanismen auch für SE-Agents relevant.
-
-\textbf{MINDSTORMS}~\cite{zhuge2023mindstorms} implementiert Societies-of-Mind-Konzepte mit natürlicher Sprache: Spezialisierte Sub-Agenten lösen Teilprobleme und kommunizieren über strukturierte Protokolle.
-
-\subsection{Graph-/Workflow-basierte Orchestrierung}
-
-Graphen erlauben robuste Kontrollflüsse (Retry, Branching, Parallelisierung), klare Zustandsübergänge und bessere Testbarkeit~\cite{wu2023autogen}. LangGraph erweitert LangChain um zustandsbasierte Graphen mit deterministischen Übergängen.
-
-Vorteile:
-\begin{itemize}
-  \item Explizite Modellierung von Kontrollfluss
-  \item Einfaches Debugging und Visualisierung
-  \item Unterstützung für Streaming und Parallelisierung
-\end{itemize}
-
-Grenzen: Initialer Modellierungsaufwand, weniger Flexibilität als vollständig LLM-gesteuertes Routing.
-
-\subsection{Evaluations-Benchmarks}
-
-Neben SWE-bench existieren weitere Benchmarks:
-\begin{itemize}
-  \item \textbf{HumanEval/MBPP}: Code-Generierung aus Beschreibungen
-  \item \textbf{APPS}: Algorithm-Problemlösung
-  \item \textbf{CodeContests}: Competitive Programming Tasks
-\end{itemize}
-
-Sie fokussieren primär auf Code-Generierung, nicht auf vollständige agentische Workflows.
-
-\section{Vergleich und Bewertung}
-
-Tabelle~\ref{tab:agententypen} vergleicht typische Agententypen nach ihren Kernfähigkeiten. Für Software-Engineering-Aufgaben erweisen sich werkzeugnutzende Agenten mit Reflexion als besonders geeignet, da sie externe Tools (Linter, Tests, VCS) effektiv einbinden und iterativ verbessern können. Daraus leitet sich die in Kapitel~\ref{ch:konzept} entwickelte Architektur ab.
-
-\begin{table}[ht]
-\centering
-\caption{Vergleich agentischer Systemtypen nach Fähigkeiten und Anwendungsbereich}
-\label{tab:agententypen}
-\begin{tabular}{L{3.5cm}L{4.5cm}L{4.5cm}}
-\toprule
-\cellcolor{headercolor}\textcolor{white}{\textbf{Agententyp}} & \cellcolor{headercolor}\textcolor{white}{\textbf{Kernfähigkeiten}} & \cellcolor{headercolor}\textcolor{white}{\textbf{Typischer Einsatz}} \\
-\midrule
-Reaktiver Agent & Direkte Stimulus-Response; kein Gedächtnis; schnelle Reaktionszeit & Einfache Klassifikation, FAQ-Bots, Code-Completion \\
-\rowcolor{rowcolorgray}
-Planender Agent & Zieldekomposition; Schrittplanung; kein Tool-Aufruf & Aufgabenplanung, Tutorialsysteme, Brainstorming \\
-Werkzeugnutzender Agent & Tool-Integration; API-Calls; Code-Execution & Web-Search, Data Analysis, Simple Automation \\
-\rowcolor{rowcolorgray}
-Reflektierender Agent & Selbstkritik; Iterative Verbesserung; Fehlerkorrektur & Code Review, Qualitätssicherung, Optimization \\
-Mehragentensystem & Rollenbasierte Kollaboration; Kommunikation; Spezialisierung & Komplexe SE-Workflows, Team-Simulation \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Aus der Analyse lassen sich folgende Designprinzipien für SE-Agents ableiten:
-
-\begin{enumerate}
-  \item \textbf{Tool-First-Design:} SE-Tasks erfordern Zugriff auf Entwicklungsumgebung (IDEs, CLI, Tests)
-  \item \textbf{Reflexion ist essentiell:} Code-Qualität benötigt iterative Verbesserung
-  \item \textbf{Kontextmanagement:} Lange Codebases erfordern effiziente Kontextfenster
-  \item \textbf{Sicherheitsmechanismen:} Code-Ausführung erfordert Sandboxing und Validierung
-\end{enumerate}
-
-\section{Forschungslücke}
-
-Basierend auf der Analyse ergeben sich folgende offene Forschungsfragen und Lücken:
-
-\subsection{Architektonische Lücken}
+Zur Einordnung der späteren Observability-Strategie wird im Folgenden ein Überblick über die Architekturkomponenten der Plattform gegeben \cite{fragjetztRepo}:
 
 \begin{itemize}
-  \item \textbf{Fehlende Referenzarchitekturen:} Während Frameworks wie LangChain Bausteine bieten, fehlen validierte End-to-End-Architekturen für SE-Workflows
-  \item \textbf{Tool-Interface-Design:} Unklar ist, wie Werkzeugschnittstellen optimal gestaltet werden sollten (granular vs. high-level, synchron vs. asynchron)
-  \item \textbf{Gedächtnis-Strategien:} Welche Informationen sollten episodisch vs. semantisch gespeichert werden?
+    \item \textbf{Angular Frontend (SPA/PWA)}: Eine Single-Page-Application, über die Nutzer mit dem System interagieren. Das Frontend ist als Progressive Web App umgesetzt und kommuniziert überwiegend über HTTPS-APIs sowie WebSockets mit dem Backend.
+    \item \textbf{WebSocket-Gateway (NGINX)}: Ein Gateway-Server zur Vermittlung der bidirektionalen Echtzeitkommunikation zwischen Frontend und Backend, insbesondere für das asynchrone Pushen von Antworten und Statusupdates.
+    \item \textbf{Spring Boot Backend}: Der zentrale, Java-basierte Anwendungsserver, der die Kernlogik der Plattform implementiert. Er verarbeitet Nutzeranfragen, koordiniert interne Dienste und stellt REST- sowie WebSocket-Schnittstellen bereit.
+    \item \textbf{Keycloak Identity Service}: Ein externer Dienst zur Authentifizierung und Autorisierung von Nutzern. Er übernimmt das Identitätsmanagement, führt jedoch zusätzliche Abhängigkeiten und potenzielle Latenzpunkte ein.
+    \item \textbf{PostgreSQL-Datenbank}: Eine relationale Datenbank zur Persistierung des Anwendungszustands, etwa für Benutzerkonten, Fragen und Antworten. Aufgrund ihrer Rolle bei der Verarbeitung und Speicherung aller zustandsbehafteten Daten stellt sie einen kritischen Ausfallpunkt, einen sogenannten Single Point of Failure, bei hoher Last dar.
+    \item \textbf{KI-Backend (Langchain \& FastAPI)}: Ein eigenständiger Microservice, der über Python (FastAPI) und die Langchain-Bibliothek Anfragen an externe Large-Language-Modelle weiterleitet, um KI-generierte Antworten zu erzeugen. Die Abhängigkeit von externen KI-APIs bringt variable Antwortzeiten und zusätzliche Fehlerquellen mit sich.
+    \item \textbf{RabbitMQ Message Broker}: Ein Message-Broker zur asynchronen Entkopplung von Backend- und KI-Komponenten. RabbitMQ ermöglicht das Puffern und Weiterleiten von Antwortnachrichten und unterstützt so eine entkoppelte und skalierbare Verarbeitung.
 \end{itemize}
 
-\subsection{Evaluations-Herausforderungen}
+Diese verteilten Komponenten bilden gemeinsam den durchgängigen Anfragepfad der Plattform. Eine Nutzerfrage durchläuft typischerweise mehrere Dienste, bevor eine Antwort an das Frontend zurückgegeben wird. Dadurch entstehen zahlreiche Schnittstellen und potenzielle Fehlerquellen. Eine Observability-Strategie für \textit{frag.jetzt} muss daher sicherstellen, dass entlang dieses gesamten Pfades geeignete Metriken, Logs und Traces erfasst werden, um Performanceprobleme und Ausfälle nachvollziehbar analysieren zu können \cite{faseeha2025observability}.
+
+\section{Werkzeuge für Monitoring und Observability}
+\label{sec:werkzeuge}
+
+Zur Umsetzung von Monitoring- und Observability-Konzepten steht eine Vielzahl spezialisierter Open-Source-Werkzeuge zur Verfügung, die in modernen Cloud- und Microservice-Architekturen etabliert sind. Diese Werkzeuge adressieren unterschiedliche Aspekte der Telemetrieerfassung und -auswertung und werden häufig in Kombination eingesetzt \cite{banerjee2024comparative}.
 
 \begin{itemize}
-  \item \textbf{Realistische Metriken:} SWE-bench misst nur Issue-Resolution, nicht Code-Qualität, Wartbarkeit oder Security
-  \item \textbf{Kosten-Nutzen-Analysen:} Token-Kosten vs. Entwicklerzeit-Ersparnis sind schwer zu quantifizieren
-  \item \textbf{Sicherheit und Robustheit:} Wie messen wir Resistenz gegen Prompt-Injection oder schädliche Tools?
+    \item \textbf{Prometheus}: Eine Open-Source-Software zur Erfassung und Speicherung zeitbasierter Metriken. Prometheus arbeitet mit einem Pull-basierten Ansatz, bei dem Metrik-Endpunkte regelmäßig abgefragt werden. Die integrierte Abfragesprache PromQL erlaubt detaillierte Analysen von Zeitreihendaten und bildet die Grundlage für regelbasierte Alerting-Mechanismen. Prometheus ist als CNCF-Projekt weit verbreitet und insbesondere für dynamische Cloud-Umgebungen geeignet \cite{banerjee2024comparative}.
+    \item \textbf{Grafana}: Eine Plattform zur Visualisierung und Analyse von Observability-Daten aus unterschiedlichen Datenquellen. Grafana dient häufig als Dashboard-Werkzeug, in dem Metriken, Logs und Traces gemeinsam dargestellt und korreliert werden können. Dadurch unterstützt Grafana die visuelle Analyse von Systemzuständen und Trends \cite{giamattei2024monitoring}.
+    \item \textbf{Elastic Stack (ELK)}: Der Elastic Stack kombiniert Elasticsearch, Logstash und Kibana und wird vor allem für die zentrale Aggregation und Analyse von Logdaten eingesetzt. Die Stärke des Stacks liegt in der skalierbaren Speicherung unstrukturierter Daten sowie in leistungsfähigen Such- und Analysefunktionen. Neben Logs unterstützt Elastic auch Metriken und Tracing, erfordert jedoch vergleichsweise hohe Systemressourcen \cite{banerjee2024comparative}.
+    \item \textbf{Jaeger}: Ein verteiltes Tracing-Tool zur Nachverfolgung von Anfragen über Service-Grenzen hinweg. Jaeger ermöglicht die Analyse von End-to-End-Latenzen und unterstützt die Identifikation von Performanceengpässen sowie Abhängigkeitsbeziehungen in Microservice-Architekturen \cite{albuquerque2025tracing}.
+    \item \textbf{OpenTelemetry}: Ein herstellerneutraler Standard zur Instrumentierung von Anwendungen. OpenTelemetry (OTel) stellt ein einheitliches API und SDK zur Erfassung von Metriken, Logs und Traces bereit und erlaubt die Weiterleitung dieser Daten an unterschiedliche Backends. Dadurch wird die Telemetrieerfassung von der Wahl konkreter Observability-Werkzeuge entkoppelt \cite{albuquerque2025tracing}.
 \end{itemize}
 
-\subsection{Skalierungs- und Kostenfragen}
-
-\begin{itemize}
-  \item \textbf{Langer Kontext:} Bei großen Codebases (\textgreater 100\,k LOC) stoßen selbst 1\,M-Token-Kontextfenster an Grenzen
-  \item \textbf{Viele Tool-Aufrufe:} Jeder Tool-Call erhöht Latenz und Kosten
-  \item \textbf{Parallelisierung:} Können unabhängige Teilaufgaben parallel bearbeitet werden?
-\end{itemize}
-
-\subsection{Beitrag der Arbeit}
-
-Die Arbeit adressiert die identifizierten Lücken durch:
-
-\begin{enumerate}
-  \item Entwicklung einer dokumentierten Referenzarchitektur für SE-Agents
-  \item Praxisnahe Implementierung mit Werkzeugschnittstellen-Richtlinien
-  \item Evaluation anhand realistischer Metriken (Erfolgsrate, Qualität, Kosten, Safety)
-  \item Ableitung von Best Practices für Kontextmanagement und Kostenoptimierung
-\end{enumerate}
-
-Die folgenden Kapitel beschreiben Konzept (Kapitel~\ref{ch:konzept}), Implementierung (Kapitel~\ref{ch:realisierung}) und Evaluation im Detail.
-
-Zusätzlich zu den theoretischen Grundlagen ist es wichtig, die praktische Relevanz herauszustellen: Viele der hier diskutierten Patterns lassen sich unmittelbar in bestehende CI/CD-Pipelines integrieren und bieten dort schnelle Produktivitätsgewinne. Die anschließende Arbeit prüft deshalb nicht nur theoretische Eigenschaften, sondern evaluiert konkrete Integrationspfade in typische Entwickler-Workflows und berichtet über pragmatische Umsetzungsdetails, die den Transfer in produktive Umgebungen erleichtern. Die Kombination aus Theorie und Praxis bildet das Rückgrat der vorliegenden Untersuchung.
+Die Auswahl geeigneter Werkzeuge erfolgt typischerweise anhand mehrerer Bewertungskriterien, darunter die unterstützten Telemetriearten, Integrationsfähigkeit, Skalierbarkeit, Analyse- und Visualisierungsfunktionen sowie der Reifegrad der jeweiligen Lösung \cite{giamattei2024monitoring}. Diese Kriterien bilden die Grundlage für eine spätere vergleichende Analyse im Rahmen der Methodik.
