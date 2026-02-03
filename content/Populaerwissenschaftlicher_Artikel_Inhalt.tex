@@ -10,18 +10,71 @@ Auf der Leinwand dreht sich der Ladebalken. Sekunden vergehen, die sich wie Minu
 
 In der „guten alten Zeit“ monolithischer Software hätte man in eine Log-Datei geschaut und die Antwort gefunden. Doch \emph{frag.jetzt} ist heute ein cloud-natives Nervensystem: Ein Angular-Frontend spricht mit einem NGINX-WebSocket-Gateway, das Anfragen an ein Spring-Boot-Backend weiterreicht; dort wird zur Identitätsprüfung ein externer Dienst (Keycloak) kontaktiert, Nachrichten werden über RabbitMQ verteilt, und komplexe Berechnungen landen schließlich in einem Python-basierten KI-Backend, das wiederum externe LLM-APIs einbindet \cite{fragjetztRepo}. Was früher ein einzelner Fehler war, ist nun häufig eine Kettenreaktion.
 
-Wenn hier etwas hakt, ist das System selten komplett „tot“ --- es ist „krank“. Es leidet an unsichtbaren Entzündungen: Ein einzelner Service antwortet \emph{beispielhaft} 200 Millisekunden zu spät, und aus dieser Verzögerung wird in der Summe ein Stillstand, der beim Nutzer als totale Blockade ankommt \cite{fischer2024microservice}.
-
-Das Problem: Herkömmliches Monitoring sagt uns oft nur: „Der Server ist an.“ Es sagt nicht, \emph{warum} sich die Anwendung für den Nutzer zäh anfühlt. Hier wechseln wir die Strategie --- von reiner Überwachung zu \textbf{Observability}. Wir wollen nicht nur wissen, ob das Herz noch schlägt, sondern ob der Patient wirklich stabil ist. Dafür nutzen wir die \emph{Four Golden Signals} als medizinische Vitalwerte \cite{ewaschukMonitoringDistributedSystems}.
-
-\begin{figure}[H]
+\begin{figure}[htb]
 \centering
 \includegraphics[width=\linewidth]{images/fragjetzt-request-path.png}
 \caption{Das „Nervensystem“ des Patienten: Der vereinfachte Anfragepfad bei frag.jetzt. Eigene Darstellung nach \cite{fragjetztRepo}.}
 \label{fig:requestpath}
 \end{figure}
 \noindent
+
+Wenn hier etwas hakt, ist das System selten komplett „tot“ --- es ist „krank“. Es leidet an unsichtbaren Entzündungen: Ein einzelner Service antwortet \emph{beispielhaft} 200 Millisekunden zu spät, und aus dieser Verzögerung wird in der Summe ein Stillstand, der beim Nutzer als totale Blockade ankommt \cite{fischer2024microservice}.
+
+Das Problem: Herkömmliches Monitoring sagt uns oft nur: „Der Server ist an.“ Es sagt nicht, \emph{warum} sich die Anwendung für den Nutzer zäh anfühlt. Hier wechseln wir die Strategie --- von reiner Überwachung zu \textbf{Observability}. Wir wollen nicht nur wissen, ob das Herz noch schlägt, sondern ob der Patient wirklich stabil ist. Dafür nutzen wir die \emph{Four Golden Signals} als medizinische Vitalwerte \cite{ewaschukMonitoringDistributedSystems}.
+
 Dieser Artikel zeigt, wie \emph{frag.jetzt} in die Diagnose-Röhre geschoben wird, damit aus stummen Daten sprechende Antworten werden --- und warum „Ich glaube, es hängt“ keine gültige Fehlerbeschreibung mehr ist.
+
+\begin{figure}[htb]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\small,
+  node distance=6mm and 4mm,
+  box/.style={draw, rounded corners, align=center, minimum width=20mm, minimum height=8mm, inner sep=2pt},
+  ext/.style={box, dashed},
+  arrow/.style={-{Latex[length=2mm]}, thick},
+  dashedarrow/.style={-{Latex[length=2mm]}, thick, dashed},
+  label/.style={font=\footnotesize, midway, fill=white, inner sep=1pt}
+]
+
+% --- Nodes (Vertical Layout) ---
+\node[box] (user) {Nutzer};
+\node[box, below=of user] (pwa) {PWA};
+\node[box, below=of pwa] (nginx) {Gateway};
+\node[box, below=of nginx] (backend) {Backend};
+\node[box, below=of backend] (rabbit) {RabbitMQ};
+\node[box, below=of rabbit] (ai) {AI-Service};
+
+\node[ext, right=of backend] (keycloak) {Keycloak};
+\node[box, left=of backend] (postgres) {DB};
+\node[ext, right=of ai] (llm) {LLM};
+
+% --- Arrows ---
+% Downstream
+\draw[arrow] (user) -- node[label, right] {(1)} (pwa);
+\draw[arrow] (pwa) -- node[label, right] {(2)} (nginx);
+\draw[arrow] (nginx) -- node[label, right] {(3)} (backend);
+
+\draw[arrow] (backend) -- node[label, above] {(4)} (keycloak);
+\draw[arrow] (backend) -- node[label, above] {(5)} (postgres);
+
+\draw[dashedarrow] (backend) -- node[label, right] {(6)} (rabbit);
+\draw[dashedarrow] (rabbit) -- node[label, right] {(7)} (ai);
+\draw[arrow] (ai) -- node[label, above] {(8)} (llm);
+
+% Upstream / Checks
+\draw[arrow, bend right=45] (ai) to node[label, right] {(9)} (backend);
+\draw[arrow, bend left=45] (backend) to node[label, left] {(10)} (nginx);
+\draw[arrow, bend left=45] (nginx) to node[label, left] {(11)} (pwa);
+\draw[arrow, bend left=45] (pwa) to node[label, left] {(12)} (user);
+
+\end{tikzpicture}%
+}
+\caption{Vereinfachter Anfragefluss in einer Microservice-Architektur von \emph{frag.jetzt} (Beispiel).}
+\label{fig:request-flow-fragjetzt}
+\small
+\textit{Quelle: Eigene Darstellung nach \cite{fragjetztRepo}.}
+\end{figure}
 
 \section{Vier Golden Signals: Der Gesundheits-Check statt Symptom-Raten}
 
@@ -53,7 +106,7 @@ Sättigung misst, wie „voll“ Ressourcen sind: CPU, Speicher, Thread-Pools, D
 
 \subsection{Fazit der Diagnose: Vier Werte, eine Geschichte}
 
-Ein einzelner Messwert ist fast immer missverständlich. Hohe Latenz kann an hoher Sättigung liegen --- oder an einem Netzwerkproblem. Erst wenn wir diese vier Vitalwerte übereinanderlegen (Korrelation), wird aus Daten echtes Wissen \cite{ewaschukMonitoringDistributedSystems}. Und erst dann wird Debugging weniger Ratespiel und mehr Detektivarbeit mit Beweismitteln.
+Ein einzelner Messwert ist fast immer missverständlich. Hohe Latenz kann an hoher Sättigung liegen --- oder an einem Netzwerkfehler. Erst wenn wir diese vier Vitalwerte übereinanderlegen (Korrelation), wird aus Daten echtes Wissen \cite{ewaschukMonitoringDistributedSystems}. Und erst dann wird Debugging weniger Ratespiel und mehr Detektivarbeit mit Beweismitteln.
 
 \begin{table}[htb]
 \centering
@@ -64,15 +117,22 @@ Ein einzelner Messwert ist fast immer missverständlich. Hohe Latenz kann an hoh
 \toprule
 \textbf{Signal} & \textbf{Typische Metrik} & \textbf{Alarm-Kriterium} \\
 \midrule
-Latenz & p95/p99 Request-Dauer & p99 steigt anhaltend (SLO-relevant) \\
-Traffic & Requests/Sek., WebSocket-Events & Einbruch auf Null oder unplausibler Peak \\
-Fehler & HTTP 5xx, Timeouts, semantische Fehler & Error-Rate oder Timeout-Rate steigt \\
-Sättigung & CPU/RAM-Auslastung, Connection-Pool & Pool nahe Limit oder Lag wächst (Trend) \\
+Latenz & Dauer der langsamsten Anfragen (Spitzenwerte) & Wert steigt dauerhaft an \\
+Traffic & Anfragen pro Sekunde & Plötzlicher Einbruch auf Null \\
+Fehler & Rate fehlgeschlagener Anfragen & Fehlerrate steigt deutlich \\
+Sättigung & Auslastung (z.B. CPU, Speicher) & Ressource ist fast erschöpft \\
 \bottomrule
 \end{tabularx}
-\caption{Die Four Golden Signals als Vitalwerte im Überblick. Nach \cite{ewaschukMonitoringDistributedSystems,sridharan2018distributed}.}
+\caption{Die Four Golden Signals als Vitalwerte: Was wir messen und wann wir warnen. Nach \cite{ewaschukMonitoringDistributedSystems,sridharan2018distributed}.}
 \label{tab:golden-signals-compact}
 \end{table}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=\linewidth]{images/grafana-dashboard-example.png}
+\caption{Das Cockpit für den Notfall: Ein Grafana-Dashboard visualisiert Latenzen und Fehlerraten in Echtzeit. Quelle: \cite{grafanaDocs}.}
+\label{fig:grafana-dashboard}
+\end{figure}
 
 \section{Werkzeug-Tetris: Die Suche nach dem passenden Stack}
 
@@ -86,7 +146,7 @@ Unsere erste Wahl fiel auf \textbf{Prometheus}. Warum? Weil Logs teuer sind: Jed
 
 Für \emph{frag.jetzt} bedeutet das: Der Puls wird überall fühlbar gemacht --- an den Schnittstellen, an kritischen Pools, an den Endpunkten, die Nutzer wirklich spüren.
 
-\subsection{Der Detektiv: Logs (aber bitte gezielt)}
+\subsection{Der Detektiv: Logs (aber nur gezielt)}
 
 Wenn Prometheus Alarm schlägt, braucht das Team Details. Hier kommt klassisch der \textbf{ELK-Stack} (Elasticsearch, Logstash, Kibana) ins Spiel. Aber Vorsicht: In verteilten Systemen explodieren Logs förmlich; „alles loggen“ ist selten nachhaltig \cite{giamattei2024monitoring}.
 
@@ -122,6 +182,14 @@ Adapter & Telemetrie & OpenTelemetry (SDK/Collector) \\
 \caption{Observability-Werkzeuge im Zusammenspiel. Nach \cite{giamattei2024monitoring,banerjee2024comparative,albuquerque2025tracing}.}
 \label{tab:stack-compact}
 \end{table}
+
+\subsection{Ein nüchterner Blick: Die Grenzen der Beobachtbarkeit}
+
+So mächtig Observability in der Praxis ist, sie ist weder kostenlos noch vollständig. Jede zusätzliche Metrik, jeder Trace und jede Logzeile erzeugt Daten, die gesammelt, gespeichert, ausgewertet und verstanden werden müssen. Damit wird Observability selbst zu einer ingenieurtechnischen Disziplin, die Pflege, Erfahrung und bewusste Reduktion erfordert \cite{faseeha2025observability}\cite{giamattei2024monitoring}.
+
+Hinzu kommt: Ein System ist immer nur so beobachtbar wie seine Instrumentierung. Was nicht gemessen wird, bleibt unsichtbar – selbst mit dem besten Werkzeug-Stack \cite{fischer2024microservice}. Observability verkürzt die Zeit bis zum Verständnis eines Problems, sie verhindert jedoch weder Ausfälle noch komplexe Wechselwirkungen in verteilten Systemen \cite{faseeha2025observability}.
+
+Gerade deshalb ist Zurückhaltung entscheidend. Ziel ist nicht maximale Datensammlung, sondern maximale Entscheidungsfähigkeit. Oder anders gesagt: Ein gutes Observability-System weiß nicht alles – aber genau das Richtige.
 
 \section{Schluss mit dem digitalen Wecker: Warum Stille Gold ist}
 
