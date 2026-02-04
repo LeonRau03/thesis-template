@@ -8,7 +8,7 @@ Und dann: \textbf{Stille}.
 
 Auf der Leinwand dreht sich der Ladebalken. Sekunden vergehen, die sich wie Minuten anfühlen. Ist das WLAN der Uni zusammengebrochen? Hat sich der Datenbank-Pool erschöpft? Oder wartet das Backend gerade vergeblich auf eine Antwort der externen KI-Schnittstelle?
 
-In der „guten alten Zeit“ monolithischer Software hätte man in eine Log-Datei geschaut und die Antwort gefunden. Doch \emph{frag.jetzt} ist heute ein cloud-natives Nervensystem: Ein Angular-Frontend spricht mit einem NGINX-WebSocket-Gateway, das Anfragen an ein Spring-Boot-Backend weiterreicht; dort wird zur Identitätsprüfung ein externer Dienst (Keycloak) kontaktiert, Nachrichten werden über RabbitMQ verteilt, und komplexe Berechnungen landen schließlich in einem Python-basierten KI-Backend, das wiederum externe LLM-APIs einbindet \cite{fragjetztRepo}. Was früher ein einzelner Fehler war, ist nun häufig eine Kettenreaktion.
+In der „guten alten Zeit“ monolithischer Software hätte man in eine Log-Datei geschaut und die Antwort gefunden. Doch \emph{frag.jetzt} ist heute ein cloud-natives Nervensystem: Ein Angular-Frontend spricht mit einem NGINX-WebSocket-Gateway, das Anfragen an ein Spring-Boot-Backend weiterreicht; dort wird zur Identitätsprüfung ein externer Dienst (Keycloak) kontaktiert, Nachrichten werden über RabbitMQ verteilt, und schließlich werden komplexe Berechnungen in einem KI-Backend durchgeführt, das wiederum externe LLM-APIs einbindet \cite{fragjetztRepo}. Was früher ein einzelner Fehler war, ist nun häufig eine Kettenreaktion.
 
 \begin{figure}[htb]
 \centering
