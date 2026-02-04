@@ -167,19 +167,24 @@ Hier setzt \textbf{OpenTelemetry (OTel)} an: als universeller Adapter, der Instr
 \begin{table}[htb]
 \centering
 \small
-\setlength{\tabcolsep}{5pt}
-\renewcommand{\arraystretch}{1.3}
-\begin{tabularx}{\columnwidth}{@{}l l >{\RaggedRight\arraybackslash}X@{}}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\columnwidth}{@{}>{\RaggedRight\arraybackslash}p{0.22\columnwidth} >{\RaggedRight\arraybackslash}p{0.36\columnwidth} >{\RaggedRight\arraybackslash}p{0.36\columnwidth}@{}}
 \toprule
-\textbf{Funktion} & \textbf{Datentyp} & \textbf{Tool-Beispiele} \\
+\textbf{Tool-Stack} & \textbf{Pro} & \textbf{Contra} \\
 \midrule
-Wächter & Metriken & Prometheus + Grafana \\
-Detektiv & Logs & ELK-Stack oder Loki \\
-Navigator & Traces & Jaeger oder Tempo \\
-Adapter & Telemetrie & OpenTelemetry (SDK/Collector) \\
+\textbf{ELK-Stack} (Elasticsearch, Logstash, Kibana) & Mächtige Suchfunktion; ausgereifte Community; detaillierte Log-Analysen möglich & Ressourcenhungrig (mehrere GB RAM); komplexe Konfiguration; bei Logs schnell teuer im Speicher \\
+\midrule
+\textbf{Loki} (Grafana Labs) & Minimal (200 MB RAM); direkt an Grafana angebunden; kosteneffizient bei großen Mengen & Nur Log-Labels durchsuchbar, nicht Volltextsuche; weniger Features als ELK \\
+\midrule
+\textbf{Jaeger} (Tracing) & Open Source; bewährt in Cloud-Umgebungen; gut dokumentiert & Benötigt eigene Datenhaltung; Setup für kleine Teams aufwendig \\
+\midrule
+\textbf{Cloud-SaaS} (z.\,B. Datadog, New Relic) & Sofort einsatzbereit; professioneller Support; keine Infrastruktur nötig & Kostspielig ab mittlerer Last; Vendor Lock-in; Datenschutz außerhalb eigener Kontrolle \\
+\midrule
+\textbf{Self-hosted} (Prometheus + Loki + Jaeger) & Volle Kontrolle; keine laufenden Kosten; DSGVO-konform auf eigener Infrastruktur & Team muss Betrieb selbst leisten; Update-Management; mehr initialer Aufwand \\
 \bottomrule
 \end{tabularx}
-\caption{Observability-Werkzeuge im Zusammenspiel. Nach \cite{giamattei2024monitoring,banerjee2024comparative,albuquerque2025tracing}.}
+\caption{Observability-Tool-Stacks im Vergleich: Die Wahl zwischen Komfort und Kontrolle. Nach \cite{giamattei2024monitoring,banerjee2024comparative,albuquerque2025tracing}.}
 \label{tab:stack-compact}
 \end{table}
 
