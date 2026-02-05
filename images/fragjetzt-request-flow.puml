@@ -1,0 +1,96 @@
+@startuml fragjetzt-request-flow
+!theme plain
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+
+skinparam component {
+  BackgroundColor #E8F4F8
+  BorderColor #2C5F7C
+  BorderThickness 2
+  FontStyle bold
+}
+
+skinparam database {
+  BackgroundColor #E8F4F8
+  BorderColor #2C5F7C
+  BorderThickness 2
+  FontStyle bold
+}
+
+skinparam queue {
+  BackgroundColor #E8F4F8
+  BorderColor #2C5F7C
+  BorderThickness 2
+  FontStyle bold
+}
+
+skinparam cloud {
+  BackgroundColor white
+  BorderColor #2C5F7C
+  BorderThickness 2
+  BorderStyle dashed
+  FontStyle italic
+}
+
+skinparam arrow {
+  Color #2C5F7C
+  Thickness 2
+}
+
+skinparam note {
+  BackgroundColor #FFFACD
+  BorderColor #DAA520
+  FontSize 10
+}
+
+' Komponenten definieren
+component "Nutzer" as user
+component "PWA" as pwa
+component "Gateway\n(NGINX)" as nginx
+component "Backend\n(Spring Boot)" as backend
+database "DB\n(PostgreSQL)" as postgres
+queue "RabbitMQ" as rabbit
+component "AI-Service" as ai
+
+' Externe Systeme (gestrichelt)
+cloud "Keycloak\n(Auth)" as keycloak
+cloud "LLM\n(OpenAI)" as llm
+
+' Hauptfluss (Request Path)
+user -[#2C5F7C,thickness=3]-> pwa : (1) Request
+pwa -[#2C5F7C,thickness=3]-> nginx : (2) WebSocket
+nginx -[#2C5F7C,thickness=3]-> backend : (3) HTTP/REST
+backend -[#2C5F7C,thickness=3]-> keycloak : (4) Auth-Check
+backend -[#2C5F7C,thickness=3]-> postgres : (5) DB-Query
+
+' Asynchroner Flow (gestrichelt)
+backend -[#8B4513,thickness=2,dashed]-> rabbit : (6) Event
+rabbit -[#8B4513,thickness=2,dashed]-> ai : (7) Process
+ai -[#2C5F7C,thickness=3]-> llm : (8) API-Call
+
+' Rückkanal
+ai -[#228B22,thickness=2]-> backend : (9) Result
+backend -[#228B22,thickness=2]-> nginx : (10) Response
+nginx -[#228B22,thickness=2]-> pwa : (11) Update
+pwa -[#228B22,thickness=2]-> user : (12) Display
+
+' Layout-Hinweise
+user -[hidden]down- pwa
+pwa -[hidden]down- nginx
+nginx -[hidden]down- backend
+backend -[hidden]down- rabbit
+rabbit -[hidden]down- ai
+
+note right of keycloak
+  Externe
+  Dienste
+end note
+
+note bottom of rabbit
+  Durchgezogen: Synchron
+  Gestrichelt: Asynchron
+  Grün: Response-Pfad
+end note
+
+@enduml

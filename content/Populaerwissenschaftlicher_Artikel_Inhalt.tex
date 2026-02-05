@@ -118,7 +118,7 @@ Ein einzelner Messwert ist fast immer missverständlich. Hohe Latenz kann an hoh
 \textbf{Signal} & \textbf{Typische Metrik} & \textbf{Alarm-Kriterium} \\
 \midrule
 Latenz & Dauer der langsamsten Anfragen (Spitzenwerte) & Wert steigt dauerhaft an \\
-Traffic & Anfragen pro Sekunde & Plötzlicher Einbruch auf Null \\
+Traffic & Anfragen pro Sekunde (RPS) & Plötzlicher Einbruch auf Null / extrem viele Anfragen \\
 Fehler & Rate fehlgeschlagener Anfragen & Fehlerrate steigt deutlich \\
 Sättigung & Auslastung (z.B. CPU, Speicher) & Ressource ist fast erschöpft \\
 \bottomrule
@@ -127,6 +127,16 @@ Sättigung & Auslastung (z.B. CPU, Speicher) & Ressource ist fast erschöpft \\
 \label{tab:golden-signals-compact}
 \end{table}
 
+\section{Werkzeug-Tetris: Die Suche nach dem passenden Stack}
+
+Wer heute „Observability Tools“ in eine Suchmaschine eingibt, wird von einer Lawine begraben. Es gibt hunderte Dienste, vom teuren Enterprise-SaaS bis zum selbstgebauten Skript. Für ein Open-Source-Projekt wie \emph{frag.jetzt} ist klar: Wir können uns keine Lizenzkosten leisten, aber wir können uns auch keine blinden Flecken leisten \cite{giamattei2024monitoring}.
+
+Wir standen vor der klassischen Frage: Was brauchen wir wirklich --- einen Detektiv, einen Wächter oder ein Navigationssystem? Die Antwort lautet: alles drei, aber in der richtigen Dosierung \cite{giamattei2024monitoring}.
+
+\subsection{Die Wächter: Prometheus + Grafana für den Puls}
+
+Unsere erste Wahl fiel auf \textbf{Prometheus} und \textbf{Grafana}. Warum? Weil Logs teuer sind: Jede Zeile Text zu speichern, kostet Speicherplatz und Rechenleistung. Metriken hingegen sind kompakt, weil sie Zahlenreihen darstellen. Prometheus speichert keine Romane, sondern Messwerte wie „CPU bei 80\,\%“ oder „50 Anfragen pro Sekunde“, während Grafana diese visualisiert \cite{banerjee2024comparative}. Das ist wie ein EKG: Es zeigt Stress, aber nicht zwangsläufig die Ursache.
+
 \begin{figure}[htb]
 \centering
 \includegraphics[width=\linewidth]{images/grafana-dashboard-example.png}
@@ -134,19 +144,9 @@ Sättigung & Auslastung (z.B. CPU, Speicher) & Ressource ist fast erschöpft \\
 \label{fig:grafana-dashboard}
 \end{figure}
 
-\section{Werkzeug-Tetris: Die Suche nach dem passenden Stack}
-
-Wer heute „Observability Tools“ in eine Suchmaschine eingibt, wird von einer Lawine begraben. Es gibt hunderte Dienste, vom teuren Enterprise-SaaS bis zum selbstgebauten Skript. Für ein Open-Source-Projekt wie \emph{frag.jetzt} ist klar: Wir können uns keine Lizenzkosten leisten, aber wir können uns auch keine blinden Flecken leisten \cite{giamattei2024monitoring}.
-
-Wir standen vor der klassischen Frage: Was brauchen wir wirklich --- einen Detektiv, einen Wächter oder ein Navigationssystem? Die Antwort lautet: alles drei, aber in der richtigen Dosierung \cite{giamattei2024monitoring}.
-
-\subsection{Der Wächter: Prometheus für den Puls}
-
-Unsere erste Wahl fiel auf \textbf{Prometheus}. Warum? Weil Logs teuer sind: Jede Zeile Text zu speichern, kostet Speicherplatz und Rechenleistung. Metriken hingegen sind kompakt, weil sie Zahlenreihen darstellen. Prometheus speichert keine Romane, sondern Messwerte wie „CPU bei 80\,\%“ oder „50 Anfragen pro Sekunde“ \cite{banerjee2024comparative}. Das ist wie ein EKG: Es zeigt Stress, aber nicht zwangsläufig die Ursache.
+\subsection{Der Detektiv: Logs (aber nur gezielt)}
 
 Für \emph{frag.jetzt} bedeutet das: Der Puls wird überall fühlbar gemacht --- an den Schnittstellen, an kritischen Pools, an den Endpunkten, die Nutzer wirklich spüren.
-
-\subsection{Der Detektiv: Logs (aber nur gezielt)}
 
 Wenn Prometheus Alarm schlägt, braucht das Team Details. Hier kommt klassisch der \textbf{ELK-Stack} (Elasticsearch, Logstash, Kibana) ins Spiel. Aber Vorsicht: In verteilten Systemen explodieren Logs förmlich; „alles loggen“ ist selten nachhaltig \cite{giamattei2024monitoring}.
 
@@ -164,28 +164,23 @@ Das größte Risiko bei der Tool-Auswahl ist der „Vendor Lock-in“. Was, wenn
 
 Hier setzt \textbf{OpenTelemetry (OTel)} an: als universeller Adapter, der Instrumentierung vom Backend bis zum Gateway neutral hält und Daten an die Tools der Wahl verteilt \cite{albuquerque2025tracing}. Statt Code mit einer Prometheus-spezifischen Bibliothek zu „verdrahten“, wird alles über OTel gesammelt und exportiert. Das reduziert Abhängigkeiten und erleichtert spätere Entscheidungen \cite{albuquerque2025tracing}.
 
-\begin{table}[htb]
+\begin{table}[h]
 \centering
 \small
-\setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{1.4}
-\begin{tabularx}{\columnwidth}{@{}>{\RaggedRight\arraybackslash}p{0.22\columnwidth} >{\RaggedRight\arraybackslash}p{0.36\columnwidth} >{\RaggedRight\arraybackslash}p{0.36\columnwidth}@{}}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.6}
+\begin{tabularx}{\columnwidth}{@{}>{\raggedright\arraybackslash}p{0.25\columnwidth} >{\raggedright\arraybackslash}p{0.28\columnwidth} >{\raggedright\arraybackslash}p{0.40\columnwidth}@{}}
 \toprule
-\textbf{Tool-Stack} & \textbf{Pro} & \textbf{Contra} \\
+\textbf{Im Krankenhaus} & \textbf{In der IT} & \textbf{Die zentrale Frage} \\
 \midrule
-\textbf{ELK-Stack} (Elasticsearch, Logstash, Kibana) & Mächtige Suchfunktion; ausgereifte Community; detaillierte Log-Analysen möglich & Ressourcenhungrig (mehrere GB RAM); komplexe Konfiguration; bei Logs schnell teuer im Speicher \\
-\midrule
-\textbf{Loki} (Grafana Labs) & Minimal (200 MB RAM); direkt an Grafana angebunden; kosteneffizient bei großen Mengen & Nur Log-Labels durchsuchbar, nicht Volltextsuche; weniger Features als ELK \\
-\midrule
-\textbf{Jaeger} (Tracing) & Open Source; bewährt in Cloud-Umgebungen; gut dokumentiert & Benötigt eigene Datenhaltung; Setup für kleine Teams aufwendig \\
-\midrule
-\textbf{Cloud-SaaS} (z.\,B. Datadog, New Relic) & Sofort einsatzbereit; professioneller Support; keine Infrastruktur nötig & Kostspielig ab mittlerer Last; Vendor Lock-in; Datenschutz außerhalb eigener Kontrolle \\
-\midrule
-\textbf{Self-hosted} (Prometheus + Loki + Jaeger) & Volle Kontrolle; keine laufenden Kosten; DSGVO-konform auf eigener Infrastruktur & Team muss Betrieb selbst leisten; Update-Management; mehr initialer Aufwand \\
+Pulsmesser (EKG) & \textbf{Metriken}\newline(Prometheus) & Ist das System gesund? \\
+Krankenakte & \textbf{Logs}\newline(ELK, Loki) & Was ist schiefgelaufen? \\
+Kontrastmittel & \textbf{Tracing}\newline(Jaeger) & Wo ist der Engpass? \\
+Notruf & \textbf{Alerting} & Muss jemand geweckt werden? \\
 \bottomrule
 \end{tabularx}
-\caption{Observability-Tool-Stacks im Vergleich: Die Wahl zwischen Komfort und Kontrolle. Nach \cite{giamattei2024monitoring,banerjee2024comparative,albuquerque2025tracing}.}
-\label{tab:stack-compact}
+\caption{Vom Symptom zur Diagnose: Die medizinischen Werkzeuge und ihre digitalen Gegenstücke.}
+\label{tab:observability-analogy}
 \end{table}
 
 \subsection{Ein nüchterner Blick: Die Grenzen der Beobachtbarkeit}
@@ -196,6 +191,8 @@ Hinzu kommt: Ein System ist immer nur so beobachtbar wie seine Instrumentierung.
 
 Gerade deshalb ist Zurückhaltung entscheidend. Ziel ist nicht maximale Datensammlung, sondern maximale Entscheidungsfähigkeit. Oder anders gesagt: Ein gutes Observability-System weiß nicht alles – aber genau das Richtige.
 
+
+
 \section{Schluss mit dem digitalen Wecker: Warum Stille Gold ist}
 
 Hand aufs Herz: Nichts ruiniert die Moral eines Teams schneller als ein Telefon, das nachts um 3 Uhr vibriert, nur um zu melden: „CPU-Auslastung bei 85\,\%“ --- und fünf Minuten später springt der Wert von selbst wieder auf „OK“.
@@ -205,7 +202,7 @@ Dieses Phänomen hat einen Namen: \textbf{Alarmmüdigkeit} (Alert Fatigue) \cite
 Also wurde das Alarm-Konzept radikal umgestellt --- weg von „Rauschen“, hin zu „Handlung“. Drei Regeln haben sich dabei als Leitplanken bewährt, weil sie Alarme zu Entscheidungen machen und nicht zu Nervenkrieg \cite{ewaschukMonitoringDistributedSystems} \cite{jalalvand2024alert}:
 
 \begin{enumerate}
-\item \textbf{Weck mich nur, wenn der Nutzer leidet.} Ein hoher CPU-Wert ist kein Grund zur Panik, solange die Antworten schnell kommen. Alarmiert wird auf \emph{Symptome}, nicht auf bloße Ursachen \cite{ewaschukMonitoringDistributedSystems}. \emph{Schlecht:} „Server Node 4 hat hohe Last.“ \emph{Gut:} „Die p99-Latenz beim Absenden von Fragen ist (beispielhaft) über 2 Sekunden gestiegen“ \cite{sridharan2018distributed}\cite{ewaschukMonitoringDistributedSystems}.
+\item \textbf{Weck mich nur, wenn der Nutzer leidet.} Ein hoher CPU-Wert ist kein Grund zur Panik, solange die Antworten schnell kommen. Alarmiert wird auf \emph{Symptome}, nicht auf bloße Ursachen \cite{ewaschukMonitoringDistributedSystems}. \emph{Schlecht:} „Server Node 4 hat hohe Last.“ \emph{Gut:} „Die Spitzenlatenz beim Absenden von Fragen ist (beispielhaft) über 2 Sekunden gestiegen“ \cite{sridharan2018distributed}\cite{ewaschukMonitoringDistributedSystems}.
 
 \item \textbf{Die „Luft-anhalten“-Strategie.} Netzwerke haben Schluckauf. Das ist normal. Statt bei jedem verlorenen Paket sofort „Feuer!“ zu schreien, wird zeitlich geglättet. Besteht das Problem länger als eine definierte Dauer (z.\,B.\ zwei Minuten), wird die Nachricht erst dann aktiv. Das eliminiert nervöse Fehlalarme („Flapping“) fast vollständig \cite{ewaschukMonitoringDistributedSystems}.
 
