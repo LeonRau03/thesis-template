@@ -18,11 +18,11 @@ In der „guten alten Zeit“ monolithischer Software hätte man in eine Log-Dat
 \end{figure}
 \noindent
 
-Wenn hier etwas hakt, ist das System selten komplett „tot“ --- es ist „krank“. Es leidet an unsichtbaren Entzündungen: Ein einzelner Service antwortet \emph{beispielhaft} 200 Millisekunden zu spät, und aus dieser Verzögerung wird in der Summe ein Stillstand, der beim Nutzer als totale Blockade ankommt \cite{fischer2024microservice}.
+Wenn hier etwas hakt, ist das System selten komplett „tot“ --- es ist „krank“. Es leidet an unsichtbaren Entzündungen: Ein einzelner Service antwortet \emph{beispielhaft} 200 Millisekunden zu spät, und aus dieser Verzögerung wird in der Summe ein Stillstand, der beim Nutzer als spürbare Verzögerung ankommt \cite{fischer2024microservice}.
 
-Das Problem: Herkömmliches Monitoring sagt uns oft nur: „Der Server ist an.“ Es sagt nicht, \emph{warum} sich die Anwendung für den Nutzer zäh anfühlt. Hier wechseln wir die Strategie --- von reiner Überwachung zu \textbf{Observability}. Wir wollen nicht nur wissen, ob das Herz noch schlägt, sondern ob der Patient wirklich stabil ist. Dafür nutzen wir die \emph{Four Golden Signals} als medizinische Vitalwerte \cite{ewaschukMonitoringDistributedSystems}.
+Das Problem: Herkömmliches Monitoring sagt uns oft nur: „Der Server ist an.“ oder „der Server ist aus.“ Es sagt nicht, \emph{warum} sich die Anwendung für den Nutzer zäh anfühlt. Hier wechseln wir die Strategie --- von reiner Überwachung zu \textbf{Observability}. Wir wollen nicht nur wissen, ob das Herz noch schlägt, sondern ob der Patient wirklich stabil ist \cite{abieba2025advanced}. Dafür nutzen wir die \emph{Four Golden Signals} als medizinische Vitalwerte.
 
-Dieser Artikel zeigt, wie \emph{frag.jetzt} in die Diagnose-Röhre geschoben wird, damit aus stummen Daten sprechende Antworten werden --- und warum „Ich glaube, es hängt“ keine gültige Fehlerbeschreibung mehr ist.
+Dieser Artikel zeigt, wie das ARS \emph{frag.jetzt} in die Diagnose-Röhre geschoben wird, damit aus stummen Daten sprechende Antworten werden --- und warum „Ich glaube, es hängt“ keine gültige Fehlerbeschreibung mehr ist.
 
 \begin{figure}[htb]
 \centering
@@ -70,39 +70,37 @@ Dieser Artikel zeigt, wie \emph{frag.jetzt} in die Diagnose-Röhre geschoben wir
 
 \end{tikzpicture}%
 }
-\caption{Vereinfachter Anfragefluss in einer Microservice-Architektur von \emph{frag.jetzt} (Beispiel).}
+\caption{Vereinfachter Anfragefluss in der Microservice-Architektur von \emph{frag.jetzt}. Eigene Darstellung nach \cite{fragjetztRepo}.}
 \label{fig:request-flow-fragjetzt}
-\small
-\textit{Quelle: Eigene Darstellung nach \cite{fragjetztRepo}.}
 \end{figure}
 
 \section{Vier Golden Signals: Der Gesundheits-Check statt Symptom-Raten}
 
-Wenn ein Patient in die Notaufnahme kommt, misst der Arzt nicht „alles“. Er schaut auf wenige Vitalwerte, die schnell Auskunft geben. In der Welt der Google Site Reliability Engineers (SRE) haben sich dafür vier universelle Messkategorien etabliert, die sogenannten \emph{Four Golden Signals} \cite{ewaschukMonitoringDistributedSystems}. Für \emph{frag.jetzt} markieren sie die Grenze zwischen „Ich hoffe, es läuft“ und „Ich weiß, was los ist“.
+Wenn ein Patient in die Notaufnahme kommt, misst der Arzt nicht „alles“. Er schaut auf wenige Vitalwerte, die schnell Auskunft geben. In der Welt der Google Site Reliability Engineers (SRE) haben sich dafür vier universelle Messkategorien etabliert, die sogenannten \emph{Four Golden Signals} \cite{ewaschukMonitoringDistributedSystems}. Für Microservices-Anwendungen wie \emph{frag.jetzt} markieren sie die Grenze zwischen „Ich hoffe, es läuft“ und „Ich weiß, was los ist“.
 
 \subsection{Latenz: Die Zeit zwischen Klick und Erlösung}
 
 Es ist egal, dass die Datenbank eine Anfrage intern in \emph{beispielhaften} 5 Millisekunden verarbeitet, wenn der Nutzer im Hörsaal über schwaches WLAN erst nach drei Sekunden eine Antwort sieht. Latenz ist die Zeit, die eine Anfrage insgesamt braucht, um bedient zu werden.
 
-\textbf{Der Trugschluss:} Der Durchschnitt beruhigt. Wenn 90\,\% der Anfragen schnell sind, aber die langsamsten 10\,\% (die Dozenten-Fragen, die gerade alle sehen) hängen, haben wir ein Problem. Deshalb wird nicht nur der Mittelwert betrachtet, sondern insbesondere die \emph{Tail Latency} --- also wie lange die langsamsten Anfragen dauern \cite{sridharan2018distributed}. Genau dort entsteht Frust, und genau dort verstecken sich die harten Fälle.
+\textbf{Der Trugschluss:} Der Durchschnitt beruhigt. Wenn 90\,\% der Anfragen schnell sind, aber die langsamsten 10\,\% (die Dozenten-Fragen, die gerade alle sehen) hängen, haben wir ein Problem. Deshalb wird nicht nur der Mittelwert betrachtet, sondern insbesondere die \emph{Tail Latency} --- also wie lange die langsamsten Anfragen dauern \cite{abieba2025advanced}. Genau dort entsteht Frust, und genau dort verstecken sich die harten Fälle.
 
-\subsection{Traffic: Der Herzschlag des Hörsaals}
+\subsection{Traffic: Der Moment, in dem alle absenden}
 
 Wie viel Last trifft unser System gerade? Bei \emph{frag.jetzt} ist das kein stetiges Rauschen, sondern manchmal ein Tsunami.
 
-\textbf{Das Szenario:} Die Vorlesung beginnt. 500 Studierende öffnen gleichzeitig die App. Der Traffic schießt \emph{beispielhaft} von 0 auf 500 Anfragen pro Sekunde. Ein plötzlicher Abfall auf Null ist hier übrigens genauso verdächtig wie eine Überlastung: Er bedeutet oft nicht „Feierabend“, sondern „Netzwerkfehler“ oder „Gateway hängt“ \cite{ewaschukMonitoringDistributedSystems}.
+\textbf{Das Szenario:} Die Vorlesung beginnt. 500 Studierende öffnen gleichzeitig die App. Der Traffic schießt von 5 auf 500 Anfragen pro Sekunde. Ein plötzlicher Abfall auf Null ist hier übrigens genauso verdächtig wie eine Überlastung: Er bedeutet oft nicht „Feierabend“, sondern „Netzwerkfehler“ oder „Gateway hängt“ \cite{giamattei2024monitoring}.
 
 \subsection{Fehler: Wenn das Schweigen laut wird}
 
 Klassische Fehler sind einfach: Ein HTTP-Code 500 (Internal Server Error) ist ein Schrei nach Hilfe. Doch in verteilten Systemen lauern die gefährlicheren Varianten im Flüsterton.
 
-\textbf{Die Tücke:} Viel bedrohlicher sind die „leisen“ Fehler. Wenn das Backend zwar „Code 200 OK“ antwortet, aber der Inhalt leer ist oder falsche Daten liefert, merkt das klassische Monitoring nichts --- der Nutzer aber alles. Observability bedeutet hier, tief genug in die Antwort zu schauen, um auch funktionale Pannen zu erkennen \cite{ewaschukMonitoringDistributedSystems}. Das kann bedeuten, dass semantische Checks (z.\,B. „Antwort enthält mindestens X Elemente“) instrumentiert und als Fehlerrate sichtbar gemacht werden.
+\textbf{Der Knackpunkt:} Viel bedrohlicher sind die „leisen“ Fehler. Wenn das Backend zwar „Code 200 OK“ antwortet, aber der Inhalt leer ist oder falsche Daten liefert, merkt das klassische Monitoring nichts --- der Nutzer aber alles. Observability bedeutet hier, tief genug in die Antwort zu schauen, um auch funktionale Pannen zu erkennen \cite{abieba2025advanced}. Das kann bedeuten, dass semantische Checks (z.\,B. „Antwort enthält mindestens X Elemente“) instrumentiert und als Fehlerrate sichtbar gemacht werden.
 
 \subsection{Sättigung: Der Stau vor der Kasse}
 
 Sättigung misst, wie „voll“ Ressourcen sind: CPU, Speicher, Thread-Pools, Datenbank-Connection-Pools. Sie ist oft der wichtigste Indikator für das, was als Nächstes passiert \cite{ewaschukMonitoringDistributedSystems}.
 
-\textbf{Die Analogie:} Stellen Sie sich die Warteschlange in der Mensa vor. Solange die Schlange sich bewegt, ist alles im Rahmen. Aber wenn die Mensa zu 99\,\% gefüllt ist, reicht eine einzige weitere Person, und alles kommt zum Stillstand. Sättigung warnt \emph{bevor} das System langsam wird --- sie ist ein Frühwarnsystem \cite{ewaschukMonitoringDistributedSystems}.
+\textbf{Die Analogie:} Die Analogie: Stellen Sie sich einen Supermarkt am Samstagabend vor. Hunderte Kunden wollen bezahlen, aber nur \textbf{eine einzige Kasse} ist geöffnet. Solange nur zwei Leute anstehen, läuft der Betrieb. Doch sobald das Kassenband (der Puffer) voll ist, bricht das System zusammen: Der Kassierer (die CPU) arbeitet zwar auf Hochtouren, aber die Schlange staut sich exponentiell bis ins Tiefkühlregal zurück. Sättigung warnt uns also, \textit{bevor} die Wartezeit für alle unerträglich wird -- sie ist das ultimative Frühwarnsystem.
 
 \subsection{Fazit der Diagnose: Vier Werte, eine Geschichte}
 
@@ -129,13 +127,13 @@ Sättigung & Auslastung (z.B. CPU, Speicher) & Ressource ist fast erschöpft \\
 
 \section{Werkzeug-Tetris: Die Suche nach dem passenden Stack}
 
-Wer heute „Observability Tools“ in eine Suchmaschine eingibt, wird von einer Lawine begraben. Es gibt hunderte Dienste, vom teuren Enterprise-SaaS bis zum selbstgebauten Skript. Für ein Open-Source-Projekt wie \emph{frag.jetzt} ist klar: Wir können uns keine Lizenzkosten leisten, aber wir können uns auch keine blinden Flecken leisten \cite{giamattei2024monitoring}.
+Wer heute „Observability Tools“ in eine Suchmaschine eingibt, wird von einer Lawine begraben. Es gibt hunderte Dienste, vom teuren Enterprise-SaaS bis zum selbstgebauten Skript. Für ein Open-Source-Projekt wie \emph{frag.jetzt} ist klar: Wir können uns keine Lizenzkosten leisten, aber wir können uns auch keine blinden Flecken leisten.
 
-Wir standen vor der klassischen Frage: Was brauchen wir wirklich --- einen Detektiv, einen Wächter oder ein Navigationssystem? Die Antwort lautet: alles drei, aber in der richtigen Dosierung \cite{giamattei2024monitoring}.
+Wir standen vor der klassischen Frage: Was brauchen wir wirklich --- einen Detektiv, einen Wächter oder ein Navigationssystem? Die Antwort lautet: alle drei, aber in der richtigen Dosierung \cite{giamattei2024monitoring}.
 
-\subsection{Die Wächter: Prometheus + Grafana für den Puls}
+\subsection{Die Wächter: Metriken für den Puls}
 
-Unsere erste Wahl fiel auf \textbf{Prometheus} und \textbf{Grafana}. Warum? Weil Logs teuer sind: Jede Zeile Text zu speichern, kostet Speicherplatz und Rechenleistung. Metriken hingegen sind kompakt, weil sie Zahlenreihen darstellen. Prometheus speichert keine Romane, sondern Messwerte wie „CPU bei 80\,\%“ oder „50 Anfragen pro Sekunde“, während Grafana diese visualisiert \cite{banerjee2024comparative}. Das ist wie ein EKG: Es zeigt Stress, aber nicht zwangsläufig die Ursache.
+Unsere erste Wahl fiel auf \textbf{Prometheus} und \textbf{Grafana}. Warum? Weil Logs teuer sind: Jede Zeile Text zu speichern, kostet Speicherplatz und Rechenleistung. Metriken hingegen sind kompakt, weil sie Zahlenreihen darstellen. Prometheus speichert keine Romane, sondern Messwerte wie „CPU bei 80\,\%“ oder „50 Anfragen pro Sekunde“, während Grafana diese anschaulich visualisiert \cite{banerjee2024comparative}. Das ist wie ein EKG: Es zeigt Stress, aber nicht zwangsläufig die Ursache.
 
 \begin{figure}[htb]
 \centering
@@ -152,11 +150,19 @@ Wenn Prometheus Alarm schlägt, braucht das Team Details. Hier kommt klassisch d
 
 Wir haben gelernt: „Log everything“ ist keine Strategie, sondern ein Weg, die Festplatte zu verstopfen. Sinnvoller ist es, Logs dort zu setzen, wo Entscheidungen getroffen werden: bei Fehlermeldungen, bei Zustandswechseln, beim Start der Anwendung --- nicht bei jedem Herzschlag \cite{abieba2025advanced}. So wird der Detektiv nicht zum Messie.
 
-\subsection{Das Navi: Distributed Tracing mit Jaeger}
+\subsection{Das Navi: Distributed Tracing}
 
 Hier wurde es für \emph{frag.jetzt} kritisch. Metriken und Logs sind mächtig, aber ohne Kontext oft isoliert. Sie sagen: „Die Datenbank ist langsam“ und „Das Frontend wartet“. Aber sie beantworten nicht: \emph{Worauf} wartet das Frontend eigentlich, und \emph{welcher} Call hat den Stau ausgelöst?
 
-In einer Microservice-Architektur wie unserer verliert man ohne \textbf{Tracing} den Faden \cite{albuquerque2025tracing}. Deshalb wurde Jaeger eingesetzt, um den Weg einer einzelnen Anfrage über Gateway, Spring Boot und KI-Backend nachzuzeichnen. Erst Tracing macht aus einzelnen Bauteilen eine zusammenhängende Geschichte \cite{albuquerque2025tracing}.
+In einer Microservice-Architektur wie unserer verliert man ohne \textbf{Tracing} den Faden \cite{albuquerque2025tracing}. Deshalb werden Tracing-Tools wie \textbf{Jaeger} eingesetzt, um den Weg einer einzelnen Anfrage über Gateway, Spring Boot und KI-Backend nachzuzeichnen. Erst Tracing macht aus einzelnen Bauteilen eine zusammenhängende Geschichte \cite{albuquerque2025tracing}.
+
+\subsection{Der Notruf: Intelligentes Alerting}
+
+Metriken, Logs und Traces sind das Nervensystem, aber das Alerting ist der Schmerzreiz, der zum Handeln zwingt. In der Praxis führt „stumpfes“ Alerting (z.\,B.\ einfache statische Schwellenwerte wie „CPU über 90\,\%“) jedoch oft zu einer Flut irrelevanter Benachrichtigungen, die echte Notfälle verdecken.
+
+Moderne Ansätze setzen daher auf \textbf{Context Aware Alerting} und \textbf{AI-Powered Alerting}, um das Rauschen drastisch zu minimieren (\emph{Noise Reduction}) \cite{sakinala2025observability}. Statt bei jedem kurzen Last-Spike sofort Panik zu verbreiten, analysieren intelligente Algorithmen den Kontext: Ist die hohe Last zu dieser Uhrzeit typisch? Korreliert der Anstieg mit einem geplanten Hintergrundprozess? 
+
+Durch diese kontextbezogene Filterung unterscheidet das System zwischen einem harmlosen „Schluckauf“ und einem ernsthaften Vorfall. Der digitale Wecker wird so vom dauerläutenden Störsignal zu einem verlässlichen Notrufsystem, das nur dann Alarm schlägt, wenn menschliches Eingreifen tatsächlich notwendig ist \cite{sakinala2025observability}.
 
 \subsection{Die Geheimwaffe: OpenTelemetry gegen blinde Flecken}
 
@@ -197,21 +203,21 @@ Gerade deshalb ist Zurückhaltung entscheidend. Ziel ist nicht maximale Datensam
 
 Hand aufs Herz: Nichts ruiniert die Moral eines Teams schneller als ein Telefon, das nachts um 3 Uhr vibriert, nur um zu melden: „CPU-Auslastung bei 85\,\%“ --- und fünf Minuten später springt der Wert von selbst wieder auf „OK“.
 
-Dieses Phänomen hat einen Namen: \textbf{Alarmmüdigkeit} (Alert Fatigue) \cite{jalalvand2024alert}. Wenn alles ein Notfall ist, ist nichts mehr ein Notfall. In der frühen Phase von \emph{frag.jetzt} neigten wir dazu, auf alles zu lauschen: Ein Service antwortet nicht sofort? Alarm. Die Datenbank schreibt viele Logs? Alarm. Das Ergebnis: Benachrichtigungen wurden ignoriert, wie man das Rauschen einer Klimaanlage irgendwann ausblendet. Und genau dann passierte der echte Ausfall.
+Dieses Phänomen hat einen Namen: \textbf{Alarmmüdigkeit} (Alert Fatigue) \cite{jalalvand2024alert}. Wenn alles ein Notfall ist, ist nichts mehr ein Notfall. Gerade in vielen frühen Betriebsphasen verteilter Systeme entsteht der Impuls, auf jedes Signal zu lauschen. Ein Service antwortet nicht sofort? Alarm. Die Datenbank schreibt viele Logs? Alarm. Mit der Zeit stumpft das Team ab – Benachrichtigungen werden ausgeblendet wie ein dauerhaftes Hintergrundgeräusch. Und ausgerechnet im entscheidenden Moment bleibt der echte Notruf ungehört \cite{jalalvand2024alert}.
 
-Also wurde das Alarm-Konzept radikal umgestellt --- weg von „Rauschen“, hin zu „Handlung“. Drei Regeln haben sich dabei als Leitplanken bewährt, weil sie Alarme zu Entscheidungen machen und nicht zu Nervenkrieg \cite{ewaschukMonitoringDistributedSystems} \cite{jalalvand2024alert}:
+Also muss das Alarm-Konzept radikal umgestellt werden --- weg von „Rauschen“, hin zu „Handlung“. Drei Regeln können dabei als Leitplanken dienen, weil sie Alarme zu Entscheidungen machen und nicht zu Nervenkrieg \cite{sakinala2025observability}\cite{jalalvand2024alert}:
 
 \begin{enumerate}
-\item \textbf{Weck mich nur, wenn der Nutzer leidet.} Ein hoher CPU-Wert ist kein Grund zur Panik, solange die Antworten schnell kommen. Alarmiert wird auf \emph{Symptome}, nicht auf bloße Ursachen \cite{ewaschukMonitoringDistributedSystems}. \emph{Schlecht:} „Server Node 4 hat hohe Last.“ \emph{Gut:} „Die Spitzenlatenz beim Absenden von Fragen ist (beispielhaft) über 2 Sekunden gestiegen“ \cite{sridharan2018distributed}\cite{ewaschukMonitoringDistributedSystems}.
+\item \textbf{Weck mich nur, wenn der Nutzer leidet.} Ein hoher CPU-Wert ist kein Grund zur Panik, solange die Antworten schnell kommen. Alarmiert wird auf \emph{Symptome}, nicht auf bloße Ursachen \cite{sakinala2025observability}. \emph{Schlecht:} „Server Node 4 hat hohe Last.“ \emph{Gut:} „Die Spitzenlatenz beim Absenden von Fragen ist über 2 Sekunden gestiegen“ \cite{ewaschukMonitoringDistributedSystems}.
 
-\item \textbf{Die „Luft-anhalten“-Strategie.} Netzwerke haben Schluckauf. Das ist normal. Statt bei jedem verlorenen Paket sofort „Feuer!“ zu schreien, wird zeitlich geglättet. Besteht das Problem länger als eine definierte Dauer (z.\,B.\ zwei Minuten), wird die Nachricht erst dann aktiv. Das eliminiert nervöse Fehlalarme („Flapping“) fast vollständig \cite{ewaschukMonitoringDistributedSystems}.
+\item \textbf{Die „Luft-anhalten“-Strategie.} Netzwerke haben Schluckauf. Das ist normal. Statt bei jedem verlorenen Paket sofort „Feuer!“ zu schreien, wird zeitlich geglättet. Besteht das Problem länger als eine definierte Dauer (z.\,B.\ zwei Minuten), wird die Nachricht erst dann aktiv. Das eliminiert nervöse Fehlalarme („Flapping“) fast vollständig \cite{jalalvand2024alert}.
 
-\item \textbf{Kein Alarm ohne Spielbuch.} Ein Alarm, der nur sagt „Es ist kaputt“, ist wertlos. Er erzeugt Stress, aber keine Lösung. Deshalb werden \textbf{Runbooks} direkt mit Alerts verknüpft: Wenn der „Datenbank-Pool erschöpft“-Alarm kommt, liefert er die Anleitung gleich mit: „(1) Offene Verbindungen prüfen, (2) Service X neu starten, (3) Lastspitze korrelieren“ \cite{ewaschukMonitoringDistributedSystems}\cite{jalalvand2024alert}.
+\item \textbf{Kein Alarm ohne Spielbuch.} Ein Alarm, der nur sagt „Es ist kaputt“, ist wertlos. Er erzeugt Stress, aber keine Lösung. Deshalb werden \textbf{Runbooks} direkt mit Alerts verknüpft: Wenn der „Datenbank-Pool erschöpft“-Alarm kommt, liefert er die Anleitung gleich mit: „(1) Offene Verbindungen prüfen, (2) Service X neu starten, (3) Lastspitze korrelieren“ \cite{gowda2022alertsAutomation}\cite{jalalvand2024alert}.
 \end{enumerate}
 
 \subsection{Ein kurzer Einschub: Warum das mehr ist als Tool-Kosmetik}
 
-Ein gutes Observability-System ist wie ein guter Rauchmelder: Es schweigt die meiste Zeit. Aber wenn es sich meldet, dann schnappt man sich den Feuerlöscher --- und nicht die Ohropax. Diese Logik wird nicht durch „mehr Daten“ erreicht, sondern durch \emph{bessere} Daten, durch Korrelation und durch Alarme, die Handlung erzwingen statt Ablenkung produzieren \cite{ewaschukMonitoringDistributedSystems}\cite{jalalvand2024alert}.
+Ein gutes Observability-System ist wie ein guter Rauchmelder: Es schweigt die meiste Zeit. Aber wenn es sich meldet, dann schnappt man sich den Feuerlöscher --- und nicht die Ohropax. Diese Logik wird nicht durch „mehr Daten“ erreicht, sondern durch \emph{bessere} Daten, durch Korrelation und durch Alarme, die Handlung erzwingen statt Ablenkung produzieren \cite{gowda2022alertsAutomation} \cite{jalalvand2024alert}.
 
 \section{Fazit: Wenn aus Stille Vertrauen wird}
 
@@ -219,13 +225,13 @@ Kehren wir zurück in Hörsaal 1. Wieder zücken 500 Studierende ihre Smartphone
 
 Der Unterschied zu früher? Niemand merkt es.
 
-Bevor der Ladebalken auf der Leinwand überhaupt ins Stocken gerät, hat der Observability-Stack das Symptom („Latenz steigt am Backend“) bereits erfasst. Prometheus hat den Trend erkannt, noch bevor ein Grenzwert gerissen wurde \cite{banerjee2024comparative}. Ein Blick in die Tracing-Ansicht zeigt: „Aha, der Connection-Pool zur Datenbank läuft voll“ \cite{albuquerque2025tracing}. Und das Runbook liefert die Lösung, noch bevor der erste Nutzer frustriert die App schließen kann \cite{ewaschukMonitoringDistributedSystems}\cite{jalalvand2024alert}.
+Bevor der Ladebalken auf der Leinwand überhaupt ins Stocken gerät, hat der Observability-Stack das Symptom („Latenz steigt am Backend“) bereits erfasst. Prometheus hat den Trend erkannt, noch bevor ein Grenzwert gerissen wurde \cite{banerjee2024comparative}. Ein Blick in die Tracing-Ansicht zeigt: „Aha, der Connection-Pool zur Datenbank läuft voll“ \cite{albuquerque2025tracing}. Und das Runbook liefert die Lösung, noch bevor der erste Nutzer frustriert die App schließen kann \cite{gowda2022alertsAutomation}.
 
-Das ist der Kern von Observability: Es geht nicht um bunte Dashboards an der Wand, die beeindruckend aussehen. Es geht darum, „Unbekannte Unbekannte“ beherrschbar zu machen \cite{sridharan2018distributed}. Fehler in verteilten Systemen werden nicht vollständig verhindert werden können --- Systeme \emph{werden} ausfallen \cite{ewaschukMonitoringDistributedSystems}. Aber wir können entscheiden, wie schnell wir verstehen, was passiert, und wie schnell wir wieder stabil sind.
+Das ist der Kern von Observability: Es geht nicht um bunte Dashboards an der Wand, die beeindruckend aussehen. Es geht darum, auch solche Fehler beherrschbar zu machen, mit denen niemand gerechnet hat – indem das System selbst Hinweise auf Ursachen und Zusammenhänge liefert \cite{abieba2025advanced}. Fehler in verteilten Systemen werden nicht vollständig verhindert werden können --- Systeme \emph{werden} ausfallen \cite{ewaschukMonitoringDistributedSystems}. Aber wir können entscheiden, wie schnell wir verstehen, was passiert, und wie schnell wir wieder stabil sind.
 
 \subsection{Der nächste Schritt: Von „Best Effort“ zu Service Level Objectives (SLOs)}
 
-Sind wir fertig? Nein. Observability ist kein Projekt, sondern ein Prozess. Aktuell wird gemessen, was \emph{ist}. Der nächste Schritt ist die Definition dessen, was \emph{sein darf}. Mit \textbf{Service Level Objectives (SLOs)} wird festgelegt, welche Nutzererfahrung als „gut genug“ gilt, etwa: „99\,\% aller Fragen müssen in unter 500 ms beantwortet sein“ \cite{ewaschukMonitoringDistributedSystems}. Das zwingt dazu, Technik nicht nur technisch zu betrachten, sondern vom Nutzer her zu denken. Und es schafft eine klare Konsequenz: Wenn das Ziel verfehlt wird, werden neue Features gestoppt und Stabilität priorisiert \cite{ewaschukMonitoringDistributedSystems}.
+Sind wir damit am Ziel? Nein. Observability ist kein Projekt, sondern ein fortlaufender Prozess. Zunächst wird sichtbar gemacht, wie sich ein System tatsächlich verhält. Der nächste Schritt ist die Definition dessen, was \emph{sein darf}. Mit \textbf{Service Level Objectives (SLOs)} wird festgelegt, welche Nutzererfahrung als „gut genug“ gilt, etwa: „99\,\% aller Fragen müssen in unter 500 ms beantwortet sein“ \cite{ewaschukMonitoringDistributedSystems}. Das zwingt dazu, Technik nicht nur technisch zu betrachten, sondern vom Nutzer her zu denken. Und es schafft eine klare Konsequenz: Wenn das Ziel verfehlt wird, werden neue Features gestoppt und Stabilität priorisiert \cite{abieba2025advanced}.
 
 Am Ende ist \emph{frag.jetzt} mehr als Code. Es ist die Interaktion zwischen Menschen. Und die Aufgabe einer Observability-Strategie besteht darin, sicherzustellen, dass die Technik dieser Interaktion niemals im Weg steht.
 
