@@ -6,6 +6,66 @@
 \index{Evaluation}%
 \label{ch:realisierung}
 
+\section{Einleitung}
+
+Ein voll besetzter Hörsaal. Hunderte Studierende greifen gleichzeitig zu ihren Smartphones und senden Antworten auf eine interaktive Frage über die Plattform \emph{frag.jetzt}. Innerhalb weniger Sekunden treffen zahlreiche Anfragen im Backend ein, während parallel Datenbankzugriffe erfolgen und externe Dienste angesprochen werden. Für die Nutzenden ist lediglich das Ergebnis sichtbar: Die Antwort erscheint auf der Leinwand – oder sie erscheint nicht.
+
+Diese Situation verdeutlicht eine zentrale Herausforderung beim Betrieb moderner verteilter Webanwendungen. Wenn eine Anfrage ungewöhnlich lange benötigt oder vollständig fehlschlägt, stellt sich unmittelbar die Frage nach der Ursache. Liegt das Problem im Frontend, im Backend, in der Datenbank oder in einem externen Dienst? In verteilten Architekturen ist die Diagnose solcher Probleme ohne geeignete Betriebsdaten erheblich erschwert, da einzelne Systemkomponenten unabhängig voneinander arbeiten und Fehlerzustände nicht geradewegs sichtbar sind (Usman et al., 2022).
+
+\subsection{Ausgangssituation}
+
+Die Plattform \emph{frag.jetzt} ist eine Open-Source-Frage- und Antwortplattform, die insbesondere in Lehrveranstaltungen eingesetzt wird, um interaktive Rückmeldungen von Studierenden zu sammeln (TH Mittelhessen \& arsnova, 2025). Technisch basiert die Anwendung auf einer verteilten Architektur mit einem Progressive-Web-App-Frontend, einem Spring-Boot-Backend, einer PostgreSQL-Datenbank sowie externen Diensten, beispielsweise für KI-gestützte Funktionen.
+
+Solche Architekturen bieten eine hohe Flexibilität sowie eine gute Skalierbarkeit, erhöhen jedoch gleichzeitig die Komplexität des Betriebs. Während moderne Entwicklungspraktiken wie Continuous Integration und Continuous Delivery schnelle und automatisierte Softwarebereitstellungen ermöglichen, bleibt häufig unklar, wie sich das Verhalten der Anwendung im realen Betrieb nachvollziehen lässt.
+
+Traditionelle Monitoring-Systeme erfassen dazu typischerweise quantitative Betriebsdaten wie Anfragevolumen, Fehlerraten oder Antwortzeiten. Monitoring bezeichnet dabei die kontinuierliche Sammlung, Aggregation und Darstellung von Systemmetriken zur Bewertung des Systemzustands (Ewaschuk, 2017). In stark verteilten Systemen reichen solche Ansätze jedoch häufig nicht aus, um komplexe Fehlerzustände oder Leistungsprobleme eindeutig zu analysieren.
+
+Observability erweitert diesen Ansatz, indem sie es ermöglicht, aus verschiedenen Telemetriedaten Rückschlüsse auf den internen Zustand eines Systems zu ziehen. Typische Datenquellen sind \emph{Metriken}, \emph{Logs} sowie \emph{Distributed Traces} (Faseeha et al., 2025). Erst durch die Kombination dieser Daten entsteht eine ganzheitliche Sicht auf das Verhalten eines Systems und seine internen Abhängigkeiten.
+
+\subsection{Problemstellung}
+
+Trotz der technischen Reife moderner Entwicklungsprozesse fehlt in vielen Anwendungen eine konsistente Strategie zur Beobachtung des Systembetriebs. Dies gilt auch für Plattformen wie \emph{frag.jetzt}, deren Architektur aus mehreren voneinander abhängigen Komponenten besteht. Ohne klar definierte Metriken sowie ohne korrelierte Telemetriedaten bleibt der interne Zustand der Anwendung weitgehend intransparent.
+
+Ein etabliertes Konzept zur Bewertung der Betriebsqualität verteilter Systeme sind die sogenannten \emph{Four Golden Signals}. Diese umfassen die vier Messgrößen \emph{Latency}, \emph{Traffic}, \emph{Errors} und \emph{Saturation} und ermöglichen eine kompakte Bewertung des Systemzustands anhand zentraler Leistungsindikatoren (Ewaschuk, 2017).
+
+Ein weiteres Problem besteht in der fehlenden Korrelation unterschiedlicher Telemetriedaten. In Cloud-Native-Anwendungen entstehen Logeinträge, Metriken und Traces an verschiedenen Stellen der Systemarchitektur. Ohne geeignete Mechanismen zur Zusammenführung dieser Daten wird es schwierig, einzelne Anfragen über mehrere Komponenten hinweg nachzuverfolgen und mögliche Ursachen von Fehlern zu identifizieren (Albuquerque \& Correia, 2025).
+
+Darüber hinaus kann eine undurchdachte Alarmierungsstrategie zu sogenannter \emph{Alert Fatigue} führen. Dabei werden so viele Warnmeldungen erzeugt, dass wichtige Hinweise im täglichen Betrieb übersehen oder ignoriert werden. Studien zeigen, dass eine gezielte Priorisierung von Alarmmeldungen entscheidend ist, um Betriebsteams bei der effektiven Reaktion auf Störungen zu unterstützen (Jalalvand et al., 2024).
+
+Diese Herausforderungen verdeutlichen, dass nicht nur die Erhebung von Betriebsdaten erforderlich ist, sondern auch eine strukturierte Strategie zu deren Auswahl, Aggregation und Interpretation.
+
+\subsection{Zielsetzung der Arbeit}
+
+Absicht dieser Arbeit ist die Entwicklung einer umfassenden Observability-Strategie für die Plattform \emph{frag.jetzt}. Dabei wird ein Ansatz entwickelt, der relevante Telemetriedaten definiert, geeignete Observability-Werkzeuge identifiziert und ein effektives Alarmierungskonzept entwirft.
+
+Die Strategie umfasst mehrere Ebenen der Systembeobachtung. Dazu gehören insbesondere Metriken zur Leistungsanalyse, Protokollierung, verteiltes Tracing sowie Konzepte für Dashboards und Alarmmeldungen. Durch diese Kombination soll es möglich werden, den Zustand der Anwendung kontinuierlich zu analysieren und Ursachen für Fehler oder Leistungsprobleme schneller zu identifizieren.
+
+Neben der konzeptionellen Entwicklung steht auch die praktische Umsetzbarkeit im Fokus. Ziel ist daher eine Observability-Strategie, die sich in reale Entwicklungs- und Betriebsumgebungen integrieren lässt und konkrete Handlungsempfehlungen (Runbooks) für den Betrieb der Plattform liefert.
+
+\subsection{Forschungsfragen}
+
+Aus der beschriebenen Problemstellung ergeben sich die folgenden Forschungsfragen:
+
+\begin{enumerate}
+\item Wie können die Four Golden Signals für die spezifischen Services von frag.jetzt (PWA-Frontend, Spring Boot Backend, PostgreSQL, KI-Services) konkret definiert und instrumentiert werden?
+
+\item Welche Observability-Stack-Kombination ist am besten geeignet für die Monitoring-Anforderungen von frag.jetzt?
+
+\item Wie kann ein intelligentes Alert-System entwickelt werden, das False Positives minimiert und actionable Insights für verschiedene Stakeholder-Rollen (DevOps, Entwickler, Product Owner) bereitstellt?
+\end{enumerate}
+
+\subsection{Aufbau der Arbeit}
+
+Die Arbeit ist in mehrere aufeinander aufbauende Kapitel gegliedert. Kapitel 2 erläutert zunächst die theoretischen Grundlagen von Monitoring und Observability und stellt zentrale Konzepte verteilter Systeme dar. Kapitel 3 analysiert anschließend die Architektur der Plattform \emph{frag.jetzt} und identifiziert observability-relevante Komponenten.
+
+Kapitel 4 beschreibt das methodische Vorgehen zur Entwicklung der Observability-Strategie. Darauf aufbauend definiert Kapitel 5 einen Metrikkatalog auf Basis der Four Golden Signals für die einzelnen Services der Plattform.
+
+Kapitel 6 untersucht verschiedene Observability-Stacks und bewertet deren Eignung für den Einsatz in der betrachteten Architektur. Kapitel 7 beschreibt die Implementierung der Telemetrie-Pipeline sowie die Instrumentierung der Anwendung.
+
+Kapitel 8 widmet sich der Gestaltung rollenbasierter Dashboards. Kapitel 9 entwickelt ein Konzept für intelligentes Alerting sowie exemplarische Runbooks für typische Störungsszenarien.
+
+Abschließend diskutiert Kapitel 10 die Ergebnisse und mögliche Limitationen der Arbeit, bevor Kapitel 11 die wichtigsten Erkenntnisse zusammenfasst und einen Ausblick auf zukünftige Entwicklungen gibt.
+
 \section{Implementierungsdetails}
 
 Das Kapitel dokumentiert die praktischen Aspekte der Umsetzung\index{Implementierungspraxis}.\footnote{Implementierungsdetails orientieren sich an Best Practices aus~\cite{martin2008clean}.}
