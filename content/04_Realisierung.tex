@@ -66,6 +66,106 @@ Kapitel 8 widmet sich der Gestaltung rollenbasierter Dashboards. Kapitel 9 entwi
 
 Abschließend diskutiert Kapitel 10 die Ergebnisse und mögliche Limitationen der Arbeit, bevor Kapitel 11 die wichtigsten Erkenntnisse zusammenfasst und einen Ausblick auf zukünftige Entwicklungen gibt.
 
+
+
+\section{Grundlagen und theoretische Fundierung}
+
+Die Sicherstellung eines zuverlässigen Betriebs von Softwaresystemen erfordert eine methodische Herangehensweise. Insbesondere in stark verteilten Umgebungen reicht die alleinige Betrachtung isolierter Hardware-Ressourcen nicht mehr aus. Dieses Kapitel legt das theoretische Fundament für die spätere Systemanalyse. Es grenzt grundlegende Begrifflichkeiten voneinander ab. Anschließend werden die maßgeblichen Kategorien von Telemetriedaten beleuchtet, bevor spezifische Herausforderungen von Microservices sowie bewährte Metriken und Alarmierungsstrategien erörtert werden.
+
+\subsection{Monitoring und Observability}
+
+Die Begriffe Monitoring und Observability werden in der Literatur häufig synonym verwendet, obwohl sie unterschiedliche Konzepte beschreiben. Monitoring umfasst das fortlaufende Sammeln, Verarbeiten und Anzeigen quantitativer Daten eines Systems in Echtzeit (Ewaschuk, 2017, S. 2 [SEITENZAHL PRÜFEN]). Es dient primär dazu, vordefinierte Fehlzustände zu erkennen. Ein Monitoring-System beantwortet die Frage, ob ein System ordnungsgemäß funktioniert. Dies ist essenziell für den Basisbetrieb.
+
+Observability hingegen entstammt ursprünglich der klassischen Kontrolltheorie. Sie beschreibt die Fähigkeit, den internen Zustand eines Systems allein anhand seiner externen Ausgaben nachvollziehen zu können (Abieba et al., 2025, S. 271 [SEITENZAHL PRÜFEN]). Während traditionelles Monitoring auf statische Dashboards und bekannte Fehler ("known unknowns") ausgelegt ist, zielt Observability auf das Verstehen unvorhersehbarer Verhaltensweisen ("unknown unknowns") ab (Sakinala, 2025, S. 102 [SEITENZAHL PRÜFEN]). Observability beantwortet somit die Frage, warum ein System nicht funktioniert. Für die Erreichung dieses Zustands ist eine tiefergehende Instrumentierung des Quellcodes unabdingbar.
+
+[HIER MÖGLICHES BILD EINFÜGEN: Gegenüberstellung von Monitoring (Was ist kaputt?) und Observability (Warum ist es kaputt?) anhand eines Schichtenmodells]
+
+\subsection{Telemetriedaten in Observability-Systemen}
+
+Um einen hohen Grad an Observability zu erreichen, müssen Systeme detaillierte Telemetriedaten emittieren. Diese Daten werden in der Fachliteratur oft als die drei Säulen der Observability bezeichnet: Logs, Metrics und Distributed Tracing (Albuquerque \& Correia, 2025, S. 2 [SEITENZAHL PRÜFEN]).
+
+Logs sind unveränderliche, zeitgestempelte Aufzeichnungen diskreter Ereignisse, die innerhalb einer Applikation auftreten. Sie enthalten detaillierte Kontextinformationen zu spezifischen Transaktionen oder Fehlermeldungen (Banerjee \& Singh, 2024, S. 2 [SEITENZAHL PRÜFEN]). Da unstrukturierte Text-Logs maschinell schwer durchsuchbar sind, wird in der Praxis zunehmend auf strukturierte Formate wie JSON gesetzt. Dies erleichtert die automatisierte Aggregation.
+
+Metrics stellen numerische Messwerte dar. Diese werden über festgelegte Zeitintervalle hinweg aggregiert (Sakinala, 2025, S. 103 [SEITENZAHL PRÜFEN]). Typische Beispiele sind die CPU-Auslastung, der belegte Arbeitsspeicher oder die Anzahl fehlerhafter HTTP-Anfragen. Metriken sind äußerst speicherplatzeffizient. Sie eignen sich hervorragend für die Erstellung von Dashboards und die Auslösung von Alarmen.
+
+Distributed Tracing ermöglicht die lückenlose Verfolgung einer Anfrage über verschiedene Service-Grenzen hinweg. Ein Trace repräsentiert den gesamten Ausführungspfad einer Nutzerinteraktion. Er besteht aus mehreren "Spans", wobei jeder Span eine einzelne Arbeitseinheit innerhalb eines bestimmten Services darstellt (Albuquerque \& Correia, 2025, S. 3 [SEITENZAHL PRÜFEN]). Durch die Injektion einer eindeutigen Trace-ID in die Header der Netzwerkkommunikation lassen sich Latenzengpässe in komplexen Architekturen präzise lokalisieren.
+
+\subsection{Observability in Microservice-Architekturen}
+
+Die Verschiebung von monolithischen Architekturen hin zu Microservices bietet enorme Vorteile hinsichtlich Skalierbarkeit und unabhängiger Deployments. Gleichzeitig steigt die operative Komplexität drastisch an (Faseeha et al., 2025, S. 72012 [SEITENZAHL PRÜFEN]). Ein einzelner Aufruf durch einen Endnutzer kann Dutzende nachgelagerte API-Kommunikationen und Datenbankzugriffe auslösen.
+
+Eine der typischen Herausforderungen besteht in der Bewältigung verteilter Fehlerzustände. Wenn ein externer Service langsam antwortet, kann dies zu einem Rückstau von Anfragen führen. Solche kaskadierenden Fehler bringen im schlimmsten Fall das gesamte System zum Erliegen (Usman et al., 2022, S. 86906 [SEITENZAHL PRÜFEN]). Herkömmliche Überwachungswerkzeuge stoßen hier an ihre Grenzen, da sie oft nur die Metriken isolierter Container betrachten.
+
+Es bedarf einer End-to-End Visibility. Die gesamte Kette vom initialen Klick im Frontend bis hin zur Datenbankabfrage im Backend muss transparent gemacht werden (Fischer et al., 2024, S. 205 [SEITENZAHL PRÜFEN]). Nur so können Entwickler und operative Teams im Fehlerfall zweifelsfrei feststellen, an welchem Knotenpunkt innerhalb des Netzwerks die Störung ihren Ursprung hat.
+
+\subsection{Die Four Golden Signals}
+
+Um die Informationsflut an Metriken handhabbar zu machen, haben sich in der Praxis standardisierte Indikatoren etabliert. Die von Google formulierten "Four Golden Signals" bilden ein bewährtes Rahmenwerk zur Überwachung benutzerorientierter Dienste (Ewaschuk, 2017, S. 3 [SEITENZAHL PRÜFEN]).
+
+Erstens misst die Latency (Latenz) die Zeitdauer, die ein System für die Verarbeitung einer Anfrage benötigt. Hierbei ist es entscheidend, die Latenz von erfolgreichen und fehlerhaften Anfragen getrennt zu betrachten (Ewaschuk, 2017, S. 4 [SEITENZAHL PRÜFEN]). Zweitens beschreibt der Traffic (Verkehrsaufkommen) die Belastung des Systems. Je nach Natur des Dienstes wird dies in HTTP-Anfragen pro Sekunde oder der Anzahl aktiver Nutzersessions gemessen.
+
+Drittens erfassen die Errors (Fehlerraten) den Anteil der Anfragen, die fehlschlagen. Dies schließt explizite HTTP-500-Fehler ebenso ein wie logische Fehler, bei denen zwar der korrekte Statuscode gesendet wird, die übertragenen Daten jedoch unvollständig sind (Sakinala, 2025, S. 105 [SEITENZAHL PRÜFEN]). Viertens gibt die Saturation (Sättigung) an, wie stark die Ressourcenkapazität des Systems ausgelastet ist. Da viele Systeme bereits vor Erreichen einer 100-prozentigen Auslastung Performance-Einbußen zeigen, dient dieser Indikator als Frühwarnsystem (Ewaschuk, 2017, S. 5 [SEITENZAHL PRÜFEN]).
+
+In modernen, Cloud-nativen Architekturen werden diese Signale zunehmend adaptiert. Während klassische Ansätze physische Ressourcen im Blick hatten, fokussieren sich heutige Praktiken stark auf Service Level Objectives (SLOs) und die tatsächliche Nutzererfahrung an den Schnittstellen der Container (Faseeha et al., 2025, S. 72015 [SEITENZAHL PRÜFEN]).
+
+[HIER MÖGLICHES BILD EINFÜGEN: Tabellarische Übersicht der Four Golden Signals mit Beispielen für Backend- und Datenbank-Metriken]
+
+\subsection{Alerting und Incident Management}
+
+Das Sammeln von Metriken stiftet nur dann Wert, wenn daraus rechtzeitig operative Handlungen abgeleitet werden. Fehlkonfigurierte Alarmierungssysteme führen jedoch häufig zum Phänomen der Alert Fatigue (Alarmmüdigkeit). Wenn Entwickler permanent mit unkritischen Benachrichtigungen überflutet werden, sinkt die Aufmerksamkeit. Echte Notfälle bleiben infolgedessen oft unbemerkt [NEUE QUELLE].
+
+Um dieser Ermüdung entgegenzuwirken, ist eine strikte Priorisierung unerlässlich. Ein robuster Ansatz ist das SLO-basierte Alerting. Anstatt einen Alarm auszulösen, sobald die CPU-Auslastung eines Servers 80 Prozent überschreitet, wird das System so konfiguriert, dass es nur dann alarmiert, wenn die Fehlerrate für den Endnutzer spürbar steigt oder das zugewiesene Error Budget rapide abnimmt (Jalalvand et al., 2024, S. 5 [SEITENZAHL PRÜFEN]). Symptome, die den Nutzer direkt betreffen, erhalten höchste Priorität.
+
+Ursachenorientierte Metriken dienen hingegen primär der Fehlersuche im Nachgang und sollten lediglich auf Dashboards sichtbar sein, anstatt aktive Alarme auf Mobiltelefonen auszulösen (Ewaschuk, 2017, S. 15 [SEITENZAHL PRÜFEN]). Diese Strategie schont die mentalen Ressourcen der Teams und fördert eine nachhaltige Incident-Management-Kultur.
+
+
+\section{Grundlagen und theoretische Fundierung}
+
+Die Sicherstellung eines zuverlässigen Betriebs von Softwaresystemen erfordert eine methodische Herangehensweise. Insbesondere in stark verteilten Umgebungen reicht die alleinige Betrachtung isolierter Hardware-Ressourcen nicht mehr aus, um den Gesundheitszustand der Anwendung verlässlich zu bewerten. Dieses Kapitel legt das theoretische Fundament für die anschließende Systemanalyse von frag.jetzt. Zu Beginn werden grundlegende Begrifflichkeiten voneinander abgegrenzt. Darauf aufbauend werden die maßgeblichen Kategorien von Telemetriedaten beleuchtet, bevor spezifische Herausforderungen verteilter Dienste sowie bewährte Indikatoren und Alarmierungsstrategien detailliert erörtert werden.
+
+\subsection{Monitoring und Observability}
+
+Obwohl die Begriffe Monitoring und Observability in der Fachliteratur oft synonym auftauchen, beschreiben sie grundverschiedene Konzepte. Monitoring umfasst das fortlaufende Sammeln, Verarbeiten, Aggregieren und Anzeigen quantitativer Daten eines Systems in Echtzeit (Ewaschuk, 2017, S. 1). Es dient primär der Erkennung vordefinierter Fehlzustände. Ein solches System beantwortet die Frage, ob eine Anwendung ordnungsgemäß funktioniert, was für den Basisbetrieb unerlässlich ist.
+
+Observability hingegen beschreibt die Fähigkeit, den internen Zustand eines Systems allein anhand seiner externen Ausgaben nachvollziehen zu können (Abieba et al., 2025, S. 270). Während herkömmliche Überwachungsansätze auf vorhersehbare Fehlermuster ("known unknowns") ausgerichtet sind, zielt Observability auf das Verstehen unvorhersehbarer und neuartiger Verhaltensweisen ("unknown unknowns") ab (Banerjee, 2025, S. 916). Folglich beantwortet Observability die tiefergehende Frage, warum ein System nicht funktioniert. Für die Erreichung dieses Zustands ist eine umfassende Instrumentierung des Quellcodes unabdingbar.
+
+\subsection{Telemetriedaten in Observability-Systemen}
+
+Um ein hohes Maß an Observability zu erzielen, müssen Anwendungen detaillierte Telemetriedaten emittieren. Diese Daten werden in der Fachliteratur häufig als die drei Säulen der Observability bezeichnet: Logs, Metrics und Traces (Albuquerque \& Correia, 2025, S. 2).
+
+Logs stellen unveränderliche, zeitgestempelte Aufzeichnungen diskreter Ereignisse dar. Sie liefern tiefe Einblicke und essenzielle Kontextinformationen zu spezifischen Transaktionen oder Fehlermeldungen innerhalb eines Systems (Banerjee, 2025, S. 917). Da reine Textprotokolle maschinell schwer durchsuchbar sind, wird in der Praxis zunehmend auf definierte Formate wie JSON gesetzt, um die automatisierte Aggregation auszuwerten.
+
+Metrics sind numerische Messwerte, welche über festgelegte Zeitintervalle hinweg aggregiert werden (Sakinala, 2025, S. 102). Typische Beispiele umfassen die CPU-Auslastung, den belegten Arbeitsspeicher oder die Anzahl fehlerhafter HTTP-Anfragen. Metriken zeichnen sich durch eine hohe Speicherplatzeffizienz aus. Sie eignen sich hervorragend für die Erstellung von Dashboards und die Auslösung von Alarmen.
+
+Distributed Tracing ermöglicht die lückenlose Verfolgung einer Anfrage über verschiedene Service-Grenzen hinweg. Ein Trace repräsentiert den gesamten Ausführungspfad einer Nutzerinteraktion. Er besteht aus mehreren Spans, wobei jeder Span eine einzelne Arbeitseinheit innerhalb eines bestimmten Services abbildet (Albuquerque \& Correia, 2025, S. 6). Durch die Injektion einer eindeutigen Trace-ID in die Header der Netzwerkkommunikation lassen sich Latenzengpässe in feingranularen Architekturen präzise lokalisieren.
+
+\subsection{Observability in Microservice-Architekturen}
+
+Die Abkehr von monolithischen Architekturen hin zu verteilten Microservices bietet enorme Vorteile hinsichtlich Skalierbarkeit und unabhängiger Deployments. Gleichzeitig steigt die operative Komplexität drastisch an (Faseeha et al., 2025, S. 72012). Ein einzelner Aufruf durch einen Endnutzer kann Dutzende nachgelagerte API-Kommunikationen und Datenbankzugriffe auslösen.
+
+Eine der größten Herausforderungen besteht in der Bewältigung verteilter Fehlerzustände. Wenn ein externer Service langsam antwortet, kann dies zu einem Rückstau von Anfragen führen. Solche Ausbreitungsmuster verursachen kaskadierende Fehler, die sich innerhalb von Millisekunden über mehrere Service-Grenzen hinweg fortpflanzen können (Sakinala, 2025, S. 101). Herkömmliche Überwachungswerkzeuge stoßen in diesem Kontext an ihre Grenzen, da sie oft nur die Metriken isolierter Container betrachten.
+
+Es bedarf einer lückenlosen Sichtbarkeit. Die gesamte Kette vom initialen Klick im Frontend bis hin zur Datenbankabfrage im Backend muss transparent gemacht werden (Sakinala, 2025, S. 103). Nur durch diese vollständige Nachverfolgbarkeit können Entwickler und operative Teams im Fehlerfall zweifelsfrei feststellen, an welchem Knotenpunkt innerhalb des Netzwerks die Störung ihren Ursprung hat.
+
+\subsection{Die Four Golden Signals}
+
+Um die Informationsflut an Metriken handhabbar zu gestalten, haben sich in der Praxis standardisierte Indikatoren etabliert. Die von Google formulierten "Four Golden Signals" bilden ein bewährtes Rahmenwerk zur Beurteilung benutzerorientierter Dienste (Ewaschuk, 2017, S. 7).
+
+Erstens misst die Latency (Latenz) die Zeitdauer, die ein System für die Verarbeitung einer Anfrage benötigt. Hierbei ist es entscheidend, die Latenz von erfolgreichen und fehlerhaften Anfragen strikt getrennt zu betrachten. Zweitens beschreibt der Traffic (Verkehrsaufkommen) die Belastung der Anwendung. Je nach Natur des Dienstes wird dieser Wert in HTTP-Anfragen pro Sekunde oder der Anzahl aktiver Nutzersessions gemessen.
+
+Drittens erfassen die Errors (Fehlerraten) den Anteil der Anfragen, die fehlschlagen. Dies schließt explizite HTTP-500-Fehler ebenso ein wie logische Fehler, bei denen zwar der korrekte Statuscode gesendet wird, die gelieferten Inhalte jedoch fehlerhaft sind (Ewaschuk, 2017, S. 7). Viertens gibt die Saturation (Sättigung) an, wie stark die Ressourcenkapazität des Systems ausgelastet ist. Da viele Dienste bereits vor Erreichen einer vollständigen Auslastung Performance-Einbußen zeigen, dient dieser Indikator als wichtiges Frühwarnsystem.
+
+In modernen, Cloud-nativen Architekturen werden diese Signale zunehmend adaptiert. Während klassische Ansätze physische Hardwareressourcen im Blick hatten, fokussieren sich heutige Praktiken stark auf Service Level Objectives (SLOs) und die tatsächliche Nutzererfahrung an den Schnittstellen der Dienste (Faseeha et al., 2025, S. 72012).
+
+\subsection{Alerting und Incident Management}
+
+Das Sammeln von Metriken stiftet nur dann Mehrwert, wenn daraus rechtzeitig operative Handlungen abgeleitet werden. Fehlkonfigurierte Alarmierungssysteme führen jedoch häufig zur sogenannten Alert Fatigue (Alarmmüdigkeit). Wenn das Personal permanent mit unkritischen Benachrichtigungen überflutet wird, sinkt die Aufmerksamkeit, was unweigerlich dazu führt, dass echte Notfälle verzögert bearbeitet oder gänzlich übersehen werden (Jalalvand et al., 2024, S. 2).
+
+Um dieser Ermüdung entgegenzuwirken, ist eine strikte Priorisierung unerlässlich. Ein robuster Ansatz ist die Ausrichtung an Service Level Objectives. Anstatt einen Alarm auszulösen, sobald die CPU-Auslastung eines Servers einen fixen Schwellenwert überschreitet, wird das System so konfiguriert, dass es nur dann alarmiert, wenn die Verfügbarkeit oder Latenz für den Endnutzer spürbar leidet (Sakinala, 2025, S. 103). Symptome, die den Nutzer direkt betreffen, erhalten bei der Priorisierung stets höchste Dringlichkeit (Ewaschuk, 2017, S. 7).
+
+Ursachenorientierte Metriken dienen hingegen primär der tiefergehenden Fehlersuche im Nachgang. Diese Detailinformationen sollten übersichtlich auf Dashboards visualisiert werden, anstatt aktive Alarme auf den Mobiltelefonen der Entwickler auszulösen (Ewaschuk, 2017, S. 5). Eine derartige Strategie schont die mentalen Kapazitäten der Teams und fördert eine nachhaltige Incident-Management-Kultur.
+
+
 \section{Implementierungsdetails}
 
 Das Kapitel dokumentiert die praktischen Aspekte der Umsetzung\index{Implementierungspraxis}.\footnote{Implementierungsdetails orientieren sich an Best Practices aus~\cite{martin2008clean}.}
