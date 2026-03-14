@@ -1,0 +1,67 @@
+%% C4 Container-Diagramm – frag.jetzt (Flowchart-Variante)
+%% Rendert zuverlässig in Mermaid Live Editor, VS Code, GitHub etc.
+%% Falls C4Context nicht unterstützt wird, diese Version verwenden.
+
+graph TB
+    classDef person fill:#08427B,color:#fff,stroke:#073B6F
+    classDef container fill:#438DD5,color:#fff,stroke:#3C7FC0
+    classDef database fill:#438DD5,color:#fff,stroke:#3C7FC0,stroke-dasharray: 5 5
+    classDef queue fill:#438DD5,color:#fff,stroke:#3C7FC0
+    classDef external fill:#999999,color:#fff,stroke:#8A8A8A
+
+    User["👤 Teilnehmende / Dozierende<br/><i>Browser</i>"]:::person
+
+    subgraph sys ["frag.jetzt Plattform — Docker Compose, 10 Container"]
+        direction TB
+
+        subgraph app ["Applikationsdienste"]
+            direction LR
+            FE["<b>Frontend + Reverse Proxy</b><br/>Angular 19, Nginx<br/><i>SPA, Routing: /api, /gateway, /auth, /ai</i>"]:::container
+            BE["<b>Backend</b><br/>Java 17, Spring Boot 3.1.5<br/>WebFlux, R2DBC<br/><i>19 Controller, 95 Endpoints</i>"]:::container
+            WS["<b>WebSocket Gateway</b><br/>Kotlin 1.8, Netty<br/><i>STOMP-over-WS, Session-Tracking</i>"]:::container
+            AI["<b>AI Provider</b><br/>Python 3.12, FastAPI<br/>LangChain 0.3<br/><i>19 LLM-Provider, Moderation</i>"]:::container
+            KC["<b>Keycloak + Plugin</b><br/>Keycloak 22.0.0<br/><i>SSO, OIDC</i>"]:::container
+        end
+
+        subgraph infra ["Infrastruktur"]
+            direction LR
+            RMQ["<b>RabbitMQ</b><br/>3.8, STOMP + AMQP<br/><i>Message Broker</i>"]:::queue
+            PG["<b>PostgreSQL Haupt</b><br/>12.1, R2DBC<br/><i>31 Tabellen, Flyway V1–V54</i>"]:::database
+            KCDB["<b>Keycloak DB</b><br/>PostgreSQL 15"]:::database
+            PGAI["<b>PostgreSQL AI</b><br/>17.0<br/><i>Logische Replikation</i>"]:::database
+            CHR["<b>ChromaDB</b><br/>0.5.17<br/><i>Vektordatenbank</i>"]:::database
+        end
+    end
+
+    LLM["<b>Externe LLM-Provider</b><br/><i>OpenAI, Anthropic, Mistral,<br/>Google GenAI, OpenRouter u.a.</i>"]:::external
+    PP["<b>PayPal API</b><br/><i>Zahlungsabwicklung</i>"]:::external
+
+    %% Beziehungen: Nutzer
+    User -->|"HTTPS, WSS"| FE
+
+    %% Frontend → Dienste
+    FE -->|"REST /api"| BE
+    FE -->|"WebSocket /gateway"| WS
+    FE -->|"OIDC /auth"| KC
+    FE -->|"REST /ai"| AI
+
+    %% Backend → Infrastruktur
+    BE -->|"R2DBC (reaktiv)"| PG
+    BE -->|"AMQP (Events)"| RMQ
+
+    %% Backend → Extern
+    BE -.->|"HTTPS ⚠ kein Timeout"| PP
+
+    %% WS-Gateway
+    WS -->|"STOMP Relay"| RMQ
+
+    %% AI Provider
+    AI -.->|"HTTPS ⚠ kein Timeout/Retry"| LLM
+    AI -->|"asyncpg"| PGAI
+    AI -->|"HTTP"| CHR
+
+    %% Keycloak
+    KC -->|"JDBC"| KCDB
+
+    %% Replikation
+    PG -.->|"Logische Replikation<br/><i>room, account, room_access</i>"| PGAI

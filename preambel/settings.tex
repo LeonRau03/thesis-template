@@ -1,29 +1,36 @@
-%%% === Textbody ==============================================================
+%%% ========================================================================
+%%% KOMA-Script Settings (settings.tex)
+%%% 
+%%% IU-Konformität: Änderungen gemäß "Richtlinien für die Gestaltung
+%%% wissenschaftlicher Arbeiten an der IU" (Stand 01.10.2025)
+%%% sind mit "% [IU-FIX]" markiert.
+%%% ========================================================================
+ 
+%%% === Seitenlayout ===========================================================
+%%% [IU-FIX] twoside=false: IU verlangt einseitigen Druck
+%%% (vorher: twoside=true)
+%%% [IU-FIX] DIV und BCOR entfernt – Ränder werden über geometry gesteuert
+%%% (vorher: DIV=11, BCOR=5mm → kollidierte mit geometry-Rändern)
 \KOMAoptions{%
-   DIV=11,%        % Größe des Satzspiegels (höher = größer)
-   BCOR=5mm%       % Bindekorrektur für gebundene Arbeiten
+   twoside=false,%         % [IU-FIX] Einseitig (IU: "einseitig zu beschreiben")
+   twocolumn=false,%       % Einspaltig
+   headinclude=false,%      % [IU-FIX] Kopfzeile im Satzspiegel berücksichtigen
+   footinclude=true,%      % [IU-FIX] Fußzeile im Satzspiegel berücksichtigen
+   headsepline=false,%      % Linie unter Kopfzeile
+   cleardoublepage=empty%
 }%
-
+ 
 %%% === Überschriften ==========================================================
 \KOMAoptions{%
    headings=big,%             % Große Überschriften mit viel Abstand
    headings=noappendixprefix,% Keine speziellen Anhang-Präfixe
    headings=nochapterprefix,%  % Keine Nummern-Präfixe bei Kapiteln
-   headings=openright,%        % Kapitel starten auf rechter Seite
    numbers=noenddot%           % Kein Punkt nach Kapitelnummern
 }%
+%%% [IU-FIX] headings=openright entfernt – bei einseitigem Druck irrelevant
+%%% und kann zu leeren Seiten führen
 \setcounter{secnumdepth}{3}
-
-%%% === Seitenlayout ===========================================================
-\KOMAoptions{%
-   twoside=true,%      % Zweiseitige Darstellung (Buch-Standard)
-   twocolumn=false,%   % Einspaltig
-   headinclude=false,%
-   footinclude=false,%
-   headsepline=true,%  % Linie unter Kopfzeile
-   cleardoublepage=empty%
-}%
-
+ 
 %%% === Table of Contents =====================================================
 \setcounter{tocdepth}{3}
 \KOMAoptions{%
@@ -32,30 +39,30 @@
    toc=noindex,%
    toc=nolistof%
 }%
-
+ 
 %%% === Lists of figures, tables etc. =========================================
 \KOMAoptions{%
    listof=indented,%
    listof=chaptergapsmall,%
    listof=totoc%
 }%
-
+ 
 %%% === Bibliography ==========================================================
 \KOMAoptions{%
    bibliography=openstyle,%
    bibliography=totoc%
 }%
-
+ 
 %%% === Index =================================================================
 \KOMAoptions{%
    index=nottotoc%
 }%
-
+ 
 %%% === Titlepage =============================================================
 \KOMAoptions{%
    titlepage=true%
 }%
-
+ 
 %%% === Miscellaneous =========================================================
 \KOMAoptions{%
    footnotes=multiple%

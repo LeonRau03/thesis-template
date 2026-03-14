@@ -1,178 +1,190 @@
 %%% ----------------------------------------------------------------------
 %%% LaTeX-Präambel
 %%% Hier werden alle Pakete geladen und Einstellungen vorgenommen.
+%%%
+%%% IU-Konformität: Anpassungen gemäß "Richtlinien für die Gestaltung
+%%% wissenschaftlicher Arbeiten an der IU" (Stand 01.10.2025) sind mit
+%%% dem Kommentar "% [IU-FIX]" gekennzeichnet.
 %%% ----------------------------------------------------------------------
-
+ 
 %%% 1. Basiskonfiguration & Hilfsbefehle
 %%% ----------------------------------------------------------------------
 \input{preambel/preambel-commands}
-
+ 
 %%% Spracheinstellungen (Babel)
 \ifthenelse{\equal{\lang}{ngerman}}
   {\usepackage[ngerman]{babel}}
   {\usepackage[english]{babel}}
-
+ 
 %%% Farben
 \usepackage[table]{xcolor}
-
+ 
 %%% Bilder einbinden
 \usepackage{graphicx}
-
+ 
 %%% Querformat für einzelne Seiten
 \usepackage{pdflscape}
-
+ 
 %%% Rechnen mit LaTeX (wird oft intern benötigt)
 \usepackage{calc}
-
-
+ 
+ 
 %%% 2. Text & Typografie
 %%% ----------------------------------------------------------------------
-
+ 
 %%% Schrift-Encoding und Symbole
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
-
+ 
 %%% Schriftarten laden (ausgelagert)
+%%% [IU-HINWEIS] Die IU verlangt Arial oder eine vergleichbare serifenlose
+%%% Schriftart. Stelle sicher, dass preambel/Fonts eine solche setzt,
+%%% z.B. \usepackage{helvet}\renewcommand{\familydefault}{\sfdefault}
 \input{preambel/Fonts}
-
-%%% Zeilenabstand (1,5-fach)
+ 
+%%% Zeilenabstand (1,5-fach) – [IU-konform: "1,5-zeiliger Abstand"]
 \usepackage{setspace}
 \onehalfspacing
-
-%%% Absatzlayout nach IU-Richtlinie
+ 
+%%% Absatzlayout – [IU-FIX] Kein Einzug, 6 Pt. Abstand nach Absatz
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{6pt}
-
-%%% Layout-Anpassung: Abstände verringern
-% Überschriften-Abstände kompakter gestalten
+\setlength{\parskip}{6pt plus 1pt minus 1pt}% [IU-FIX] exakt 6pt
+ 
+%%% Überschriften-Abstände gemäß IU-Richtlinie
+%%% [IU-FIX] 1. Stufe: 12 Pt. vor und 12 Pt. nach
+%%% [IU-FIX] 2. und 3. Stufe: 12 Pt. vor, 6 Pt. nach
 \RedeclareSectionCommand[
-  beforeskip=-1\baselineskip,
-  afterskip=0.5\baselineskip
+  beforeskip=12pt,
+  afterskip=12pt
 ]{chapter}
 \RedeclareSectionCommand[
-  beforeskip=-1\baselineskip,
-  afterskip=0.25\baselineskip
+  beforeskip=12pt,
+  afterskip=6pt
 ]{section}
 \RedeclareSectionCommand[
-  beforeskip=-0.75\baselineskip,
-  afterskip=0.15\baselineskip
+  beforeskip=12pt,
+  afterskip=6pt
 ]{subsection}
-
+ 
 %%% Mikrotypografie (Optischer Randausgleich etc.)
 \usepackage[
    protrusion=true
 ]{microtype}
-
-% Allow a larger emergency stretch to reduce occasional overfull boxes
-% Increasing this gives TeX more flexibility to adjust spacing before reporting
-% overfull/underfull hbox warnings; kept reasonably small to avoid poor spacing.
+ 
 \emergencystretch=2em
-
-%%% Besserer Flattersatz (Linksbündig)
+ 
+%%% Besserer Flattersatz (nur für Überschriften/Verzeichnisse, nicht global)
 \usepackage{ragged2e}
-
+ 
 %%% Intelligente "..." (\dots)
 \usepackage{ellipsis}
-
-%%% Textauszeichnungen (Unterstreichen, Durchstreichen, Sperren)
+ 
+%%% Textauszeichnungen
 \usepackage[normalem]{ulem}
 \usepackage{soul}
-
+ 
 %%% URLs korrekt umbrechen
 \usepackage{xurl}
-
+ 
 %%% Anführungszeichen (passend zur Sprache)
 \usepackage[babel, german=quotes, english=british, french=guillemets]{csquotes}
-\SetBlockThreshold{2} % Ab 2 Zeilen wird ein Zitat als Block gesetzt
-
-
+\SetBlockThreshold{2}
+ 
+ 
 %%% 3. Layout & Seitenränder
 %%% ----------------------------------------------------------------------
-
-%%% Geometry nur für \newgeometry/\restoregeometry (Layout ansonsten via KOMA)
-\usepackage[pass]{geometry}
-
+ 
+%%% [IU-FIX] Seitenränder 2,00 cm – mit Platz für Kopf- und Fußzeile
+%%% Die IU verlangt 2 cm Rand auf allen Seiten. Da Kopf- und Fußzeile
+%%% innerhalb des Satzspiegels liegen (headinclude=true, footinclude=true
+%%% in settings.tex), definieren wir den Textbereich so, dass der
+%%% sichtbare Rand zum Papierrand exakt 2 cm beträgt.
+%%% includehead/includefoot sorgt dafür, dass geometry den Platz für
+%%% Header/Footer aus dem Textbereich herausrechnet, nicht aus dem Rand.
+\usepackage[
+  top=2cm,
+  bottom=2cm,
+  left=2cm,
+  right=2cm,
+  includefoot,          % [IU-FIX] Fußzeile innerhalb des 2cm-Rands platzieren
+  headheight=14pt,      % Höhe der Kopfzeile (passend für 10pt Schrift + Linie)
+  headsep=8pt,          % Abstand Kopfzeile → Textbeginn
+  footskip=20pt         % Abstand Textende → Seitenzahl
+]{geometry}
+ 
 %%% Kopf- und Fußzeilen (KOMA-Script)
 \usepackage[
    automark,
    pagestyleset=KOMA-Script,
    markcase=ignoreuppercase,
 ]{scrlayer-scrpage}
-
-\raggedbottom % Verhindert ungleichmäßige vertikale Abstände durch vertikalen Stretch
-
+ 
+\raggedbottom
+ 
 % Standard-Stile löschen
 \clearmainofpairofpagestyles
 \clearplainofpairofpagestyles
-
-% Einstellung: Oben außen Kapitel/Sektion, Unten außen Seitenzahl
-\ohead{\headmark}
-\ofoot[\pagemark]{\pagemark}
-
-% Linie unter der Kopfzeile
-\KOMAoptions{headsepline=.4pt}
-\addtokomafont{headsepline}{\color{black}}
-
+ 
+% Kopfzeile deaktivieren
+\ohead{}
+ 
+% [IU-FIX] Seitenzahlen zentriert am Seitenende
+\cfoot[\pagemark]{\pagemark}
+ 
+% Obere Leiste (Linie) deaktivieren
+\KOMAoptions{headsepline=false}
+ 
 % Breite von Kopf/Fuß an Text anpassen
 \KOMAoptions{headwidth=text:0pt, footwidth=text:0pt}
-
+ 
 % Schriftart für Kopf/Fuß
 \setkomafont{pageheadfoot}{\normalfont\normalcolor\small\sffamily}
 \setkomafont{pagenumber}{\bfseries\sffamily}
-
+ 
 %%% Fußnoten
 \usepackage[bottom, stable, multiple]{footmisc}
-\deffootnote{1.5em}{1em}{\makebox[1.5em][l]{\thefootnotemark}} % Layout
-\addtolength{\skip\footins}{\baselineskip} % Abstand Text <-> Fußnote
-
+\deffootnote{1.5em}{1em}{\makebox[1.5em][l]{\thefootnotemark}}
+\addtolength{\skip\footins}{\baselineskip}
+ 
 %%% Einzelne Zeilen am Seitenanfang/-ende vermeiden
 \clubpenalty=3000
 \widowpenalty=3000
 \displaywidowpenalty=2000
-
-
+ 
+ 
 %%% 4. Tabellen & Abbildungen
 %%% ----------------------------------------------------------------------
-
-%%% Tabellen-Optimierung
-\usepackage{booktabs}  % Schöne Linien (\toprule, \midrule, \bottomrule)
-\usepackage{multirow}  % Zellen über mehrere Zeilen
-\usepackage{dcolumn}   % Ausrichtung an Komma/Punkt
-\usepackage{ltxtable}  % Tabellen über mehrere Seiten (Longtable + Tabularx)
+ 
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{dcolumn}
+\usepackage{ltxtable}
 \usepackage{tabularx}
-\usepackage{array}     % Erweiterte Spalten-Befehle
-\usepackage{colortbl}  % Färbung von Zellen und Reihen
-
-% Farben für alternierende Zeilen
-\definecolor{rowcolorgray}{gray}{0.90}      % Hellgrau für jeden 2. Zeile
-\definecolor{headercolor}{RGB}{120,150,180} % Matteres Blau für Header
-
-% Erweiterte Spalten-Definition mit Padding
+\usepackage{array}
+\usepackage{colortbl}
+ 
+\definecolor{rowcolorgray}{gray}{0.90}
+\definecolor{headercolor}{RGB}{120,150,180}
+ 
 \newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
-
-% Tabellen-Einstellungen mit besserem Padding
-\renewcommand{\arraystretch}{1.5}           % Zeilenhöhe erhöht
-\setlength{\tabcolsep}{8pt}                 % Padding links/rechts von Zellen
-
-%%% Abbildungen & Floats
-\usepackage{float}     % Option [H] für feste Platzierung
-\usepackage{flafter}   % Floats erst nach ihrer Referenz im Text
-\usepackage[section]{placeins} % Floats bleiben in ihrer Section
-
-%%% Unterabbildungen (Bild a, Bild b)
+ 
+\renewcommand{\arraystretch}{1.5}
+\setlength{\tabcolsep}{8pt}
+ 
+\usepackage{float}
+\usepackage{flafter}
+\usepackage[section]{placeins}
+ 
 \usepackage{subcaption}
-
-%%% TikZ für Diagramme
+ 
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,shapes,fit}
-
-%%% Textumflossene Bilder
+ 
 \usepackage{wrapfig}
 \setlength{\intextsep}{0.5\baselineskip}
-
-%%% Beschriftungen (Captions)
+ 
 \usepackage{caption}
 \captionsetup{
    margin = 10pt,
@@ -185,101 +197,83 @@
    singlelinecheck = true,
    position = bottom
 }
-% Workaround für Warnungen
 \DeclareCaptionOption{parskip}[]{}
 \DeclareCaptionOption{parindent}[]{}
-
-% Caption auch außerhalb von Floats erlauben
+ 
 \usepackage{capt-of}
-
-%%% Farbige Boxen (für Infoboxen etc.)
+ 
 \usepackage[most]{tcolorbox}
-
-
+ 
+ 
 %%% 5. Mathematik & Wissenschaft
 %%% ----------------------------------------------------------------------
-
-%%% Basispakete
+ 
 \usepackage{amsmath}
 \usepackage[fixamsmath,disallowspaces]{mathtools}
-
-%%% ISO-Konforme Mathematik (Griechische Großbuchstaben kursiv etc.)
+ 
 \usepackage{fixmath}
-
-%%% Komma als Dezimaltrennzeichen im Mathe-Modus
+ 
 \usepackage{icomma}
-
-%%% Maßeinheiten & Zahlenformatierung (korrekter Abstand bei Prozentangaben)
+ 
 \usepackage{siunitx}
 \sisetup{
 	detect-all = true,
-	locale = DE,        % Deutsche Konventionen (Dezimal-Komma)
-	per-mode = symbol   % Prozent als Symbol mit korrekt gesetztem Abstand
+	locale = DE,
+	per-mode = symbol
 }
-% Praktischer Prozent-Makro
 \newcommand{\pct}[1]{\SI{#1}{\percent}}
-
-%%% Zusätzliche Mathe-Symbole und Werkzeuge
-\usepackage{braket}    % Bra-Ket Schreibweise
-\usepackage{cancel}    % Durchstreichen
-\usepackage{empheq}    % Hervorgehobene Gleichungen
-\usepackage{pifont}	   % Zusätzliche Symbole (z.B. Haken/Kreuz)
+ 
+\usepackage{braket}
+\usepackage{cancel}
+\usepackage{empheq}
+\usepackage{pifont}
 \usepackage[Symbolsmallscale]{upgreek}
 \usepackage[upmu]{gensymb}
-
-%%% Epsilon-Symbol anpassen (gewohntes Aussehen)
+ 
 \let\ORGvarepsilon=\varepsilon
 \let\varepsilon=\epsilon
 \let\epsilon=\ORGvarepsilon
-
-
+ 
+ 
 %%% 6. Verzeichnisse & Referenzen
 %%% ----------------------------------------------------------------------
-
-%%% Literaturverzeichnis (BibLaTeX mit Biber)
+ 
 \usepackage[style=apa, backend=biber]{biblatex}
 \addbibresource{bib/BibtexDatabase.bib}
-
-%%% Index, Abkürzungen, Nomenklatur
-% Use imakeidx for flexible index printing (supports columns)
+ 
 \usepackage{imakeidx}
 \usepackage[german]{nomencl}
 \usepackage[printonlyused]{acronym}
-
-%%% Intelligente Querverweise ("siehe Seite X")
+ 
 \usepackage[ngerman]{varioref}
-
-%%% PDF-Links und Bookmarks (Hyperref)
+ 
 \usepackage[
-   hidelinks,               % Keine bunten Rahmen
-   linktocpage=true,        % Seitenzahlen im TOC verlinken
-   bookmarks=true,          % Lesezeichen im PDF
+   hidelinks,
+   linktocpage=true,
+   bookmarks=true,
    bookmarksopen=true,
    bookmarksnumbered=true,
-   plainpages=false,        % Verhindert "duplicate page identifiers"
-   pdfpagelabels=true,      % Korrekte Seitennummerierung (römisch/arabisch)
+   plainpages=false,
+   pdfpagelabels=true,
    pdftitle={},
    pdfauthor={},
 ]{hyperref}
-
-%%% Links springen zum Bild, nicht zur Caption
+ 
 \usepackage[figure,table]{hypcap}
-
-
+ 
+ 
 %%% 7. Code & Listings
 %%% ----------------------------------------------------------------------
-
-%%% Quellcode-Darstellung
+ 
 \usepackage{listings}
-\usepackage{upquote} % Korrekte Anführungszeichen im Code
-
-% Farben für Code-Highlighting
-\definecolor{keywordblue}{RGB}{0,0,139}      % Dunkelblau
-\definecolor{stringred}{RGB}{178,34,34}      % Firebrick (dunkelrot)
-\definecolor{commentgreen}{RGB}{34,139,34}   % Forest Green
-\definecolor{numbermauve}{RGB}{128,0,128}    % Dunkelviolett
-\definecolor{bgcolor}{RGB}{245,245,245}      % Hellgrau
-
+\usepackage{upquote}
+ 
+\definecolor{keywordblue}{RGB}{0,0,139}
+\definecolor{stringred}{RGB}{178,34,34}
+\definecolor{commentgreen}{RGB}{34,139,34}
+\definecolor{numbermauve}{RGB}{128,0,128}
+\definecolor{bgcolor}{RGB}{245,245,245}
+ 
 \lstset{
   basicstyle={\footnotesize\ttfamily},
 	backgroundcolor=\color{bgcolor},
@@ -303,11 +297,9 @@
 	abovecaptionskip=10pt,
 	belowcaptionskip=10pt
 }
-
-% Lade vordefinierte Sprachen
+ 
 \lstloadlanguages{Python,Java}
-
-% TypeScript als Basis-Definition (nicht auf JavaScript basierend)
+ 
 \lstdefinelanguage{TypeScript}{
 	keywords={
 		abstract,any,as,async,await,boolean,break,case,catch,class,const,constructor,continue,
@@ -323,8 +315,7 @@
 	string=[b]{'}, 
 	string=[b]{`},
 }
-
-% Python-Highlighting
+ 
 \lstdefinestyle{Python}{
 	language=Python,
 	keywordstyle={\color{keywordblue}\bfseries},
@@ -332,8 +323,7 @@
 	stringstyle={\color{stringred}},
 	breaklines=true
 }
-
-% TypeScript-Highlighting
+ 
 \lstdefinestyle{TypeScript}{
 	language=TypeScript,
 	keywordstyle={\color{keywordblue}\bfseries},
@@ -341,53 +331,48 @@
 	stringstyle={\color{stringred}},
 	breaklines=true
 }
-
-
+ 
+ 
 %%% 8. Sonstiges
 %%% ----------------------------------------------------------------------
-
-%%% Listen (Aufzählungen) anpassen
+ 
 \usepackage{enumitem}
-\setlist{nosep} % Kompakte Listen: kein Abstand zwischen Items
-% Alternative: \setlist{itemsep=0.5ex} für etwas Abstand
-
-%%% Mehrspaltiger Text
+\setlist{nosep}
+ 
 \usepackage{multicol}
-
-%%% Externe PDFs einbinden
+ 
 \usepackage{pdfpages}
-
-%%% Randnotizen
+ 
 \usepackage{marginnote}
-
-%%% TODO-Notizen
+ 
 \setlength{\marginparwidth}{2cm}
 \usepackage{todonotes}
-
-
+ 
+ 
 %%% 9. Farben & Design
 %%% ----------------------------------------------------------------------
-
-% Farben definieren
+ 
 \definecolor{sectioncolor}{RGB}{0, 0, 0}
 \definecolor{textcolor}{RGB}{0, 0, 0}
 \definecolor{shadecolor}{gray}{0.90}
-
-% PDF-Link-Farben (werden bei hidelinks ignoriert, aber gut zu haben)
+ 
 \definecolor{pdfurlcolor}{rgb}{0,0,0.6}
 \definecolor{pdffilecolor}{rgb}{0.7,0,0}
 \definecolor{pdflinkcolor}{rgb}{0,0,0.6}
 \definecolor{pdfcitecolor}{rgb}{0,0,0.6}
-
-% Schriftart für Überschriften (Sans-Serif)
+ 
+% [IU-FIX] Überschriften-Schriftgrößen exakt nach IU-Richtlinie:
+% 1. Ebene (chapter):    16 Pt., fett, serifenlos
+% 2. Ebene (section):    14 Pt., fett, serifenlos
+% 3. Ebene (subsection): 11 Pt., fett, serifenlos
 \newcommand\SectionFontStyle{\sffamily}
-\setkomafont{sectioning}{\SectionFontStyle}
-\setkomafont{chapter}{\huge\SectionFontStyle}
+\setkomafont{chapter}{\fontsize{16pt}{19.2pt}\selectfont\bfseries\SectionFontStyle}
+\setkomafont{section}{\fontsize{14pt}{16.8pt}\selectfont\bfseries\SectionFontStyle}
+\setkomafont{subsection}{\fontsize{11pt}{13.6pt}\selectfont\bfseries\SectionFontStyle}
 \addtokomafont{sectioning}{\color{sectioncolor}}
-
+ 
 %%% 10. Auszuführende Befehle
 %%% ----------------------------------------------------------------------
-% Enable index with two columns (print with \printindex in the document)
 \makeindex[columns=2]
 \IfDefined{makenomenclature}{\makenomenclature}
 \renewcommand{\nomname}{Abkürzungsverzeichnis}

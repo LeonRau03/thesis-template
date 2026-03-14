@@ -14,7 +14,7 @@ Observability geht über diese hypothesengeleitete Überwachung hinaus. Im Kern 
  
 Monitoring bildet damit die notwendige Voraussetzung für Observability, wird jedoch nicht davon ersetzt (Usman et al., 2022, S. 86907). Für die vorliegende Arbeit bedeutet das, eine Strategie, die sich auf das reine Erfassen bekannter Grenzwerte beschränkt, reicht für ein verteiltes System wie frag.jetzt nicht aus. Benötigt wird vielmehr ein Ansatz, der technische Messdaten mit diagnostischer Tiefe und Nutzerperspektive verbindet.
  
- 
+\newpage 
 \section{Besonderheiten verteilter und cloud-nativer Anwendungen}
  
 Die begriffliche Abgrenzung gewinnt ihre praktische Bedeutung erst vor dem Hintergrund konkreter Systemarchitekturen. Verteilte und cloud-native Anwendungen werden heute häufig als Microservices-Architekturen umgesetzt, welche aus zahlreichen, oft unabhängig deploybaren Diensten bestehen, die über Netzwerkschnittstellen kommunizieren und in Containern oder vergleichbaren Laufzeitumgebungen betrieben werden (Sakinala, 2025, S. 102). Instanzen werden fortlaufend erzeugt und beendet, wodurch solche Umgebungen als operativ deutlich anspruchsvoller gelten als klassische Monolithen (Li et al., 2022, S. 1). Die resultierende Komplexität lässt sich laut Usman et al. (2022, S. 86908) auf vier Eigenschaften verdichten: Modularität, Verteilung, Dynamik und Flüchtigkeit. Frühere Überwachungsansätze, die auf einzelne Schichten oder Komponenten zugeschnitten waren, stoßen unter diesen Bedingungen an Grenzen, weil sie Interaktionen zwischen Diensten zur Laufzeit nur unzureichend abbilden (Usman et al., 2022, S. 86908).
@@ -96,7 +96,6 @@ Vor diesem Hintergrund gewinnt der Begriff des \emph{actionable alert} an Bedeut
 Wirksame Alerting-Strategien müssen zwischen handlungsrelevanten Hinweisen und bloßem Hintergrundrauschen differenzieren (Sakinala, 2025, S. 107). Als problematisch gelten insbesondere starre Schwellwerte in dynamischen Umgebungen, weil sie saisonale Schwankungen oder Abhängigkeiten zwischen Diensten unzureichend berücksichtigen. Dynamische Schwellen, mehrdimensionale Regeln und die laufende Überprüfung von False Positives werden als wesentliche Gestaltungsprinzipien genannt (Vinnakota \& Kolla, 2025, S. 173, 176).
  
 Eng mit handlungsfähiger Alarmierung ist die Rolle von Runbooks verbunden. Jede kritische Meldung sollte mit einem Runbook verknüpft sein, das den Bearbeitenden unabhängig vom Vorwissen in die Lage versetzt, die Störung einzuordnen und erste Gegenmaßnahmen einzuleiten. Dazu gehören Verweise auf relevante Observability-Werkzeuge, vordefinierte Behebungsschritte, klare Eskalationspfade und Angaben zur Zuständigkeit (Vinnakota \& Kolla, 2025, S. 174). Der Nutzen liegt nicht nur in schnellerer Reaktion, sondern auch in der Wissenssicherung. Gleichzeitig sind veraltete Runbooks problematisch und müssen regelmäßig gepflegt werden. Für wiederkehrende, schematische Reaktionsmuster empfiehlt die SRE-Literatur eine konsequente Automatisierung. Alarmreaktionen, die rein algorithmischen Mustern folgen, sollten nicht dauerhaft menschliche Aufmerksamkeit binden, sondern Anlass geben, die zugrunde liegende Ursache zu beheben oder den Prozess zu automatisieren (Ewaschuk, 2016, S. 14).
- 
  
 \section{Zwischenfazit}
  
