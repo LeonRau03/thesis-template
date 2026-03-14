@@ -1,114 +1,149 @@
 % !TEX root = ../Thesis.tex
 
-\chapter{Methodik und Forschungsdesign}
-\label{ch:methodik}
+\chapter{Systemanalyse und Anforderungsdefinition: frag.jetzt}
+\label{ch:SystemanalyseFragJetzt} 
 
-% ============================================================================
-% HINWEIS: Vorläufiger Inhalt aus dem Exposé
-% ============================================================================
-\begin{tcolorbox}[
-    colback=red!5!white,
-    colframe=red!75!black,
-    title={\textbf{Hinweis: Vorläufiger Inhalt}},
-    fonttitle=\bfseries
-]
-Die folgenden Abschnitte zur Methodik und zur geplanten Gliederung stammen aus dem Exposé und werden im Laufe der Bachelorarbeit überarbeitet, konkretisiert oder angepasst. Sie dienen derzeit als Arbeitsgrundlage und spiegeln den konzeptionellen Stand zu Beginn der Arbeit wider.
-\end{tcolorbox}
-
-\vspace{1em}
-
-Die Arbeit folgt einem artefaktorientierten Forschungsdesign mit konzeptionellem und prototypischem Schwerpunkt. Ziel ist es, eine praxisnahe Observability-Strategie für \emph{frag.jetzt} zu entwickeln und diese anhand konkreter Artefakte nachvollziehbar darzustellen. Die Methodik gliedert sich in sechs aufeinander aufbauende Schritte.
-
-\section{Schritt 1: Service-spezifische Konkretisierung der Four Golden Signals}
-\label{sec:methodik-schritt1}
-
-Im ersten Schritt werden die Four Golden Signals als Referenzmodell herangezogen und für die Zielarchitektur von \emph{frag.jetzt} konkretisiert. Für jedes Teilsystem (PWA-Frontend, Spring-Boot-Backend, PostgreSQL-Datenbank und KI-Dienste) werden geeignete Interpretationen für die einzelnen Beobachtungsgrößen abgeleitet, beispielsweise Latenz aus Nutzersicht, Fehlerraten pro Service oder Ressourcenauslastung kritischer Komponenten. Ziel ist die Definition klar interpretierbarer Indikatoren, die sowohl für Dashboards als auch für Alerting nutzbar sind.
-
-\section{Schritt 2: Vergleichende Evaluation von Observability-Stack-Kombinationen}
-\label{sec:methodik-schritt2}
-
-Der zweite Schritt umfasst eine vergleichende Evaluation geeigneter Observability-Werkzeuge. Da eine vollständige praktische Erprobung aller verfügbaren Tools im Rahmen der Arbeit nicht realistisch ist, erfolgt der Vergleich primär auf theoretischer und konzeptioneller Ebene. Untersucht werden Prometheus/Grafana, der Elastic Stack sowie Jaeger unter Berücksichtigung der Anforderungen von \emph{frag.jetzt}. Bewertungskriterien sind unter anderem die Abdeckung der benötigten Telemetriearten, die Integrationsfähigkeit in bestehende Systeme, der Betriebsaufwand sowie die Verfügbarkeit als Open-Source-Lösung. Auf dieser Basis wird eine begründete Auswahl eines geeigneten Stacks getroffen.
-
-\section{Schritt 3: Instrumentierung mit OpenTelemetry}
-\label{sec:methodik-schritt3}
-
-Im dritten Schritt wird die Instrumentierung der Services konzipiert. OpenTelemetry dient dabei als einheitliches Instrumentierungswerkzeug zur Erfassung von Metriken, Logs und Traces. Ziel ist eine konsistente Telemetrie entlang des gesamten Anfragepfads, die eine Korrelation zwischen Nutzerinteraktionen, Backend-Verarbeitung und externen Abhängigkeiten ermöglicht.
-
-\section{Schritt 4: Rollenbasierte Dashboards}
-\label{sec:methodik-schritt4}
-
-Der vierte Schritt befasst sich mit der Konzeption rollenbasierter Dashboards. Für unterschiedliche Zielgruppen wie DevOps, Entwickler und Product Owner werden Sichten entworfen, die Telemetriedaten mit nutzungs- und betriebsrelevantem Kontext verknüpfen. Ziel ist es, nicht nur Auffälligkeiten darzustellen, sondern deren Bedeutung für die jeweilige Rolle nachvollziehbar zu machen, etwa im Hinblick auf Nutzerwahrnehmung, Dringlichkeit oder notwendige Maßnahmen.
-
-\section{Schritt 5: Alerting-Framework mit Fokus auf False-Positive-Reduktion}
-\label{sec:methodik-schritt5}
-
-Im fünften Schritt wird ein Alerting-Ansatz entwickelt, der sich an den Golden Signals orientiert und auf Prometheus als technischer Basis aufsetzt. Neben klassischen regelbasierten Alerts werden Konzepte zur Priorisierung und Reduktion irrelevanter Alarme berücksichtigt. Dazu gehören beispielsweise die Aggregation mehrerer Signale, zeitliche Glättung sowie der Einsatz datengetriebener Verfahren wie einfacher Anomalieerkennung. Optional wird untersucht, inwiefern KI-gestützte Verfahren zur Mustererkennung oder Alert-Bewertung eingesetzt werden können, um die Anzahl unnötiger Benachrichtigungen zu reduzieren.
-
-\section{Schritt 6: Entwicklung operativer Runbooks}
-\label{sec:methodik-schritt6}
-
-Im sechsten Schritt werden exemplarische Runbooks für wiederkehrende Incident-Szenarien erstellt. Diese Runbooks sollen Alerts mit klaren Diagnose- und Handlungsanweisungen verknüpfen und dienen dazu, Reaktionszeiten zu verkürzen und die operative Qualität der Störungsbearbeitung zu erhöhen.
-
-\section{Ergebnisartefakte}
-\label{sec:ergebnisartefakte}
-
-Aus den beschriebenen Schritten ergeben sich die geplanten Ergebnisse:
-\begin{enumerate}
-    \item Ein wissenschaftlicher Bericht zur Strategie, Toolauswahl und Alerting-Konzeption
-    \item Eine lauffähige Observability-Plattform (z.\,B. Prometheus/Grafana)
-    \item Rollenbasierte Dashboards
-    \item Beispielhafte Runbooks für Incident-Situationen
-\end{enumerate}
-
-% ============================================================================
-% Geplante Gliederung
-% ============================================================================
-
-\section{Geplante Gliederung (konzeptionell)}
-\label{sec:geplante-gliederung}
-
-\begin{tcolorbox}[
-    colback=red!5!white,
-    colframe=red!75!black,
-    title={\textbf{Hinweis: Vorläufige Gliederung}},
-    fonttitle=\bfseries
-]
-Die folgende Gliederung ist ein erster Entwurf aus dem Exposé. Die endgültige Struktur der Arbeit kann hiervon abweichen und wird im Verlauf der Bearbeitung angepasst.
-\end{tcolorbox}
-
-\vspace{1em}
-
-\begin{enumerate}
-    \item \textbf{Einleitung} \\
-    Problemstellung, Motivation, Zielsetzung und Forschungsfragen; Einordnung der Arbeit in den Kontext cloud-nativer Systeme und moderner Observability.
-    
-    \item \textbf{Theoretische Fundierung} \\
-    Grundlagen zu Monitoring und Observability (Metriken, Logs, Traces, Alerting); Four Golden Signals als Referenzmodell; Überblick relevanter Observability-Tools und Toolklassen.
-    
-    \item \textbf{Untersuchungsgegenstand: Architektur von \emph{frag.jetzt}} \\
-    Beschreibung der Systemarchitektur (PWA-Frontend, Spring Boot Backend, PostgreSQL, KI-Services sowie Schnittstellen/Kommunikationspfade); Ableitung der Observability-Anforderungen je Komponente.
-    
-    \item \textbf{Methodik / Forschungsdesign} \\
-    Vorgehensmodell der Arbeit; Operationalisierung der Golden Signals; Kriterienkatalog für Tool-/Stack-Evaluation; Instrumentierungs- und Evaluationsplan; Validitäts- und Abgrenzungsaspekte.
-    
-    \item \textbf{Evaluation von Observability-Stacks} \\
-    Vergleich Prometheus/Grafana, ELK Stack, Jaeger (und OpenTelemetry als Instrumentierungsstandard); Ergebnisdarstellung anhand definierter Kriterien; begründete Auswahl einer geeigneten Stack-Kombination.
-    
-    \item \textbf{Konzeption der Observability-Strategie für \emph{frag.jetzt}} \\
-    Service-spezifische Golden-Signal-Definitionen; Messkonzept (Metriken/Logs/Traces) entlang des Anfragepfads; Telemetrie- und Korrelationserfordernisse.
-    
-    \item \textbf{Umsetzung: Instrumentierung und Observability-Plattform} \\
-    Umsetzung der Telemetrie-Erfassung; Konfiguration der Plattformkomponenten; Nachweis der End-to-End-Sicht (Metrik–Trace–Log-Korrelation).
-    
-    \item \textbf{Dashboards und Alerting-Konzept} \\
-    Rollenbasierte Dashboards; Alerting-Regeln auf Grundlage nutzerrelevanter Beobachtungsgrößen; Ansatz zur False-Positive-Reduktion und Priorisierung; Einbindung von Anomalieerkennung (konzeptionell/prototypisch).
-    
-    \item \textbf{Runbooks und Incident-Playbooks} \\
-    Erstellung exemplarischer Runbooks; Verknüpfung von Alerts mit Diagnose- und Handlungsschritten; typische Incident-Szenarien.
-    
-    \item \textbf{Diskussion} \\
-    Einordnung der Ergebnisse, Grenzen der Umsetzung, Trade-offs (z.\,B. Aufwand vs. Nutzen, Datenvolumen/Kardinalität, Abhängigkeit externer KI-Services).
-    
-    \item \textbf{Fazit und Ausblick} \\
-    Zusammenfassung der wichtigsten Ergebnisse; Ausblick auf Weiterentwicklung (z.\,B. Reifegradsteigerung, Service Level Objective (SLO)-basierte Steuerung, weitere Automatisierung).
-\end{enumerate}
+Die folgende Systemanalyse basiert auf einer systematischen Inspektion des Quellcodes, der Deployment-Konfigurationen und der Abhängigkeitsstruktur aller sechs Repositories des frag.jetzt-Ökosystems.\footnote{Die technische Analyse in diesem Kapitel basiert auf dem Quellcode des Projekts frag.jetzt, abrufbar unter \url{https://gitlab.arsnova.eu/arsnova/frag.jetzt/} (abgerufen am [DATUM EINFÜGEN]).} Ziel ist die Identifikation observability-relevanter Architekturmerkmale, Risikopunkte und bestehender Instrumentierungslücken als Grundlage für die Anforderungsdefinition. Wo die Befunde über den konkreten Einzelfall hinausgehen und allgemeine Observability-Prinzipien berühren, werden sie durch die in Kapitel~2 eingeführte Literatur gestützt.
+ 
+ 
+\section{Fachlicher Kontext und Nutzungsszenario}
+ 
+frag.jetzt ist ein webbasiertes Audience-Response-System, das primär in Lehrveranstaltungen an Hochschulen eingesetzt wird. Die Plattform ermöglicht es Teilnehmenden, während einer Veranstaltung anonym Fragen zu stellen, auf Beiträge anderer abzustimmen und an Live-Umfragen teilzunehmen. Dozierende und Moderierende erhalten so ein unmittelbares Stimmungsbild und können auf häufig gestellte oder hoch bewertete Fragen gezielt eingehen. Ergänzend bietet das System KI-gestützte Funktionen wie automatische Keyword-Extraktion, Textverbesserung und thematische Zusammenfassungen.
+ 
+Das Nutzungsmuster weicht von klassischen Webanwendungen ab. Die Last verteilt sich nicht gleichmäßig über den Tag, sondern konzentriert sich auf die Dauer einzelner Lehrveranstaltungen. Innerhalb eines solchen Zeitfensters können \textcolor{red}{[Platzhalter]} mehrere hundert Teilnehmende gleichzeitig aktiv sein, Fragen stellen und abstimmen. Außerhalb dieser Fenster liegt die Aktivität nahe null. Für die Observability-Strategie bedeutet das: Engpässe und Störungen treten vor allem unter synchroner Spitzenlast auf und müssen dort erkannt werden -- nicht im Durchschnitt über 24 Stunden. Niedermaier et al. identifizieren eine solche Dynamik als zentrale Herausforderung beim Monitoring verteilter Systeme, da konventionelle Schwellenwerte auf statischen Lastannahmen basieren und transiente Lastspitzen nicht zuverlässig abbilden (vgl. Niedermaier et al., 2019, S.~8).
+ 
+ 
+\section{Technische Architektur}
+ 
+Das frag.jetzt-Ökosystem umfasst sechs eigenständige Quellcode-Repositories, die über Docker Compose zu einer Gesamtanwendung orchestriert werden. In der Produktionsumgebung laufen zehn Container auf einem gemeinsamen Host. Es kommen weder Kubernetes noch eine CI/CD-Pipeline für das Deployment zum Einsatz; Deployments werden manuell über ein zentrales Setup-Script ausgelöst.
+ 
+Die Anwendung gliedert sich in vier applikationstragende Dienste und mehrere Infrastrukturkomponenten. Tabelle~\ref{tab:komponenten} gibt einen Überblick über die Dienste, ihre Technologien und ihre Relevanz für die Observability-Strategie.
+ 
+\begin{table}[ht]
+\centering
+\caption{Applikationstragende Dienste und ihre Observability-Relevanz}
+\label{tab:komponenten}
+\small
+\begin{tabularx}{\textwidth}{
+>{\hsize=0.70\hsize\RaggedRight\arraybackslash}X
+>{\hsize=1.00\hsize\RaggedRight\arraybackslash}X
+>{\hsize=1.10\hsize\RaggedRight\arraybackslash}X
+>{\hsize=1.20\hsize\RaggedRight\arraybackslash}X
+}
+\toprule
+\textbf{Dienst} & \textbf{Technologie} & \textbf{Kernfunktion} & \textbf{Observability-Relevanz} \\
+\midrule
+Frontend & Angular 19, Nginx & SPA-Auslieferung, Reverse Proxy & Einstiegspunkt aller Nutzerinteraktionen; Routing an Backend-Dienste \\
+Backend & Spring Boot 3.1.5, WebFlux, R2DBC & REST-API, Geschäftslogik, Datenpersistenz & Zentraler Dienst (95 Endpunkte); Single Point of Failure \\
+WS-Gateway & Kotlin, Spring Boot, Netty & Echtzeit-Kommunikation (STOMP/WebSocket) & Session-Tracking, Live-Updates; Broker-Abhängigkeit \\
+AI Provider & Python 3.12, FastAPI, LangChain & KI-Funktionen (19 LLM-Provider) & Externe Abhängigkeiten ohne Timeout-Konfiguration \\
+\bottomrule
+\end{tabularx}
+\end{table}
+ 
+Das \textbf{Frontend} ist eine Angular-19-Applikation, die als Single Page Application im Browser läuft und über einen integrierten Nginx-Reverse-Proxy ausgeliefert wird. Nginx übernimmt zugleich die Weiterleitung eingehender Anfragen an die nachgelagerten Dienste: REST-Aufrufe unter \texttt{/api} werden an das Backend geroutet, WebSocket-Verbindungen unter \texttt{/gateway} an das WS-Gateway, Authentifizierungsanfragen unter \texttt{/auth} an Keycloak und KI-Anfragen unter \texttt{/ai} an den AI Provider.
+ 
+Das \textbf{Backend} bildet den Kern der Geschäftslogik. Es ist als reaktive Spring-Boot-Anwendung (Version 3.1.5, Java 17) mit WebFlux und R2DBC umgesetzt. Alle Datenbankzugriffe erfolgen nicht-blockierend über reaktive Repositories, alle Rückgabewerte sind als \texttt{Mono<T>} oder \texttt{Flux<T>} modelliert. Das Backend stellt 95 REST-Endpunkte bereit, verteilt auf 19 Controller in neun fachlichen Bereichen -- darunter Raumverwaltung, Fragen und Abstimmungen, Brainstorming, Live-Umfragen, Benachrichtigungen und Zahlungsabwicklung. Es kommuniziert mit der PostgreSQL-Hauptdatenbank (Version 12.1), mit RabbitMQ für die Nachrichtenvermittlung an den WebSocket-Kanal und mit externen Diensten wie Keycloak, PayPal und Wechselkurs-APIs.
+ 
+Das \textbf{WebSocket Gateway} ist ein eigenständiger Kotlin-Dienst auf Basis von Spring Boot und Netty. Es stellt den STOMP-over-WebSocket-Endpunkt bereit und nutzt RabbitMQ als externen Message Broker. Clients abonnieren raumspezifische Topics für Live-Updates zu Teilnehmerzahlen und Kommentarströmen sowie ein globales Topic für plattformweite Statistiken. Die Architektur verarbeitet Verbindungsereignisse über Spring-STOMP-Events, leitet sie als Applikations-Events an Subscription-Services weiter und sendet Nachrichten rate-limitiert über RabbitMQ an die abonnierten Clients.
+ 
+Der \textbf{AI Provider} ist ein Python-Dienst auf Basis von FastAPI und LangChain. Er bietet Funktionen wie Keyword-Extraktion, Textverbesserung, Inhaltsmoderation und konversationsbasierte KI-Interaktion. Für die Verarbeitung greift er auf bis zu 19 verschiedene LLM-Provider zu -- darunter Anthropic, OpenAI, Mistral und Google GenAI. Nutzende können entweder einen eigenen API-Key verwenden oder erhalten als verifizierte Lehrperson kostenlosen Zugang. Eine lokale ChromaDB-Instanz dient als Vektordatenbank für Embedding-basierte Ähnlichkeitssuchen. Der AI-Stack wird über eine logische PostgreSQL-Replikation mit den Kerndaten der Hauptdatenbank synchronisiert.
+ 
+Die Infrastrukturkomponenten umfassen neben der PostgreSQL-Hauptdatenbank eine dedizierte Keycloak-Datenbank (PostgreSQL 15), eine separate AI-Datenbank (PostgreSQL 17), RabbitMQ 3.8 als Message Broker und einen E-Mail-Dienst (Postfix in Produktion, MailHog in der Entwicklung). \textbf{Keycloak 22} übernimmt die Authentifizierung und Autorisierung über OIDC und SSO, ergänzt durch ein Custom-Plugin für spezifische Event-Verarbeitung.
+ 
+\textcolor{red}{[HIER MÖGLICHES BILD EINFÜGEN: C4-Container-Diagramm der frag.jetzt-Architektur mit allen Diensten, Datenbanken und Kommunikationswegen]}
+ 
+Für die spätere Observability-Strategie ist die Deployment-Topologie ein wichtiger Faktor. Alle Container laufen in einem gemeinsamen Docker-Bridge-Netzwerk. Es sind weder Ressourcenlimits (CPU, Speicher) noch Health-Check-Direktiven auf Container-Ebene konfiguriert. Das bedeutet, dass ein einzelner Dienst bei unkontrolliertem Ressourcenverbrauch den gesamten Host beeinträchtigen kann, ohne dass die Orchestrierung dies erkennt oder darauf reagiert.
+ 
+ 
+\section{Kritische User Journeys und betriebliche Kernabläufe}
+ 
+Eine wirksame Observability-Strategie orientiert sich an den tatsächlichen Nutzungspfaden, nicht an abstrakten Systemkomponenten. In der Literatur wird diese Perspektive als nutzerzentrierte Sicht auf das Monitoring gefordert: Niedermaier et al. (2019, S.~10) formulieren als Anforderung, dass Monitoring vom Geschäftsprozess und der Nutzererfahrung her gedacht werden muss, nicht von der Infrastruktur. Für frag.jetzt lassen sich drei Kernabläufe identifizieren, die sowohl funktional als auch betrieblich besonders relevant sind.
+ 
+\subsection{Journey 1: Frage stellen und beantworten.}
+Eine teilnehmende Person öffnet im Browser einen Raum, verfasst eine Frage und sendet sie ab. Das Frontend übermittelt die Eingabe per REST-Aufruf (\texttt{POST /comment/}) an das Backend. Dort wird die Frage validiert, in der PostgreSQL-Datenbank persistiert und dabei ein Datenbank-Trigger ausgelöst, der eine laufende Kommentarnummer generiert. Anschließend publiziert das Backend ein Event über RabbitMQ, das vom WebSocket Gateway an alle im Raum abonnierten Clients weitergeleitet wird. Der gesamte Ablauf durchläuft damit vier Komponenten: Frontend, Backend, Datenbank und WebSocket-Kanal. Aus Observability-Sicht sind die Backend-Antwortzeit, die Dauer des Datenbank-Inserts einschließlich Trigger-Ausführung und die Zustelllatenz der WebSocket-Nachricht die entscheidenden Messgrößen.
+ 
+\subsection{Journey 2: Live-Voting auf Fragen.}
+Teilnehmende bewerten Fragen durch Upvotes oder Downvotes. Der Vote wird per REST an das Backend übermittelt (\texttt{POST /vote/}) und in der Datenbank gespeichert. Bei jedem Schreibvorgang auf die Vote-Tabelle löst ein PostgreSQL-Trigger eine synchrone Aktualisierung der Score-Spalte in der zugehörigen Kommentarzeile aus. Dieser Mechanismus ist bei parallelen Abstimmungen auf dieselbe Frage anfällig für Row-Level Contention -- ein Engpass, dessen technische Ursachen in Abschnitt~3.4 detailliert analysiert werden. Für die Beobachtbarkeit ist deshalb neben der Anfragedauer auch die Datenbanklatenz auf der Comment-Tabelle eine kritische Größe.
+ 
+\subsection{Journey 3: KI-Zusammenfassung anfordern.}
+Eine Lehrperson oder ein Moderator löst eine KI-gestützte Analyse der gestellten Fragen aus. Die Anfrage gelangt vom Frontend über das Backend an den AI Provider, der über LangChain einen externen LLM-Dienst aufruft. Die Antwortzeit hängt maßgeblich vom gewählten Modell, der Auslastung des externen Providers und der Textlänge ab. Im aktuellen System ist auf keinem dieser externen Aufrufe ein Timeout konfiguriert. Ein hängender Upstream-Dienst kann den AI Provider und damit indirekt auch das Frontend blockieren. Diese Journey ist die einzige, die eine Abhängigkeit zu vollständig externen, nicht kontrollierbaren Diensten enthält, und stellt damit besondere Anforderungen an Latenz-Überwachung und Fehlerbehandlung.
+ 
+ 
+\section{Risikopunkte und typische Störungsszenarien}
+ 
+Aus der Architekturanalyse und den identifizierten Kernabläufen lassen sich mehrere Risikopunkte ableiten, die für die Observability-Strategie unmittelbar relevant sind. Sie werden hier entlang der in Kapitel~2 eingeführten Four Golden Signals strukturiert.
+ 
+\subsection{Fehlende Timeouts und Resilienz bei externen Aufrufen.}
+Weder das Backend noch der AI Provider konfigurieren Timeouts, Retries oder Circuit Breaker auf ihren ausgehenden HTTP-Aufrufen. Das Backend nutzt \texttt{WebClient}-Instanzen ohne explizite Zeitbegrenzung für Keycloak, PayPal und Wechselkurs-APIs. Der AI Provider ruft 19 verschiedene LLM-Provider über LangChain-Wrapper auf, von denen neun Retries explizit auf null gesetzt haben und die übrigen gar keine Retry-Konfiguration besitzen. Ein Quellcode-Kommentar im AI Provider dokumentiert diesen Zustand ausdrücklich als offene Baustelle. Die Konsequenz: Ein nicht reagierender externer Dienst kann Threads binden und Antwortzeiten unbegrenzt in die Höhe treiben. Dies betrifft primär die Golden Signals \emph{Latency} und \emph{Errors}. Niedermaier et al. (2019, S.~8--9) beschreiben vergleichbare Situationen als typische Folge fehlender Transparenz über Drittanbieter-Abhängigkeiten und identifizieren diese als eine der zentralen Herausforderungen beim Betrieb verteilter Systeme.
+ 
+\subsection{Datenbankengpässe bei Massenabstimmungen.}
+Die PostgreSQL-Trigger für die Vote-Verarbeitung führen bei jedem Schreibvorgang einen zusätzlichen \texttt{SELECT} und \texttt{UPDATE} auf der Comment-Tabelle aus. Bei gleichzeitigen Abstimmungen auf dieselbe Frage entsteht Row-Level Contention, weil mehrere Trigger gleichzeitig auf denselben Kommentardatensatz zugreifen. In gut besuchten Veranstaltungen, in denen einzelne Fragen viele Stimmen in kurzer Zeit erhalten, kann dieser Engpass zu steigenden Antwortzeiten führen. Hinzu kommt die Kommentarnummern-Generierung, die bei jedem Insert eine Regex-basierte Aggregation über alle Kommentare eines Raums durchführt -- ein Vorgang, dessen Kosten mit steigender Kommentaranzahl wachsen. Erschwerend fehlen auf mehreren neueren Tabellen zusammengesetzte Indizes, die für häufig verwendete Abfragemuster notwendig wären. Diese Befunde betreffen die Signale \emph{Latency} und \emph{Saturation}.
+ 
+\subsection{Backend als Single Point of Failure.}
+Das Backend ist die zentrale Vermittlungsinstanz: Nahezu alle Nutzerinteraktionen -- Fragen, Votes, Raumerstellung, Authentifizierung, KI-Anfragen -- laufen über diesen Dienst. Gleichzeitig verfügt das Backend über keinerlei Observability-Infrastruktur. Es existieren weder Spring Boot Actuator noch Micrometer-Metriken, weder Health-Check-Endpunkte noch strukturierte Logs. Fehler im Backend bleiben daher unsichtbar, bis sie sich als Symptom im Frontend bemerkbar machen -- etwa durch Timeouts, HTTP-500-Antworten oder ausbleibende WebSocket-Updates. Ohne Messbarkeit können die Golden Signals für das Backend schlicht nicht erhoben werden. In der Systematik von Niedermaier et al. (2019, S.~11) entspricht dieser Zustand einer rein reaktiven Monitoring-Implementierung, bei der Probleme erst nach Auswirkung auf Endnutzende erkannt werden.
+ 
+\subsection{WebSocket-Verbindungsverlust ohne Erkennung.}
+Das WebSocket Gateway verwaltet Session-Tracking und Subscription-Management in eigenen In-Memory-Datenstrukturen. Für RabbitMQ, der als externer STOMP Broker Relay dient, existieren keine Health-Checks. Fällt die Verbindung zwischen Gateway und Broker aus, werden Echtzeit-Updates für alle aktiven Räume unterbrochen. Ohne Überwachung der Message-Queue-Tiefe und der aktiven Subscription-Anzahl bleibt ein solcher Ausfall zunächst unbemerkt. Dies betrifft die Signale \emph{Errors} und \emph{Traffic}.
+ 
+\subsection{Fehlende Ressourcenlimits auf Container-Ebene.}
+Kein Container im Deployment definiert Speicher- oder CPU-Limits. In einer Umgebung, in der zehn Container auf einem gemeinsamen Host laufen, kann ein einzelner Dienst mit unkontrolliertem Ressourcenverbrauch -- etwa durch eine Speicherlücke im Backend oder eine rechenintensive KI-Anfrage -- die übrigen Dienste durch Ressourcenverdrängung destabilisieren. Dies betrifft das Signal \emph{Saturation} auf Infrastrukturebene.
+ 
+ 
+\section{Observability-Ist-Zustand}
+ 
+Vor der Ableitung von Anforderungen muss zunächst der bestehende Ausgangszustand analysiert werden. Die Inspektion des Quellcodes und der Deployment-Konfiguration ergibt, dass die vorhandene Observability-Infrastruktur minimal ist. Tabelle~\ref{tab:istzustand} fasst die Befunde komponentenweise zusammen.
+ 
+\begin{table}[ht]
+\centering
+\caption{Observability-Ist-Zustand der frag.jetzt-Komponenten}
+\label{tab:istzustand}
+\small
+\begin{tabularx}{\textwidth}{l c X}
+\toprule
+\textbf{Komponente} & \textbf{Status} & \textbf{Befund} \\
+\midrule
+Backend & \textcolor{red}{\ding{55}} & Weder Actuator noch Metriken, kein Tracing, keine strukturierten Logs \\
+WS-Gateway & \textcolor{orange}{$\sim$} & Health-Endpunkt und Prometheus-Endpunkt konfiguriert, aber Micrometer-Registry nicht als Abhängigkeit deklariert \\
+AI Provider & \textcolor{red}{\ding{55}} & Keine Metriken, kein Tracing, Standard-Python-Logging \\
+Frontend & \textcolor{orange}{$\sim$} & Matomo-Analytics in Produktion (Nutzungsstatistik, keine technische Observability) \\
+RabbitMQ & \textcolor{orange}{$\sim$} & Prometheus-Plugin aktiviert, Port nicht nach außen gemappt \\
+Keycloak & \textcolor{red}{\ding{55}} & Health- und Metrik-Endpunkte im Dockerfile explizit deaktiviert \\
+PostgreSQL & \textcolor{red}{\ding{55}} & Keine Metriken-Exposition, kein \texttt{pg\_stat\_statements} konfiguriert \\
+Docker-Ebene & \textcolor{red}{\ding{55}} & Keine Health-Checks, keine Ressourcenlimits \\
+Dienstübergreifend & \textcolor{red}{\ding{55}} & Kein Distributed Tracing, keine Korrelations-IDs, keine zentrale Log-Aggregation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+ 
+Der einzige Dienst mit einem Health-Endpunkt ist das WebSocket Gateway. Es exponiert zudem einen Prometheus-kompatiblen Metriken-Endpunkt und aktiviert automatisches HTTP-Request-Timing. Allerdings ist die dafür benötigte Micrometer-Registry nicht als explizite Abhängigkeit deklariert, sodass die tatsächliche Funktionsfähigkeit dieses Endpunkts nicht gesichert ist. RabbitMQ hat das Prometheus-Plugin aktiviert, der zugehörige Port wird jedoch nicht nach außen gemappt -- die Metriken sind also innerhalb des Containers vorhanden, aber nicht abrufbar. Keycloak hat Health- und Metrik-Endpunkte im Dockerfile explizit deaktiviert.
+ 
+Im Frontend ist Matomo als Analytics-Lösung in der Produktionsumgebung konfiguriert. Der zugehörige Tracking-Service umfasst über 700 Zeilen und erfasst Page-Views, Nutzerkennungen und individuelle Variablen. Matomo liefert damit Nutzungsstatistiken, keine technische Observability im Sinne der in Kapitel~2 beschriebenen Telemetriearten.
+ 
+Alle übrigen Observability-Komponenten fehlen vollständig. Das Backend -- der geschäftskritischste Dienst -- besitzt weder Actuator noch Metriken, weder Tracing noch strukturierte Logs. Es gibt im gesamten System kein Distributed Tracing, keine Korrelations-IDs zwischen Diensten, keine zentrale Log-Aggregation und keinen Monitoring-Stack. Docker-Container definieren keine Health-Checks, und kein Dienst implementiert Custom Health Indicators. Die Logging-Konfiguration beschränkt sich auf Standard-Log-Level ohne JSON-Formatierung und ohne MDC-Kontext.
+ 
+Zusammengefasst: Die Anwendung wird produktiv betrieben, verfügt aber über nahezu keine technische Beobachtbarkeit. Störungen werden gegenwärtig erst dann wahrgenommen, wenn sie Endnutzende direkt betreffen -- ein Zustand, den Niedermaier et al. (2019, S.~11) als \emph{reactive implementation} klassifizieren und als unzureichend für den stabilen Betrieb verteilter Systeme einordnen.
+ 
+ 
+\section{Ableitung der Observability-Anforderungen}
+ 
+Aus der Architektur, den Kernabläufen, den identifizierten Risiken und dem Ist-Zustand lassen sich fünf Anforderungen an die zu entwickelnde Observability-Strategie ableiten.
+ 
+\subsection{A1: Ende-zu-Ende-Nachvollziehbarkeit über Dienstgrenzen hinweg.}
+Die in Abschnitt~3.3 beschriebenen User Journeys durchlaufen jeweils mehrere Dienste. Eine Störung in der Datenbank kann sich als erhöhte Latenz im Backend und schließlich als Timeout im Frontend manifestieren. Um solche kausalen Zusammenhänge sichtbar zu machen, wird Distributed Tracing mit durchgängigen Korrelations-IDs benötigt. Ohne diese Fähigkeit bleibt die Diagnose auf den jeweils lokalen Kontext eines einzelnen Dienstes beschränkt -- ein Zustand, der in Kapitel~2 als unzureichend für verteilte Architekturen eingeordnet wurde. Albuquerque und Correia (2025, S.~6) beschreiben Distributed Tracing als grundlegendes Entwurfsmuster für diese Anforderung: Jeder eingehenden Anfrage wird eine eindeutige ID zugewiesen, die über alle beteiligten Dienste propagiert und in Logs sowie Spans mitgeführt wird, sodass der gesamte Ausführungspfad rekonstruierbar ist.
+ 
+\subsection{A2: Servicebezogene Messbarkeit entlang der Golden Signals.}
+Jeder der vier applikationstragenden Dienste und die Datenbank müssen mit Metriken für Latenz, Durchsatz, Fehlerrate und Sättigung instrumentiert werden. Die Code-Analyse zeigt, dass diese Instrumentierung heute auf keinem Dienst -- mit der partiellen Ausnahme des WebSocket Gateways -- vorhanden ist. Für das Backend bedeutet dies den Einbau von Actuator und Micrometer, für den AI Provider eine vergleichbare Metriken-Erhebung auf Python-Seite, und für die Datenbank die Bereitstellung von Query-Latenz-, Verbindungspool- und Fehlermetriken.
+ 
+\subsection{A3: Strukturiertes, korrelierbares Logging.}
+Die vorhandene Logging-Infrastruktur ist auf Standard-Log-Level ohne JSON-Formatierung, ohne MDC-Kontext und ohne zentrale Aggregation beschränkt. Für eine wirksame Beobachtbarkeit muss das Logging auf strukturierte Formate umgestellt werden, die Korrelations-IDs aus dem Tracing tragen und in einem zentralen System durchsuchbar sind. Nur so können Logeinträge verschiedener Dienste einer gemeinsamen Anfrage zugeordnet werden (vgl. Albuquerque \& Correia, 2025, S.~9; Faseeha et al., 2025, S.~72021).
+ 
+\subsection{A4: Handlungsfähige Alarmierung mit Kontextinformationen.}
+Die in Kapitel~2 formulierte Anforderung an \emph{actionable alerts} muss auf die spezifischen Risikopunkte von frag.jetzt übertragen werden. Alarme sollen nicht auf abstrakte Infrastrukturkennzahlen reagieren, sondern auf Zustände, die Endnutzende unmittelbar betreffen: etwa steigende Antwortzeiten bei Kernfunktionen, eine wachsende Fehlerrate im Backend oder eine nicht erreichbare KI-Schnittstelle. Jeder Alarm sollte ausreichend Kontext enthalten, um eine gezielte Erstreaktion zu ermöglichen -- einschließlich Verweisen auf relevante Dashboards, Logs und Troubleshooting-Schritte. Formale SLOs existieren für frag.jetzt derzeit nicht und sind deshalb kein Bestandteil der initialen Strategie, können aber als zukünftige Weiterentwicklung in Betracht gezogen werden.
+ 
+\subsection{A5: Beobachtbarkeit der Infrastrukturschicht.}
+Die fehlenden Ressourcenlimits und Health-Checks auf Container-Ebene erzeugen einen blinden Fleck, der durch die Anwendungsschicht allein nicht kompensiert werden kann. Die Observability-Strategie muss daher auch die Infrastrukturebene einbeziehen: Container-Ressourcenverbrauch (CPU, Speicher), Datenbankverbindungspool-Auslastung, RabbitMQ-Queue-Tiefen und die Verfügbarkeit aller Dienste über Health-Endpunkte. Erst in Kombination mit den anwendungsbezogenen Metriken entsteht die in Kapitel~2 geforderte ganzheitliche Sicht -- eine Forderung, die auch Niedermaier et al. (2019, S.~10) als Kernanforderung an Monitoring-Konzepte für verteilte Systeme formulieren.
+ 
+\bigskip
+ 
+Diese fünf Anforderungen bilden die Grundlage für die folgenden Kapitel. Dabei adressieren A1, A2 und A3 primär Forschungsfrage~1 (Definition und Instrumentierung der Golden Signals), A2 und A5 liefern Evaluationskriterien für Forschungsfrage~2 (Auswahl des Observability-Stacks), und A4 bildet die Grundlage für Forschungsfrage~3 (Entwicklung eines intelligenten Alert-Systems). In Kapitel~5 werden die Golden Signals servicebezogen konkretisiert, in Kapitel~6 wird der passende Observability-Stack evaluiert, und in Kapitel~9 wird das Alerting-Framework einschließlich exemplarischer Runbooks entwickelt. Die Architektur, die Nutzungspfade und die Risikopunkte aus diesem Kapitel dienen dabei durchgängig als Referenzrahmen.

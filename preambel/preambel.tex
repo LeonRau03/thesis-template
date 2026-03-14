@@ -39,6 +39,10 @@
 \usepackage{setspace}
 \onehalfspacing
 
+%%% Absatzlayout nach IU-Richtlinie
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
 %%% Layout-Anpassung: Abstände verringern
 % Überschriften-Abstände kompakter gestalten
 \RedeclareSectionCommand[
@@ -95,6 +99,8 @@
    markcase=ignoreuppercase,
 ]{scrlayer-scrpage}
 
+\raggedbottom % Verhindert ungleichmäßige vertikale Abstände durch vertikalen Stretch
+
 % Standard-Stile löschen
 \clearmainofpairofpagestyles
 \clearplainofpairofpagestyles
@@ -119,10 +125,10 @@
 \deffootnote{1.5em}{1em}{\makebox[1.5em][l]{\thefootnotemark}} % Layout
 \addtolength{\skip\footins}{\baselineskip} % Abstand Text <-> Fußnote
 
-%%% Hurenkinder und Schusterjungen vermeiden (Einzelne Zeilen am Seitenanfang/-ende)
-\clubpenalty = 10000
-\widowpenalty = 10000
-\displaywidowpenalty = 10000
+%%% Einzelne Zeilen am Seitenanfang/-ende vermeiden
+\clubpenalty=3000
+\widowpenalty=3000
+\displaywidowpenalty=2000
 
 
 %%% 4. Tabellen & Abbildungen
@@ -133,6 +139,7 @@
 \usepackage{multirow}  % Zellen über mehrere Zeilen
 \usepackage{dcolumn}   % Ausrichtung an Komma/Punkt
 \usepackage{ltxtable}  % Tabellen über mehrere Seiten (Longtable + Tabularx)
+\usepackage{tabularx}
 \usepackage{array}     % Erweiterte Spalten-Befehle
 \usepackage{colortbl}  % Färbung von Zellen und Reihen
 
@@ -216,6 +223,7 @@
 \usepackage{braket}    % Bra-Ket Schreibweise
 \usepackage{cancel}    % Durchstreichen
 \usepackage{empheq}    % Hervorgehobene Gleichungen
+\usepackage{pifont}	   % Zusätzliche Symbole (z.B. Haken/Kreuz)
 \usepackage[Symbolsmallscale]{upgreek}
 \usepackage[upmu]{gensymb}
 
