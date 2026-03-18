@@ -1,0 +1,59 @@
+@startuml fragjetzt-request-flow
+
+!theme plain
+skinparam backgroundColor white
+skinparam defaultFontSize 12
+skinparam componentStyle rectangle
+skinparam legendBackgroundColor #FFFFF0
+skinparam legendBorderColor #999999
+
+' === Akteure und Komponenten ===
+actor "Nutzer" as user #LightBlue
+
+component "PWA" as pwa #SteelBlue
+component "Gateway\n(NGINX)" as nginx #SteelBlue
+component "Backend\n(Spring Boot)" as backend #SteelBlue
+component "WS-Gateway" as wsgw #SteelBlue
+component "AI-Service" as ai #SteelBlue
+
+database "DB\n(PostgreSQL)" as db #LightSteelBlue
+queue "RabbitMQ" as rmq #LightSteelBlue
+
+component "Keycloak\n(Auth)" as kc #Khaki
+cloud "LLM\n(OpenAI)" as llm #LightCyan
+package "Externe\nDienste" as ext #Khaki
+
+' === Synchrone Aufrufe (durchgezogen, blau) ===
+user -[#SteelBlue]-> pwa : (1) Request
+pwa -[#SteelBlue]-> nginx : (2) HTTP/REST
+nginx -[#SteelBlue]-> backend : (3) Routing
+backend -[#Orange,dashed]-> kc : (4) Auth-Check
+backend -[#SteelBlue]-> db : (5) DB-Query
+
+' === Asynchroner WebSocket-Pfad (gestrichelt, orange) ===
+backend -[#Orange,dashed]-> rmq : (6) Event
+rmq -[#Orange,dashed]-> wsgw : (7) Message
+wsgw -[#Orange,dashed]-> pwa : (8) WebSocket\nUpdate
+
+' === AI-Pfad: Backend ruft AI-Service direkt per HTTP auf ===
+backend -[#SteelBlue]-> ai : (9) HTTP/REST
+ai -[#SteelBlue]-> llm : (10) API-Call
+
+' === Responses (grün) ===
+ai -[#Green]-> backend : (11) Result
+backend -[#Green]-> nginx : (12) Response
+nginx -[#Green]-> pwa : (13) Response
+pwa -[#Green]-> user : (14) Display
+
+' === Externe Dienste ===
+kc -[hidden]-> ext
+backend -[#Orange,dashed]-> ext : Weitere\nexterne APIs
+
+' === Legende ===
+legend bottom left
+  |<color:SteelBlue><b>———</b></color>| Synchron |
+  |<color:Orange><b>- - -</b></color>| Asynchron |
+  |<color:Green><b>———</b></color>| Response |
+endlegend
+
+@enduml

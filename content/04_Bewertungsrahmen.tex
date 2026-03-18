@@ -1,0 +1,472 @@
+% !TEX root = ../Thesis.tex
+ 
+% =============================================================================
+% KAPITEL 4 – Methodisches Vorgehen und Bewertungsrahmen
+% =============================================================================
+
+\chapter{Methodisches Vorgehen und Bewertungsrahmen}
+ 
+Dieses Kapitel legt das methodische Vorgehen offen, mit dem aus den theoretischen Grundlagen (Kapitel~2) und der Systemanalyse (Kapitel~3) eine konkrete Observability-Strategie für frag.jetzt entsteht. Es beschreibt zunächst die Arbeitslogik der Arbeit, dann das Verfahren zur servicebezogenen Ableitung der Golden Signals und abschließend die Kriterien für Stack-Auswahl und Evaluation.
+ 
+ 
+\section{Arbeitslogik der Arbeit}
+ 
+Die Arbeit folgt einer konstruktiv-artefaktorientierten Arbeitslogik. Auf Basis der theoretischen Fundierung und der Systemanalyse werden Observability-Anforderungen abgeleitet. Darauf aufbauend wird eine Observability-Strategie entwickelt, in ausgewählten Komponenten prototypisch umgesetzt und anhand zuvor definierter Kriterien bewertet. Der Schwerpunkt liegt auf der systematischen Entwicklung und Beurteilung eines konkreten Lösungskonzepts für einen realen Anwendungskontext -- nicht auf einem empirischen Forschungsdesign im engeren Sinne.
+ 
+Die Arbeitsschritte gliedern sich in fünf aufeinander aufbauende Phasen: Die \emph{theoretische Fundierung} (Kapitel~2) erarbeitet die begrifflichen Grundlagen. Die \emph{Systemanalyse} (Kapitel~3) überführt diese in den Kontext von frag.jetzt und leitet fünf Observability-Anforderungen (A1--A5) ab. Die \emph{Stack-Evaluation} (Kapitel~5) bewertet verfügbare Technologiekombinationen anhand der in Abschnitt~4.3 definierten Vergleichskriterien. Die \emph{Strategiekonzeption mit prototypischer Umsetzung} (Kapitel~6 und~7) bildet den Kern der Eigenleistung: Hier werden die Four Golden Signals dienstspezifisch operationalisiert, eine Telemetrie-Pipeline entworfen sowie Dashboards und Alerting-Regeln konzipiert. Abschließend prüft die \emph{Evaluation} (Kapitel~8) die Strategie gegen die Bewertungskriterien und die Anforderungen aus Kapitel~3.
+ 
+Die Architekturerhebung in Kapitel~3 stützt sich ergänzend auf eine KI-gestützte Quellcodeexploration mithilfe von GitHub Copilot. Das Werkzeug diente als Explorationshilfe, um Architekturübersichten, Controller-Strukturen und bestehende Konfigurationen aus der umfangreichen Codebasis systematisch zu extrahieren. Sämtliche architekturrelevanten Befunde -- insbesondere Serviceabhängigkeiten, Datenbankzugriffe, externe Anbindungen und vorhandene Monitoring-Konfigurationen -- wurden anschließend durch manuelle Prüfung gegen Quellcode, Docker-Compose-Dateien und Konfigurationsartefakte validiert. GitHub Copilot fungierte dabei ausschließlich als unterstützendes Analysewerkzeug, nicht als eigenständiger Erkenntnisträger. Das Verfahren erfasst implizite Laufzeitabhängigkeiten und Konfigurationen außerhalb des versionierten Quellcodes nur eingeschränkt. Diese Grenzen werden bei der Anforderungsableitung berücksichtigt.
+ 
+ 
+\section{Vorgehen bei der Ableitung der Golden Signals pro Service}
+ 
+Die Four Golden Signals -- Latency, Traffic, Errors und Saturation -- bilden den heuristischen Rahmen für die servicebezogene Instrumentierung \parencite[Kap.~\emph{The Four Golden Signals}]{ewaschukMonitoringDistributedSystems}. Die Herausforderung liegt weniger in der Kenntnis der vier Kategorien als in ihrer konkreten Übersetzung auf heterogene Dienste mit unterschiedlichen Rollen und Kommunikationsmustern. Damit diese Übersetzung nachvollziehbar erfolgt, folgt die Arbeit einer fünfstufigen Ableitungslogik.
+ 
+Im ersten Schritt wird die \emph{Rolle des Dienstes im Gesamtsystem} bestimmt. Die funktionale Einordnung -- ob Einstiegspunkt für Nutzerinteraktionen, zentrale Geschäftslogik, Datenhaltung oder Anbindung externer Ressourcen -- beeinflusst maßgeblich, welche Beobachtungsgrößen aussagekräftig sind.
+ 
+Der zweite Schritt identifiziert die \emph{kritischen Interaktionen} des Dienstes. Hierzu dienen die User Journeys und Risikopunkte aus Kapitel~3 als Eingangsgröße. Metriken sollten an realen Nutzungspfaden ausgerichtet sein, nicht an abstrakten Komponentengrenzen \parencite[S.~10--11]{Niedermaier2019onObservability}.
+ 
+Auf dieser Grundlage werden im dritten Schritt \emph{geeignete Messgrößen} abgeleitet. Wo fachlich sinnvoll, wird pro Golden Signal mindestens eine primäre Messgröße bestimmt. Ergänzend können Logs, Traces oder Black-Box-Indikatoren herangezogen werden. Nicht jedes Signal lässt sich bei jedem Dienst gleichermaßen als White-Box-Metrik erfassen -- bei externen KI-Services etwa ist Saturation nur indirekt über Antwortzeiten und Timeout-Raten beobachtbar. \textcite[Kap.~\emph{Symptoms Versus Causes}]{ewaschukMonitoringDistributedSystems} betont die Unterscheidung zwischen symptomorientierten und ursachenorientierten Beobachtungsgrößen: Für die Alarmierung sind Symptome entscheidend, während Ursachenindikatoren primär als Debugging-Kontext dienen. \textcite[S.~10, 16]{albuquerque2025tracing} differenzieren zudem zwischen \emph{Application Metrics} und \emph{Infrastructure Metrics} als komplementären Entwurfsmustern, deren Zusammenspiel erst eine vollständige Sicht auf das Verhalten eines Dienstes ermöglicht \parencite[S.~22]{albuquerque2025tracing}.
+ 
+Der vierte Schritt begründet \emph{initiale Ziel- und Schwellenwerte}. Da für frag.jetzt keine historischen Produktivdaten vorliegen, werden zunächst operative Startschwellen auf Basis von Lasttests und Erfahrungswerten festgelegt. Diese dienen als Ausgangspunkt für begründete Zielwerte, die zunächst in einer Staging-Umgebung anhand definierter Last- und Störungsszenarien überprüft und bei Bedarf angepasst werden. Formale Service Level Objectives, wie sie im SRE-Kontext als quantifizierbare Zielvorgaben die Instrumentierung und Alarmierung strukturieren \parencite[S.~605]{hallur2024monitoring}, existieren für frag.jetzt derzeit nicht und werden als zukünftige Weiterentwicklung betrachtet. \textcite[S.~9]{Niedermaier2019onObservability} bestätigen, dass unklare nichtfunktionale Anforderungen und eine reaktive Monitoring-Entwicklung zu den häufigsten Herausforderungen verteilter Systeme gehören -- ein Ausgangszustand, der auch auf frag.jetzt zutrifft.
+ 
+Im fünften Schritt wird bestimmt, welche \emph{Visualisierung und Alarmierung} aus den Messgrößen folgen. Nicht jede Metrik rechtfertigt einen eigenen Alarm. Alarme sollten auf nutzerseitig wahrnehmbare Symptome ausgerichtet sein, während interne Ursachenindikatoren als Debugging-Kontext bereitstehen \parencite[S.~175]{vinnakota2025creating}. Ebenso bestimmt die Zielgruppe die Aufbereitung: Eine p99-Latenzverteilung eignet sich für ein DevOps-Dashboard, während ein Product Owner eher aggregierte Verfügbarkeitsindikatoren benötigt.
+ 
+Diese Logik stellt sicher, dass die Signal-Ableitung in Kapitel~6 nachvollziehbar an die Systemanalyse rückgebunden bleibt.
+ 
+ 
+\section{Kriterien für Stack-Auswahl und spätere Evaluation}
+ 
+Die Arbeit verwendet zwei aufeinander abgestimmte, aber bewusst getrennte Kriterienebenen. Die Stack-Auswahl (Kapitel~5) beantwortet eine Werkzeugfrage -- welche Technologiekombination adressiert die Anforderungen am besten? Die Evaluation (Kapitel~8) beantwortet eine Ergebnisfrage -- löst die entwickelte Strategie tatsächlich die identifizierten Probleme?
+ 
+\subsection{Vergleichskriterien für die Stack-Auswahl}
+ 
+Eine systematische Stack-Auswahl erfordert mehr als bloße Feature-Listen. Bei der Wahl von Observability-Werkzeugen müssen Faktoren wie Datenaufnahmeraten, Abfrageleistung, Speicherkosten und Integrationsfähigkeit berücksichtigt werden \parencite[S.~104]{sakinala2025observability}. \textcite[S.~72015]{faseeha2025observability} schlagen eine thematische Taxonomie vor, die Werkzeuge nach Einsatzzweck, erfassten Parametern und Architekturmustern vergleichbar macht. \textcite[S.~3]{giamattei2024monitoring} operationalisieren einen ähnlichen Ansatz, indem sie funktionale und technologische Merkmale systematisch gegenüberstellen.
+ 
+Aufbauend auf diesen Vorarbeiten und den Anforderungen A1--A5 werden folgende Vergleichskriterien verwendet:
+ 
+\begin{itemize}
+    \item \textbf{Abdeckung der Telemetriepfeiler.} Unterstützung von Metriken, Logs und Traces in integrierter Form.
+    \item \textbf{Korrelationsfähigkeit.} Verknüpfung verschiedener Telemetriearten über gemeinsame Bezeichner (Trace-IDs, Korrelations-IDs).
+    \item \textbf{OpenTelemetry-Kompatibilität.} Unterstützung des herstellerneutralen CNCF-Standards für Instrumentierung und Datenexport, um Vendor Lock-in zu vermeiden.
+    \item \textbf{Dashboarding und Alerting.} Eignung des Stacks für die Erstellung rollenspezifischer Dashboards sowie für die Definition und Verwaltung differenzierter Alarmregeln.
+    \item \textbf{Integrationsaufwand.} Technischer Aufwand für die Einbindung in die bestehende Docker-Compose-Topologie und die vorhandenen Technologien (Spring Boot, Kotlin/Netty, Python/FastAPI).
+    \item \textbf{Ressourcenbedarf.} Zusätzlicher Speicher-, CPU- und Festplattenbedarf auf einem einzelnen Host, besonders relevant angesichts der Single-Host-Topologie von frag.jetzt (vgl.~R6).
+    \item \textbf{Erweiterbarkeit.} Anpassungsfähigkeit bei steigenden Anforderungen, etwa wachsendem Telemetrievolumen oder zusätzlichen Diensten.
+    \item \textbf{Community und Ökosystem.} Breite der Nutzerbasis, Dokumentationsreife und Integrationen mit gängigen Frameworks.
+\end{itemize}
+ 
+Die Gesamtbewertung eines Stacks wird abschließend unter dem Gesichtspunkt der \emph{Eignung für frag.jetzt} zusammengeführt. Dabei fließen die Einzelkriterien gewichtet in eine Synthese ein, die den spezifischen Kontext -- Single-Host-Betrieb, begrenztes Betriebsteam, heterogene Technologielandschaft -- explizit berücksichtigt.
+ 
+\subsection{Bewertungskriterien für die Gesamtstrategie}
+ 
+Die Gesamtstrategie wird an einem übergeordneten Maßstab gemessen, der direkt auf die Anforderungen A1--A5 aus Kapitel~3 zurückgreift. \textcite[S.~9--10]{Niedermaier2019onObservability} formulieren eine ganzheitliche Sicht über System- und Infrastrukturebenen hinweg als Kernanforderung an Monitoring-Konzepte verteilter Systeme. Diese Perspektive wird hier aufgegriffen und in prüfbare Evaluationsfragen überführt.
+ 
+Für jede Anforderung wird eine konkrete Prüffrage formuliert: Lässt sich ein Request Ende-zu-Ende rekonstruieren (A1)? Deckt die Instrumentierung alle drei Messebenen ab (A2)? Können Logeinträge über Korrelations-IDs verknüpft werden (A3)? Reagieren Alarme auf nutzerwirksame Zustände und enthalten sie ausreichend Kontext für eine Erstreaktion (A4)? Werden Container-Ressourcen, Datenbankpool-Auslastung und Queue-Tiefen erfasst (A5)? Für die Alarmierungsqualität betonen \textcite[S.~3]{gowda2022alerts}, dass ein Alarm nur dann operativen Wert besitzt, wenn er Problem, Schweregrad, betroffene Komponenten und empfohlene Gegenmaßnahmen klar benennt.
+ 
+Die Beantwortung dieser Fragen stützt sich auf drei Evidenzquellen: erstens die \emph{Artefaktanalyse}, bei der Instrumentierungskonfigurationen, Dashboard-Definitionen und Alarmregeln gegen die Anforderungen geprüft werden. Zweitens die \emph{Konfigurations- und Instrumentierungsprüfung}, die sicherstellt, dass die definierten Metriken, Logs und Traces tatsächlich erhoben und korrekt korreliert werden. Drittens ausgewählte \emph{Last- und Störungsszenarien}, die in einer produktionsnahen Testumgebung gezielt Lastspitzen und Fehlerbilder simulieren.
+ 
+Ergänzend fließen drei übergreifende Bewertungsdimensionen ein: die \emph{Stakeholder-Tauglichkeit}, also ob Dashboards den unterschiedlichen Rollen die jeweils benötigten Informationen liefern, die \emph{Abdeckung der Risikopunkte} R1--R6 aus Kapitel~3 und der \emph{Umsetzungsrealismus}, also ob die Strategie mit den verfügbaren Mitteln und der bestehenden Infrastruktur implementierbar ist.
+ 
+Die Evaluation in Kapitel~8 gleicht diese Kriterien mit den Ergebnissen der prototypischen Umsetzung ab. Zu diesem Zweck werden in einer produktionsnahen Staging-Umgebung gezielt Lastspitzen und Fehlerszenarien erzeugt, um die Instrumentierung, Korrelation und Alarmierungslogik kontrolliert zu prüfen. Die Aussagekraft dieser Validierung bleibt gegenüber Beobachtungen aus einem langfristigen Produktivbetrieb begrenzt und wird in Kapitel~8 entsprechend eingeordnet.
+
+
+
+% \newpage
+
+% \chapter{Implementierung und Ergebnisse}
+% \index{Implementierung}%
+% \index{Benchmark}%
+% \index{Evaluation}%
+% \label{ch:realisierung}
+
+% \section{Implementierungsdetails}
+
+% Das Kapitel dokumentiert die praktischen Aspekte der Umsetzung\index{Implementierungspraxis}.\footnote{Implementierungsdetails orientieren sich an Best Practices aus~\cite{martin2008clean}.}
+% Die Implementierung erfolgte iterativ\index{Iterative Entwicklung} über einen Zeitraum von 4 Monaten mit kontinuierlichem Testen\index{Continuous Testing} und Verfeinerung.
+
+% \subsection{Technologiestack}
+
+% Folgende Technologien wurden für die Implementierung eingesetzt:
+
+% \begin{sloppypar}
+% \begin{description}
+%   \item[Programmiersprache:] Python 3.11+\index{Python} (Typ-Hinweise\index{Type Hints}, Async/Await-Un\-ter\-stüt\-zung\index{Async/Await})
+%   \item[LLM-Integration:] OpenAI API (GPT-4)\index{GPT-4}, Anthropic API (Claude 3.5 Sonnet)\index{Claude}, mit Fallback-Mechanismus\index{Fallback-Mechanismus}
+%   \item[Orchestrierung:] LangChain 0.1.x für Basis-Komponenten\index{LangChain}, benutzerdefinierte Erweiterungen für SE-spezifische Tools; strukturierte Tool-Calls über \textbf{JSON}-Schemas und Konfigurationen per \textbf{YAML}.
+%   \item[Gedächtnis:] Chroma\index{Chroma Vector-DB} Vektordatenbank für semantisches Retrieval, SQLite für episodische Logs\index{Event-Logging}
+%   \item[Werkzeuglaufzeitumgebung:] Docker 24.0+\index{Docker!Sandboxing} für Sandboxing, pytest für Tests, ruff/black für Linting\index{Code Linting}
+%   \item[Monitoring:] Prometheus für Metriken\index{Prometheus}, strukturierte Logs (JSON) mit Trace-IDs\index{Distributed Tracing}
+% \end{description}
+% \end{sloppypar}
+
+% \subsection{Projektstruktur}
+
+% Das Projekt folgt einer modularen Architektur:
+
+% \begin{lstlisting}[breaklines=true, basicstyle=\ttfamily\small]
+% agent_se/
+% +-- core/
+% |   +-- agent.py           # Agent Controller (ReAct-Loop)
+% |   +-- policy.py          # Planning & Reflection Logic
+% |   +-- state.py           # State Management
+% +-- tools/
+% |   +-- base.py            # Tool Interface & Registry
+% |   +-- code_tools.py      # Linter, Formatter, AST-Parser
+% |   +-- test_tools.py      # pytest, coverage, Test-Runner
+% |   +-- vcs_tools.py       # git operations
+% +-- memory/
+% |   +-- episodic.py        # Event Logging & Retrieval
+% |   +-- semantic.py        # Vector Store Integration
+% +-- safety/
+% |   +-- validator.py       # Input Validation & Sanitization
+% |   +-- sandbox.py         # Docker-based Execution Env
+% +-- evaluation/
+%     +-- benchmarks.py      # Test Scenarios
+%     +-- metrics.py         # Success Rate, Costs, Latency
+% \end{lstlisting}
+
+% \subsection{Kernimplementierung: Agent-Controller}\index{Agent Controller!Implementierung}
+
+% Listing \ref{lst:agent-loop} zeigt eine minimale agentische Schleife\index{Agent Loop} mit Planung\index{Planung!Implementierung}, Werkzeugausführung und Reflexion\index{Reflexion}. Die vollständige Implementierung umfasst zusätzlich Fehlerbehandlung\index{Error-Handling!Agent}, Timeouts, Schrittbegrenzungen und strukturiertes Logging\index{Agent Logging}.
+
+% \begin{lstlisting}[style=Python, caption={Minimaler agentischer Loop für SE-Aufgaben (Beispiel-Listing)}, label={lst:agent-loop}]
+% from typing import Dict, Any
+
+% class Toolset:
+%   def run_tests(self) -> str:
+%     return "tests: 103 passed, 2 failed"
+
+%   def format_code(self, diff: str) -> str:
+%     return "formatted diff applied"
+
+% class Agent:
+%   def __init__(self, tools: Toolset):
+%     self.tools = tools
+%     self.memory = []  # episodic traces
+
+%   def plan(self, goal: str) -> str:
+%     return f"Plan: run tests -> fix failures -> re-run -> format -> commit ({goal})"
+
+%   def act(self, step: str) -> str:
+%     if "run tests" in step:
+%       return self.tools.run_tests()
+%     if "format" in step:
+%       return self.tools.format_code(diff="...")
+%     return "noop"
+
+%   def reflect(self, observation: str) -> str:
+%     if "failed" in observation:
+%       return "Next: inspect failing tests and patch code"
+%     return "Next: finalize and commit"
+
+%   def run(self, goal: str) -> Dict[str, Any]:
+%     plan = self.plan(goal)
+%     self.memory.append({"plan": plan})
+%     obs = self.act("run tests")
+%     self.memory.append({"obs": obs})
+%     next_step = self.reflect(obs)
+%     self.memory.append({"reflect": next_step})
+%     obs2 = self.act("format")
+%     self.memory.append({"obs": obs2})
+%     return {"status": "done", "trace": self.memory}
+
+% agent = Agent(Toolset())
+% result = agent.run(goal="increase reliability of module X")
+% print(result["status"])
+% \end{lstlisting}
+
+% Listing~\ref{lst:ts-tool-calling} zeigt ergänzend die Implementierung eines Tool-Aufrufs in TypeScript.
+
+% % ------------------------------------------------------------
+% % Zweites Listing: TypeScript Tool-Calling Stub
+% \begin{lstlisting}[style=TypeScript, caption={Werkzeugaufruf-Stub in TypeScript mit einfachem Funktionsschema (Beispiel-Listing)}, label={lst:ts-tool-calling}]
+% type ToolName = "run_tests" | "format_code" | "open_issue";
+
+% interface ToolCall {
+%   name: ToolName;
+%   args: Record<string, unknown>;
+% }
+
+% interface ToolResult {
+%   name: ToolName;
+%   ok: boolean;
+%   output: string;
+% }
+
+% const tools = {
+%   run_tests: async (): Promise<ToolResult> => ({ name: "run_tests", ok: true, output: "103 passed, 2 failed" }),
+%   format_code: async (_args: { diff: string }): Promise<ToolResult> => ({ name: "format_code", ok: true, output: "formatted" }),
+%   open_issue: async (_args: { title: string; body: string }): Promise<ToolResult> => ({ name: "open_issue", ok: true, output: "#4321" })
+% };
+
+% async function dispatch(call: ToolCall): Promise<ToolResult> {
+%   switch (call.name) {
+%     case "run_tests":
+%       return tools.run_tests();
+%     case "format_code":
+%       return tools.format_code(call.args as { diff: string });
+%     case "open_issue":
+%       return tools.open_issue(call.args as { title: string; body: string });
+%   }
+% }
+
+% async function agent(goal: string) {
+%   const plan = [`run_tests`, `analyze_failures`, `format_code`, `commit`];
+%   const trace: Array<{ event: string; data: unknown }> = [{ event: "plan", data: plan }];
+
+%   const res1 = await dispatch({ name: "run_tests", args: {} });
+%   trace.push({ event: "tool_result", data: res1 });
+
+%   if (res1.output.includes("failed")) {
+%     // Simple reflection -> open an issue with details
+%     const res2 = await dispatch({ name: "open_issue", args: { title: `Test failures for ${goal}`, body: res1.output } });
+%     trace.push({ event: "tool_result", data: res2 });
+%   }
+
+%   const res3 = await dispatch({ name: "format_code", args: { diff: "..." } });
+%   trace.push({ event: "tool_result", data: res3 });
+%   return { status: "done", trace };
+% }
+
+% agent("increase reliability of module X").then(r => console.log(r.status));
+% \end{lstlisting}
+
+% \section{Experimentelles Setup}
+
+% Die Validierung erfolgt anhand von realistischen Testszenarien, die typische Software-Engineering-Workflows abbilden.
+
+% \subsection{Testumgebung}
+
+% \begin{sloppypar}
+% \begin{description}
+%   \item[Hardware:] MacBook Pro M2, 16\,GB RAM, 512\,GB SSD
+%   \item[Betriebssystem:] macOS 14.x, Docker Desktop 4.25
+%   \item[LLM-Modelle:] GPT-4-Turbo (0125), Claude 3.5 Sonnet, mit Temperatur 0.2 für Reproduzierbarkeit
+%   \item[Testdaten:] 25 repräsentative Python-Projekte (5\,k--50\,k LOC), synthetische Bugs, real-world Issues
+% \end{description}
+% \end{sloppypar}
+
+% \subsection{Benchmark-Szenarien}
+
+% Drei Haupt-Szenarien wurden evaluiert (vgl. Kapitel~\ref{ch:konzept}):
+
+% \begin{enumerate}
+%   \item \textbf{Automated Refactoring} (10 Tasks): Extract-Function, Rename-Variable, Simplify-Conditional
+%   \item \textbf{Test Failure Diagnosis} (8 Tasks): Debug failing tests, fix assertions, update mocks
+%   \item \textbf{Lint Error Resolution} (7 Tasks): Fix style issues, type errors, unused imports
+% \end{enumerate}
+
+% Jedes Szenario wurde 5-mal mit unterschiedlichen Seeds wiederholt, um Varianz zu messen.
+
+% \subsection{Beispiel: Test Failure Diagnosis — Schritt-für-Schritt}
+
+% Im Folgenden wird das Szenario \enquote{Test Failure Diagnosis} detailliert beschrieben, um den praktischen Ablauf und die typischen Artefakte (Tool-Calls, Logs, Entscheidungen) zu veranschaulichen.
+
+% 1) Initialer Zustand: Test-Runner meldet \texttt{3 failed} in \texttt{auth/test\_login.py}. Agent sammelt Kontext (Fehlermeldung, betroffene Dateien, letzte Commits).
+
+% 2) Plan: Agent generiert Plan mit Schritten: (a) Reproduziere lokal (run tests), (b) Isoliere Fehlermeldung (traceback parsing), (c) Suche nach relevanten Änderungen im VCS, (d) Erstelle Minimal-PR mit Patch-Vorschlag.
+
+% 3) Act: Tool-Calls (Beispiel):
+% \begin{itemize}
+%   \item \texttt{run\_tests(module="auth")} \textrightarrow\ \texttt{"3 failed, 97 passed"}
+%   \item \texttt{run\_linter(path="auth/")} \textrightarrow\ Tool-Result: Hinweise auf Stil, aber keine direkten Fehler
+%   \item \texttt{search\_in\_repo(query="login", range="last-5-commits")} \textrightarrow\ Treffer: Commit 123abc \texttt{Refactor: auth flow}
+% \end{itemize}
+
+% 4) Observation: Agent parst Traceback, findet NullPointer-ähnlichen Fehler in Hilfsfunktion, die neu extrahiert wurde. Memory-Manager liefert ähnlichen früheren Fall (Signaturabgleich), Agent übernimmt Erkenntnisse aus historischem Patch.
+
+% 5) Reflection 
+% \begin{sloppypar}
+% \begin{itemize}
+%   \item Agent generiert Patch-Vorschlag (kleine Scope-Korrektur im Helper), erstellt Diff und führt Tests erneut in isolierter Sandbox aus.
+%   \item Tests grün $\Rightarrow$ Agent eröffnet PR-Entwurf und notiert Review-Kommentare; bei Teil-Erfolg: Human-Approval-Gate vor Merge.
+% \end{itemize}
+% \end{sloppypar}
+
+% Beispiel-Trace (gekürzt):
+% \begin{lstlisting}[breaklines=true, basicstyle=\ttfamily\small]
+% [Agent] run_tests -> 3 failed (auth/test_login.py::test_login)
+% [Agent] search_in_repo -> found commit 123abc (Refactor auth flow)
+% [Agent] generate_patch -> diff created: modify auth/helpers.py
+% [Agent] run_tests (sandbox) -> 100 passed
+% [Agent] open_pr -> PR #42 (Draft)
+% \end{lstlisting}
+
+% Das Beispiel zeigt, wie Tool-Adapter, Memory und Safety-Layer (Sandbox, Human-Approval) zusammenwirken, um fehlerhafte Änderungen sicher zu erkennen und zu beheben. Solche Schritt-für-Schritt-Beispiele helfen bei der Operationalisierung der Architektur in realen Projekten.
+
+% \section{Ergebnisse}
+
+% Die durchgeführten Experimente zeigen differenzierte Ergebnisse über verschiedene Dimensionen.
+
+% \subsection{Erfolgsraten nach Aufgabentyp}
+
+% Tabelle \ref{tab:benchmark-results} zeigt detaillierte Ergebnisse für ausgewählte Tasks:
+
+% \begin{sloppypar}
+% \begin{itemize}
+%   \item \textbf{Refactoring:} \pct{73} Erfolgsrate (11/15 Tasks erfolgreich)
+%   \item \textbf{Test-Fixing:} \pct{62} Erfolgsrate (5/8 Tasks erfolgreich)
+%   \item \textbf{Lint-Resolution:} \pct{86} Erfolgsrate (6/7 Tasks erfolgreich)
+% \end{itemize}
+% \end{sloppypar}
+
+% Erfolg wurde definiert als: (1) Task formal korrekt gelöst (Tests grün, Lint clean), (2) keine Regressionen, (3) Code-Qualität nicht verschlechtert.
+
+% \subsection{Effizienzmetriken}
+
+% Die entwickelte Lösung erreicht folgende Performance-Charakteristika:
+
+% \begin{sloppypar}
+% \begin{description}
+%   \item[Token-Verbrauch:] Durchschnittlich 8.4\,k Tokens pro erfolgreichem Task (Range: 2\,k--25\,k). Kontextoptimierung reduzierte Verbrauch um \pct{40} gegenüber naivem Ansatz.
+  
+%   \item[Laufzeit:] Median 12.3\,Sekunden pro Task (ohne Tool-Execution). Mit Test-Runs: 45\,s--180\,s je nach Testsuite-Größe.
+  
+%   \item[Tool-Calls:] Durchschnittlich 4.2\,Werkzeugaufrufe pro Task. Reflexion reduzierte fehlerhafte Aufrufe um \pct{28}.
+  
+%   \item[Kosten:] Geschätzt \$\,0.08 pro Task bei GPT-4-Pricing (Jan 2024). Claude war \pct{35} günstiger bei vergleichbarer Qualität.
+% \end{description}
+% \end{sloppypar}
+
+% \subsection{Qualitätsmetriken}
+
+% \textquote[\cite{yang2024sweagent}]{Die praktische Implementierung agentischer Systeme erfordert sorgfältige Planung und umfassende Tests, um Zuverlässigkeit in produktiven Umgebungen zu gewährleisten.}
+
+% Code-Qualität wurde über mehrere Dimensionen gemessen:
+
+% \begin{sloppypar}
+% \begin{itemize}
+%   \item \textbf{Test-Pass-Rate:} \pct{98} (nur 2 von 103 Tests regressierten nach Agent-Edits)
+%   \item \textbf{Lint-Score:} Durchschnittlich +12 Punkte Verbesserung nach Lint-Fixes
+%   \item \textbf{Complexity:} Cyclomatic Complexity blieb unverändert oder verbesserte sich (Extract-Function Tasks)
+%   \item \textbf{Review-Akzeptanz:} Manuelles Review ergab \pct{81} Akzeptanzrate („would merge“)
+%   \item \textbf{Review-Akzeptanz:} Manuelles Review ergab \pct{81} Akzeptanzrate (\enquote{would merge})
+% \end{itemize}
+% \end{sloppypar}
+
+% \subsection{Robustheit und Fehlerbehandlung}
+
+% Error-Cases wurden systematisch getestet:
+
+% \begin{sloppypar}
+% \begin{itemize}
+%   \item \textbf{Werkzeugfehler:} Agent erholte sich in \pct{67} der Fälle durch Wiederholung oder Alternativstrategie
+%   \item \textbf{Malformed Outputs:} JSON-Parsing-Fehler wurden durch Wiederholungen mit Schema-Validierung in \pct{89} behoben
+%   \item \textbf{Timeouts:} Graceful Degradation bei max-steps Limit (definiert als \pct{15} Partial-Success)
+% \end{itemize}
+% \end{sloppypar}
+
+% \section{Vergleich mit existierenden Ansätzen}
+
+% Die entwickelte Lösung wurde mit Baselines verglichen:
+
+% \begin{table}[ht]
+% \centering
+% \caption{Vergleich mit Baseline-Systemen (auf gleichem Benchmark-Set)}
+% \label{tab:comparison}
+% \begin{tabularx}{\textwidth}{Xcccc}
+% \toprule
+% \cellcolor{headercolor}\textcolor{white}{\textbf{Ansatz}} & \cellcolor{headercolor}\textcolor{white}{\textbf{Success}} & \cellcolor{headercolor}\textcolor{white}{\textbf{Token}} & \cellcolor{headercolor}\textcolor{white}{\textbf{Zeit (s)}} & \cellcolor{headercolor}\textcolor{white}{\textbf{Kosten}} \\
+% \midrule
+% Naive Prompting & \pct{42} & 12.3\,k & 8.5 & \$\,0.12 \\
+% \rowcolor{rowcolorgray}
+% ReAct (Baseline) & \pct{58} & 10.1\,k & 15.2 & \$\,0.10 \\
+% Unsere Architektur & \pct{73} & 8.4\,k & 12.3 & \$\,0.08 \\
+% \rowcolor{rowcolorgray}
+% + Reflexion & \pct{73} & 8.9\,k & 14.1 & \$\,0.09 \\
+% \bottomrule
+% \end{tabularx}
+% \end{table}
+
+% Kernverbesserungen gegenüber Baselines:
+
+% \begin{sloppypar}
+% \begin{itemize}
+%   \item \textbf{+31\% Erfolgsrate} vs. Naives Prompting durch strukturierte Werkzeugorchestrierung
+%   \item \textbf{+15\% Erfolgsrate} vs. Standard-ReAct durch optimiertes Kontextmanagement
+%   \item \textbf{-17\% Token-Kosten} durch intelligentes Pruning und Zusammenfassung
+%   \item \textbf{Robustere Fehlerbehebung} durch Reflexions-Mechanismen
+% \end{itemize}
+% \end{sloppypar}
+
+% Die vorgestellten Ergebnisse werden im Folgenden kontextualisiert: Für Entwickler bedeutet eine um 31\% höhere Erfolgsrate gegenüber naivem Prompting konkret weniger manueller Nacharbeit, schnellere Durchlaufzeiten in Pull-Request-Zyklen und eine höhere Automatisierungsquote. Für Betreiber von CI/CD-Infrastrukturen bedeuten niedrigere Token-Kosten und reduzierte Fehlerraten geringere Betriebskosten. Die praktische Perspektive ist wichtig, um Entscheidungsträgern in Unternehmen handfeste Argumente für den Einsatz agentischer Lösungen zu liefern.
+
+% \section{Validierung und Verifikation}
+
+% Alle kritischen Funktionen wurden durch automatisierte Tests validiert. Die Testabdeckung beträgt \pct{87} (Zeilen-Coverage).
+
+% \subsection{Unit-Tests}
+
+% \begin{sloppypar}
+% \begin{itemize}
+%   \item Tool-Adapter: 45 Tests, \pct{95} Abdeckung
+%   \item Policy-Logic: 32 Tests, \pct{89} Abdeckung
+%   \item Sicherheitsschicht: 28 Tests, \pct{92} Abdeckung
+% \end{itemize}
+% \end{sloppypar}
+
+% \subsection{Integrationstests}
+
+% End-to-End-Tests für alle 3 Benchmark-Szenarien. Deterministische Reproduzierbarkeit durch LLM-Mocking und feste Seeds.
+
+% Praktische Erkenntnisse: Automatisierte Tests sollten sowohl synthetische als auch realistische Repositories umfassen; Mocking allein reicht nicht aus, da Tests in realen Umgebungen unerwartete Randfälle aufdecken. Darüber hinaus ist kontinuierliche Überwachung unabdingbar, um Drift in LLM-Verhalten oder Änderungen in abhängigen Tools frühzeitig zu erkennen.
+
+% \subsection{Sicherheits-Audits}
+
+% \begin{itemize}
+%   \item Prompt-Injection-Tests: 15 Exploit-Versuche, alle blockiert
+%   \item Dateisystemisolierung: Sandbox-Ausbrüche verhindert
+%   \item Rate-Limiting: Korrekte Durchsetzung bei 100\,Requests/min Limit
+% \end{itemize}
+
+% % Benchmark-Ergebnisse mit longtable
+% \begin{table}[ht]
+% \centering
+% \caption{Detaillierte Benchmark-Ergebnisse: Agentische SE-Tasks mit Evaluationsmetriken}
+% \label{tab:benchmark-results}
+% \begin{tabularx}{\textwidth}{Xccccc}
+% \toprule
+% \cellcolor{headercolor}\textcolor{white}{\textbf{Aufgabe}} & \cellcolor{headercolor}\textcolor{white}{\textbf{Success}} & \cellcolor{headercolor}\textcolor{white}{\textbf{Token}} & \cellcolor{headercolor}\textcolor{white}{\textbf{Zeit (s)}} & \cellcolor{headercolor}\textcolor{white}{\textbf{Tools}} & \cellcolor{headercolor}\textcolor{white}{\textbf{Kosten}} \\
+% \midrule
+% Extract Function & OK & 7.2\,k & 18.5 & 4 & \$\,0.07 \\
+% \rowcolor{rowcolorgray}
+% Fix Lint Errors & OK & 3.1\,k & 8.2 & 3 & \$\,0.03 \\
+% Debug Test Failure & OK & 12.5\,k & 45.3 & 6 & \$\,0.12 \\
+% \rowcolor{rowcolorgray}
+% Format Code & OK & 2.8\,k & 5.1 & 2 & \$\,0.03 \\
+% Rename Variable & OK & 5.4\,k & 12.8 & 3 & \$\,0.05 \\
+% \rowcolor{rowcolorgray}
+% Remove Deadcode & OK & 8.9\,k & 22.1 & 5 & \$\,0.09 \\
+% Update Mocks & FAIL & 9.7\,k & 38.2 & 7 & \$\,0.10 \\
+% \rowcolor{rowcolorgray}
+% Simplify Conditional & OK & 6.3\,k & 15.7 & 4 & \$\,0.06 \\
+% Generate Docstrings & OK & 4.5\,k & 9.3 & 2 & \$\,0.04 \\
+% \rowcolor{rowcolorgray}
+% Fix Type Errors & OK & 11.2\,k & 28.4 & 5 & \$\,0.11 \\
+% \bottomrule
+% \multicolumn{6}{l}{\small \textit{Durchschnitt (erfolgreiche Tasks):} 7.1\,k Tokens, 16.5\,s, 3.8\,Tools, \$\,0.07} \\
+% \end{tabularx}
+% \end{table}
+
+% Tabelle~\ref{tab:eval-metrics} fasst die verwendeten Evaluationsmetriken zusammen.
+
+% % Zusätzliche Beispiel-Tabelle für Evaluationsmetriken
+% \begin{table}[ht]
+% \centering
+% \caption{Evaluationsmetriken für agentische SE-Workflows (Beispieltabelle)}
+% \label{tab:eval-metrics}
+% \begin{tabularx}{\textwidth}{lX}
+% \toprule
+% \cellcolor{headercolor}\textcolor{white}{\textbf{Kategorie}} & \cellcolor{headercolor}\textcolor{white}{\textbf{Metriken / Beschreibung}} \\
+% \midrule
+% Qualität & Task-Success-Rate, Patch-Korrektheit (Tests/Lint), Review-Akzeptanz, Regressionen (\#) \\
+% \rowcolor{rowcolorgray}
+% Kosten & Token-/API-Kosten (EUR), Werkzeugaufrufkosten, Rechenzeit \\
+% Latenz & End-to-End-Laufzeit (s), Tool-Roundtrips (\#), Wartezeit auf CI \\
+% \rowcolor{rowcolorgray}
+% Sicherheit & Policy-Verstöße (\#), Risk Flags, sand-boxed I/O, PII-Leaks (\#) \\
+% Nachvollziehbarkeit & Trace-Länge (\#Events), Artefakte (Patches, Logs), Reproduzierbarkeit (Seeds) \\
+% \bottomrule
+% \end{tabularx}
+% \end{table}

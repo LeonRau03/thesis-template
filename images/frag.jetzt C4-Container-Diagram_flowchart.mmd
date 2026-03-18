@@ -1,0 +1,63 @@
+---
+title: "C4-Container-Diagramm: frag.jetzt-Plattform"
+---
+flowchart TD
+    user(["<b>Teilnehmende / Dozierende</b><br/><i>Browser</i>"])
+
+    user -->|"HTTPS, WSS"| frontend
+
+    subgraph fragjetzt [" frag.jetzt Plattform "]
+        direction TB
+
+        subgraph app [" Applikationsdienste "]
+            direction TB
+            frontend["<b>Frontend + Reverse Proxy</b><br/>[Angular, Nginx]<br/><i>SPA-Auslieferung<br/>Routing: /api, /gateway, /auth, /ai</i>"]
+
+            frontend -->|"REST /api"| backend
+            frontend -->|"WebSocket /gateway"| wsgw
+            frontend -->|"REST /ai"| ai
+            frontend -->|"OIDC /auth"| keycloak
+
+            backend["<b>Backend</b><br/>[Spring Boot, WebFlux, R2DBC]<br/><i>Geschaeftslogik, REST-API<br/>19 Controller, 95 Endpoints</i>"]
+            wsgw["<b>WebSocket Gateway</b><br/>[Kotlin, Netty]<br/><i>STOMP-over-WS<br/>Session-Tracking</i>"]
+            ai["<b>AI Provider</b><br/>[Python, FastAPI, LangChain]<br/><i>KI-Funktionen, Moderation<br/>19 LLM-Provider</i>"]
+            keycloak["<b>Keycloak + Plugin</b><br/>[Keycloak]<br/><i>SSO, OIDC<br/>Authentifizierung</i>"]
+        end
+
+        backend -->|"R2DBC (reaktiv)"| pgmain
+        backend -->|"AMQP (Events)"| rmq
+        wsgw -->|"STOMP Relay"| rmq
+        ai -->|"HTTP"| chroma
+        keycloak -->|"JDBC"| pgkc
+
+        subgraph infra [" Infrastruktur "]
+            direction LR
+            pgmain[("  <b>PostgreSQL Haupt</b><br/>[PostgreSQL, R2DBC]<br/><i>31 Tabellen<br/>Hauptdatenbank</i>  ")]
+            rmq["<b>RabbitMQ</b><br/>[STOMP + AMQP]<br/><i>Message Broker</i>"]
+            chroma[("  <b>ChromaDB</b><br/>[ChromaDB]<br/><i>Vektordatenbank<br/>fuer Embeddings</i>  ")]
+            pgkc[("  <b>Keycloak DB</b><br/>[PostgreSQL]<br/><i>Dedizierte<br/>Keycloak-DB</i>  ")]
+        end
+
+        pgmain -->|"Logische Replikation<br/>(room, account, room_access)"| pgai
+        pgai[("  <b>PostgreSQL AI</b><br/>[PostgreSQL]<br/><i>AI-Datenbank<br/>Logische Replikation</i>  ")]
+    end
+
+    backend -.->|"HTTPS — kein Timeout"| paypal
+    ai -.->|"HTTPS — kein Timeout/Retry"| llm
+
+    paypal["<b>PayPal API</b><br/><i>Zahlungsabwicklung</i>"]
+    llm["<b>Externe LLM-Provider</b><br/><i>OpenAI, Anthropic, Mistral,<br/>Google GenAI, OpenRouter u.a.</i>"]
+
+    classDef person fill:#08427B,stroke:#052E56,color:#fff,font-size:14px
+    classDef appService fill:#1168BD,stroke:#0B4884,color:#fff,font-size:12px
+    classDef infraService fill:#438DD5,stroke:#2E6295,color:#fff,font-size:12px
+    classDef external fill:#999999,stroke:#6B6B6B,color:#fff,font-size:12px
+    classDef dbStyle fill:#438DD5,stroke:#2E6295,color:#fff,font-size:12px
+
+    class user person
+    class frontend,backend,wsgw,ai,keycloak appService
+    class pgmain,rmq,chroma,pgkc,pgai dbStyle
+    class paypal,llm external
+
+    linkStyle 11 stroke:red,stroke-width:2px
+    linkStyle 12 stroke:red,stroke-width:2px
