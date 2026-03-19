@@ -3,16 +3,35 @@
 \chapter{Verzeichnis der KI-Nutzung}
 \label{ch:ki-nutzung}
 
+\input{content/00_KIErklaerung}
+
+Tabelle~\ref{tab:ki-nutzung} listet alle in dieser Arbeit verwendeten KI-Werkzeuge auf.
+\newpage
+
+
+\section{Copilot Prompts für die unterstützende Systemanalyse von frag.jetzt}
+\label{sec:anhang-copilot-prompts}
+
+\begin{lstlisting}[caption={Copilot-Prompts zur Architekturanalyse}]
+Analysiere die Projektstruktur von frag.jetzt. Welche Module, Services und Hauptkomponenten gibt es? Erstelle eine tabellarische Uebersicht mit Modulname, Technologie/Framework und Hauptverantwortung.
+Identifiziere alle externen HTTP-Aufrufe (REST-Clients, WebClients, Feign-Clients) im Spring-Boot-Backend. Welche externen Dienste werden aufgerufen, mit welchen Endpunkten, und gibt es Timeout- oder Retry-Konfigurationen?
+Liste alle REST-Controller im Backend auf. Gruppiere sie nach fachlicher Funktion (z. B. Room-Management, Question-Management, Auth, AI-Service) und notiere die HTTP-Methoden und Pfade.
+Gibt es bereits Observability-bezogene Konfigurationen? Suche nach: Micrometer, Actuator, OpenTelemetry, Prometheus, Logging-Frameworks (Logback, Log4j), Health-Check-Endpoints, Tracing-Bibliotheken.
+Analysiere die Datenbankschicht. Welche Entities/Tabellen gibt es, welche Repositories werden verwendet, und gibt es komplexe Queries oder Stored Procedures, die als Performancerisiko gelten koennten?
+Beschreibe die WebSocket-Kommunikation. Welche STOMP-Topics oder Channels gibt es, welche Nachrichten werden darueber ausgetauscht, und wie wird die Verbindung verwaltet?
+Analysiere die Deployment-Konfiguration (docker-compose.yml, Kubernetes-Manifeste, CI/CD-Pipeline). Welche Container/Services werden deployt, wie sind sie vernetzt, und welche Ressourcenlimits sind konfiguriert?
+\end{lstlisting}
+\newpage
+
+\input{content/Z-Anhang-table}
+\newpage
+
 \section{C4-Container-Diagramm in Vollansicht}
 \label{sec:anhang-c4-vollansicht}
 
 \begin{figure}[p]
 \centering
-\includegraphics[angle=90,height=0.90\textheight,keepaspectratio]{images/frag.jetzt C4-Container-Diagram.png}
+\includegraphics[angle=90,height=0.75\textheight,keepaspectratio]{images/frag.jetzt C4-Container-Diagram.png}
 \caption{C4-Container-Diagramm der frag.jetzt-Architektur in Vollseitenansicht}
 \label{fig:c4-fragjetzt-architektur-vollseite}
 \end{figure}
-
-\input{content/00_KIErklaerung}
-
-Tabelle~\ref{tab:ki-nutzung} listet alle in dieser Arbeit verwendeten KI-Werkzeuge auf.

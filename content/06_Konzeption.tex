@@ -85,7 +85,9 @@ Drittens ist das erwartete Telemetrievolumen im Normalbetrieb gering genug, um a
  
 \textcite[S.~1--2]{borges2024informed} argumentieren, dass Instrumentierung und Konfiguration einer Observability-Lösung werkzeugabhängig und an Kosten gebunden sind und Architekten deshalb die zugehörigen Entwurfs-Trade-offs verstehen müssen. Die Literatur liefert dafür den Rahmen; die konkrete Priorisierung erfolgt jedoch anhand der in Abschnitt~3.4 identifizierten Risiken. Die vorliegende Architektur hält den Einstieg bewusst schlank und lässt Erweiterungspfade -- etwa das Hinzufügen von Mimir für Langzeitmetriken oder die Aktivierung von Tail-Based Sampling im Collector -- offen, ohne die Grundstruktur zu verändern.
  
-% [HIER MÖGLICHES BILD EINFÜGEN]
+% [HIER MÖGLICHES BILD EINFÜGEN] Logische Zielarchitektur der Observability-Pipeline für frag.jetzt -- 
+% Schichtenmodell mit Instrumentierung (OTel Agents, Exporter), Sammlung (OTel Collector, Prometheus Scrape), 
+% Speicherung (Prometheus, Loki, Tempo) und Auswertung (Grafana), eingebettet in die Docker-Compose-Topologie.]
  
 Die beschriebene Architektur legt fest, \emph{wie} Telemetriedaten fließen. Im nächsten Abschnitt wird darauf aufbauend bestimmt, \emph{welche} konkreten Beobachtungsgrößen an den einzelnen Diensten erhoben werden.
  

@@ -6,12 +6,11 @@
 
 \chapter{Systemanalyse und Anforderungsdefinition: \enquote{frag.jetzt}}
  
-Die folgende Systemanalyse basiert auf einer KI-gestützten Auswertung des Quellcodes, der Deployment-Konfigurationen und der Abhängigkeitsstruktur der fünf Repositories des frag.jetzt-Ökosystems.\footnote{Quellcode abrufbar unter \url{https://gitlab.arsnova.eu/arsnova/frag.jetzt/} (abgerufen am \today).} Ziel ist die Identifikation observability-relevanter Architekturmerkmale, Risikopunkte und bestehender Instrumentierungslücken als Grundlage für die Anforderungsdefinition.
- 
+Die folgende Systemanalyse basiert auf einer systematischen Auswertung des Quellcodes, der Deployment-Konfigurationen und der Abhängigkeitsstruktur der Repositories des frag.jetzt-Ökosystems. Ziel ist die Identifikation observability-relevanter Architekturmerkmale, Risikopunkte und bestehender Instrumentierungslücken als Grundlage für die Anforderungsdefinition. Zur Unterstützung der Analyse wurde ein KI-Werkzeug eingesetzt und anschließend manuell verifiziert (siehe Anhang ~\ref{tab:ki-nutzung} und ~\ref{sec:anhang-copilot-prompts}). 
  
 \section{Fachlicher Kontext und Nutzungsszenario}
  
-frag.jetzt ist ein webbasiertes Audience-Response-System für Lehrveranstaltungen. Teilnehmende können anonym Fragen stellen, auf Beiträge abstimmen und an Live-Umfragen teilnehmen. Ergänzend bietet das System KI-gestützte Funktionen wie Keyword-Extraktion und thematische Zusammenfassungen. Das Nutzungsmuster ist durch synchrone Spitzenlast geprägt. Innerhalb kurzer Veranstaltungsfenster sind mehrere hundert Teilnehmende gleichzeitig aktiv, während die Last außerhalb nahe null liegt. Für die Observability-Strategie folgt daraus, dass Engpässe vor allem unter Spitzenlast erkannt werden müssen -- nicht im Tagesdurchschnitt. \textcite[S.~8]{Niedermaier2019onObservability} identifizieren solche Dynamik als zentrale Herausforderung beim Monitoring verteilter Systeme, da konventionelle Schwellenwerte transiente Lastspitzen nicht zuverlässig abbilden.
+frag.jetzt ist ein webbasiertes Audience-Response-System für Lehrveranstaltungen. Teilnehmende können anonym Fragen stellen, auf Beiträge abstimmen und an Live-Umfragen teilnehmen. Ergänzend bietet das System KI-gestützte Funktionen wie Keyword-Extraktion und thematische Zusammenfassungen. Das Nutzungsmuster ist durch synchrone Spitzenlast geprägt. Innerhalb kurzer Veranstaltungsfenster sind mehrere hundert \textcolor{red}{[AUF RUBENS ANTWORT WARTEN]} Teilnehmende gleichzeitig aktiv, während die Last außerhalb nahe null liegt. Für die Observability-Strategie folgt daraus, dass Engpässe vor allem unter Spitzenlast erkannt werden müssen, nicht im Tagesdurchschnitt. \textcite[S.~8]{Niedermaier2019onObservability} identifizieren solche Dynamik als zentrale Herausforderung beim Monitoring verteilter Systeme, da konventionelle Schwellenwerte temporäre Lastspitzen nicht zuverlässig abbilden.
  
  
 \section{Technische Architektur}
