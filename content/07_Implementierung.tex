@@ -1,2 +1,193 @@
-% !TEX root = ../Thesis.tex
-
+% =============================================================================
+% KAPITEL 7 – Prototypische Implementierung
+% =============================================================================
+ 
+\chapter{Prototypische Implementierung}
+ 
+Dieses Kapitel dokumentiert die praktische Umsetzung der in Kapitel~6 konzipierten Observability-Strategie. Es beschreibt den Umfang des Prototyps, die Instrumentierung der Kernkomponenten, die beobachtete Funktionsfähigkeit in exemplarischen Szenarien, die Umsetzung eines Golden-Signals-Dashboards sowie die Konfiguration exemplarischer Alerting-Regeln mit zugehörigen Runbooks. Den Abschluss bildet eine Reflexion über Herausforderungen, die während der Implementierung aufgetreten sind.
+ 
+ 
+\section{Umfang und Abgrenzung der prototypischen Umsetzung}
+ 
+Die Umsetzung erfolgte auf dem Staging-Server von frag.jetzt, auf dem der vollständige Anwendungsstack in einer produktionsnahen Docker-Compose-Konfiguration betrieben wird. Der Observability-Stack wurde als eigenständiges Compose-Projekt neben der bestehenden Orchestrierung deployt und über ein gemeinsames Docker-Netzwerk an die Applikationscontainer angebunden.
+ 
+Die Implementierung umfasst drei Schwerpunkte: erstens das Deployment des LGTM-Stacks mit allen Speicher-Backends und Infrastruktur-Exportern, zweitens die Instrumentierung von Backend und WS-Gateway über den OpenTelemetry Java Agent und drittens die Erstellung eines Golden-Signals-Dashboards in Grafana mit zugehörigen Alerting-Regeln. Bewusst ausgeklammert wurden die Instrumentierung des AI Providers (Python/FastAPI) und des Frontends (Angular/Nginx), die clientseitige Browser-Telemetrie sowie die Produktivhärtung mit Hochverfügbarkeit und Langzeitspeicherung. Ebenso beschränkt sich das Dashboard-Design auf ein einzelnes, technisch orientiertes Golden-Signals-Dashboard. Die in Kapitel~6.5 konzipierte rollenspezifische Aufbereitung für Product Owner und Entwicklung verbleibt als Ausbauschritt, weil sie auf denselben Datenquellen aufsetzt und primär eine Frage der Informationsverdichtung ist.
+ 
+Diese Abgrenzungen begrenzen die Vollständigkeit der prototypischen Validierung: Eine durchgängige Ende-zu-Ende-Beobachtbarkeit aller Systemgrenzen kann ohne Frontend- und AI-Provider-Instrumentierung nicht nachgewiesen werden. Die Teilumsetzung erlaubt jedoch die Prüfung der zentralen Mechanismen, insbesondere der Trace-Erfassung über Dienstgrenzen, der Metrik-Aggregation entlang der Golden Signals und der Korrelation zwischen Telemetriesignalen. \textcite[S.~52]{bissig2024unified} beobachten in einer vergleichbaren Implementierungsstudie, dass der Hauptaufwand bei der Einführung von Observability nicht in der theoretischen Konzeption, sondern in den Infrastrukturentscheidungen und der Konfiguration der Observability-Komponenten liegt.
+ 
+Die folgenden Abschnitte dokumentieren die konkreten Konfigurationen und ihre beobachteten Ergebnisse. Umfangreichere Konfigurationsdateien wie die vollständige OTel-Collector-Konfiguration und das Dashboard-JSON befinden sich im Anhang.
+ 
+ 
+\section{Instrumentierung ausgewählter Kernkomponenten}
+\label{sec:instrumentierung}
+ 
+Die Instrumentierung folgt dem in Kapitel~6.2 beschriebenen Schichtenmodell: Applikationsdienste senden Telemetriedaten über OTLP an den Collector, Infrastrukturkomponenten werden über dedizierte Exporter beobachtet. Tabelle~\ref{tab:instrumentierung-uebersicht} gibt eine Übersicht über die instrumentierten Komponenten, die jeweils erzeugten Signale und den im Prototyp beobachteten Nachweis.
+ 
+\begin{table}[ht]
+\centering
+\caption{Übersicht der instrumentierten Komponenten und beobachteten Telemetriesignale.}
+\label{tab:instrumentierung-uebersicht}
+\small
+\begin{tabularx}{\textwidth}{
+  >{\RaggedRight\arraybackslash}p{2.2cm}
+  >{\RaggedRight\arraybackslash}p{2.5cm}
+  >{\RaggedRight\arraybackslash}X
+  >{\RaggedRight\arraybackslash}X
+}
+\toprule
+\textbf{Komponente} & \textbf{Instrumentierung} & \textbf{Erzeugte Signale} & \textbf{Nachweis im Prototyp} \\
+\midrule
+Backend (Spring Boot) & OTel Java Agent (Auto-Instr.) & HTTP-Spans, DB-Spans, Logback-Logs mit Trace-ID, JVM-Metriken & Span-Waterfall mit DB-Operationen in Grafana sichtbar \\[4pt]
+WS-Gateway (Netty) & OTel Java Agent (Auto-Instr.) & WebSocket-Spans, RabbitMQ-Spans, JVM-Metriken & Service Graph zeigt Knoten mit Anfragerate \\[4pt]
+PostgreSQL & PostgreSQL Exporter & Verbindungszähler, Transaktionsraten, Lock-Statistiken & \texttt{pg\_stat\_activity\_count} in Prometheus abfragbar \\[4pt]
+RabbitMQ & Prometheus-Plugin & Queue-Tiefen, Nachrichten\-raten & \texttt{rabbitmq\_queue\_messages} in Dashboard-Panel sichtbar \\[4pt]
+Host & Node Exporter, cAdvisor & CPU, Speicher, Netzwerk, Container-Metriken & Gauge-Panels im Dashboard mit Schwellenwertfärbung \\
+\bottomrule
+\end{tabularx}
+\end{table}
+ 
+ 
+\subsection{Observability-Stack und Telemetrie-Pipeline}
+ 
+Das Deployment umfasst acht Container, die über ein separates Docker-Compose-File orchestriert werden. Der OpenTelemetry Collector empfängt sämtliche Applikationstelemetrie über OTLP (gRPC auf Port~4317, HTTP auf Port~4318) und verteilt sie an die drei Speicher-Backends: Metriken an Prometheus, Logs an Loki und Traces an Tempo. Für die Infrastrukturschicht erfassen cAdvisor Container-Ressourcenmetriken, der Node Exporter Host-Kennzahlen und der PostgreSQL Exporter Datenbankmetriken. Die Metriken des RabbitMQ-Prometheus-Plugins werden von Prometheus direkt über das Docker-interne Netzwerk abgerufen, ohne dass ein zusätzlicher Port auf dem Host freigegeben werden muss. Damit implementiert die Pipeline das in Kapitel~6.2 entworfene Architekturschema mit den dort festgelegten Komponentenzuordnungen.
+ 
+Alle Observability-Container sind mit expliziten Speicherlimits konfiguriert, um das in Kapitel~3 beschriebene Risiko einer unkontrollierten Ressourcenverdrängung (R5) nicht im Observability-Stack selbst zu reproduzieren. Grafana wird mit provisionierten Datenquellen gestartet, sodass Prometheus, Loki und Tempo beim ersten Aufruf bereits konfiguriert sind. Die Datenquellen-Provisioning stellt insbesondere die Verknüpfungen zwischen den Backends her: Tempo-Traces können auf korrespondierende Loki-Logs verweisen und umgekehrt. Diese Korrelationsfähigkeit ist eine Voraussetzung für die in A1 geforderte Ende-zu-Ende-Nachvollziehbarkeit \parencite[S.~16]{sundstroem2025faults}.
+ 
+ 
+\subsection{Applikationsinstrumentierung über den OTel Java Agent}
+ 
+Für die JVM-basierten Dienste (Backend und WS-Gateway) wurde der OpenTelemetry Java Agent in Version~2.26.0 eingesetzt. Der Agent wird nicht in das Docker-Image integriert, sondern als Read-Only-Volume in den Container gemountet und über die Umgebungsvariable \texttt{JAVA\_TOOL\_OPTIONS} als JVM-Argument aktiviert. Dieser Ansatz vermeidet Änderungen am Applikationscode und an den bestehenden Docker-Images. \textcite[S.~51--52]{bissig2024unified} bestätigen, dass bei Standard-Java-Diensten lediglich das Einbinden des Agenten als Volume und die Konfiguration weniger Umgebungsvariablen erforderlich sind, um funktionsfähige Telemetrie zu erzeugen. Die Konfiguration erfolgt vollständig über Umgebungsvariablen im Docker-Compose-Override-File: Dienstname (\texttt{OTEL\_SERVICE\_NAME}), Collector-Adresse (\texttt{OTEL\_EXPORTER\_OTLP\_ENDPOINT}), Exportformat und Umgebungsattribute.
+ 
+Der Agent instrumentiert automatisch HTTP-Anfragen (Spring WebFlux, Netty), R2DBC-Datenbankzugriffe, RabbitMQ-Interaktionen und Logback-Logausgaben. Im Ergebnis erzeugt jeder eingehende HTTP-Request einen Root-Span, der untergeordnete Spans für Datenbankoperationen enthält. Die Trace-Ansicht in Grafana zeigt diese Hierarchie als Span-Waterfall, in der beispielsweise ein \texttt{POST /livepoll/find}-Request mit seinen zugehörigen \texttt{SELECT}- und \texttt{UPDATE}-Operationen auf der PostgreSQL-Datenbank sichtbar wird. Für die instrumentierten Dienste ist damit der Verarbeitungspfad vom HTTP-Eingang über die Geschäftslogik bis zur Datenpersistierung in einem zusammenhängenden Trace rekonstruierbar, was Anforderung~A1 in Teilen adressiert.
+ 
+[HIER MÖGLICHES BILD EINFÜGEN: Span-Waterfall eines Backend-Trace mit DB-Spans (POST /livepoll/find, 13 Spans, 15.4~ms)]
+ 
+Der Service Graph in Grafana, der aus den von Tempo generierten Span-Metriken gespeist wird, visualisiert die Kommunikationsbeziehungen zwischen den instrumentierten Diensten. Im Prototyp zeigt er drei Knoten (\texttt{fragjetzt-backend}, \texttt{fragjetzt-ws-gateway} und \texttt{fragjetzt-postgres}) mit ihren jeweiligen Anfrageraten und durchschnittlichen Antwortzeiten. Die automatische Erzeugung dieses Graphen aus Trace-Daten bestätigt, dass die gewählte Kombination aus OTel Agent und Tempo die in Kapitel~5 als Vorteil beschriebene enge Grafana-Integration im Prototyp einlöst \parencite[S.~16]{sundstroem2025faults}.
+ 
+[HIER MÖGLICHES BILD EINFÜGEN: Service Graph mit user → backend → postgres und user → ws-gateway]
+ 
+ 
+\subsection{Infrastrukturexporter und Scrape-Konfiguration}
+ 
+Prometheus scrapt sechs Targets im 15-Sekunden-Intervall: sich selbst, den OTel Collector, cAdvisor, den Node Exporter, den PostgreSQL Exporter und das RabbitMQ-Prometheus-Plugin. Die Infrastruktur-Exporter liefern Metriken, die direkt auf die Sättigungsindikatoren der Signal-Matrix aus Kapitel~6.4 abbilden: \texttt{pg\_stat\_activity\_count} für die Datenbankverbindungsauslastung, \texttt{rabbitmq\_queue\_messages} für Queue-Tiefen, \texttt{node\_memory\_MemAvailable\_bytes} für die Host-Speicherauslastung und JVM-Metriken (\texttt{jvm\_memory\_used\_bytes}, \texttt{jvm\_cpu\_recent\_utilization\_ratio}) für die Anwendungsressourcen. Damit wird Anforderung~A5 auf Metrikebene im Prototyp abgebildet.
+ 
+Ergänzend zu den Infrastrukturmetriken empfängt Prometheus über den OTLP-Receiver Applikationsmetriken vom OTel Collector, darunter HTTP-Request-Dauer-Histogramme (\texttt{http\_server\_request\_duration\_seconds}). Tempo generiert aus den eingehenden Traces automatisch Span-Metriken (\texttt{traces\_spanmetrics\_calls\_total}, \texttt{traces\_spanmetrics\_latency}) und schreibt diese per Remote Write an Prometheus zurück. Aus diesen Span-Metriken werden der Service Graph und die Traffic- sowie Fehlerratenpanels im Dashboard gespeist. Dieses Zusammenspiel aus Infrastruktur- und Applikationsmetriken entspricht den von \textcite[S.~10, 16]{albuquerque2025tracing} beschriebenen komplementären Entwurfsmustern \emph{Application Metrics} und \emph{Infrastructure Metrics}.
+ 
+ 
+\subsection{Logging-Anbindung}
+ 
+Das Backend erzeugte im Standardbetrieb nahezu keine Logausgaben, weil Spring Boot WebFlux eingehende HTTP-Requests nicht automatisch protokolliert. Die Logs, die über den OTel Agent an Loki weitergeleitet werden, beschränkten sich auf Startmeldungen. Für den Prototyp wurde Debug-Level-Logging für die HTTP-Verarbeitungsschicht (\texttt{org.springframework.web}) selektiv aktiviert, sodass auch Request-bezogene Einträge in Loki verfügbar sind und über die vom OTel Agent automatisch injizierten Trace-IDs mit den zugehörigen Spans korreliert werden können. Diese Korrelierbarkeit über Trace-IDs adressiert Anforderung~A3 in Grundzügen.
+ 
+Einschränkend ist festzuhalten, dass diese Konfiguration eine Demonstrationslösung für den Staging-Prototyp darstellt. Debug-Level-Logging erzeugt ein hohes Ausgabevolumen, das im Produktivbetrieb nicht vertretbar wäre. Für einen späteren Produktiveinsatz wäre stattdessen strukturierte, selektiv priorisierte JSON-Protokollierung vorzuziehen, bei der Logeinträge je nach Schweregrad gefiltert und nur geschäftsrelevante Ereignisse dauerhaft an Loki weitergeleitet werden.
+ 
+ 
+\subsection{Exemplarische Validierungsszenarien}
+\label{sec:validierung}
+ 
+Um die Funktionsfähigkeit der Telemetrie-Pipeline über die reine Konfigurationsbeschreibung hinaus zu belegen, wurden drei Szenarien auf dem Staging-Server exemplarisch durchgeführt. Die Szenarien folgen jeweils dem Muster: Ausgangsaktion, erwartete Telemetriesignale, beobachtetes Ergebnis. Sie erheben keinen Anspruch auf systematische Testabdeckung, sondern dienen als Plausibilitätsnachweis für die Kernmechanismen.
+ 
+\paragraph{Szenario 1: Normaler Nutzerrequest (Frage stellen).}
+Ein Nutzer erstellte über die Weboberfläche eine neue Frage in einem aktiven Raum. Erwartet wurde ein Root-Span für den \texttt{POST /comment/}-Endpunkt mit untergeordneten Spans für den Datenbank-Insert sowie ein Anstieg des Latenz- und Traffic-Panels im Dashboard. In Grafana war der entsprechende Trace mit 8~Spans sichtbar, darunter der \texttt{INSERT}-Span auf der PostgreSQL-Datenbank mit einer Dauer von 3,2\,ms. Das Dashboard zeigte für den betreffenden Endpunkt im betrachteten Zeitfenster ein p50-Latenzniveau von circa 12\,ms. Damit stimmen die aggregierte Metriksicht und die beobachtete Größenordnung des Einzeltraces plausibel überein. Dieses Ergebnis bestätigt, dass die in A1 geforderte Nachvollziehbarkeit für die instrumentierten Dienste funktional gegeben ist.
+ 
+\paragraph{Szenario 2: Erhöhte Last auf Voting-Endpunkt.}
+Durch wiederholte manuelle Abstimmungen auf mehrere Fragen wurde eine erhöhte Anfragerate auf dem \texttt{POST /vote/}-Endpunkt erzeugt. Erwartet wurde ein sichtbarer Anstieg im Traffic-Panel und ein messbarer Effekt auf die Datenbankverbindungsauslastung. Im Dashboard stieg die Anfragerate des Backends im Beobachtungszeitraum erkennbar an. Der PostgreSQL-Verbindungszähler (\texttt{pg\_stat\_activity\_count}) blieb im unkritischen Bereich, was bei manueller Last erwartbar ist. Das Szenario zeigt, dass Sättigungsindikatoren (A5) unter Last prinzipiell sichtbar werden, auch wenn ein belastbarer Stresstest ein automatisiertes Lastwerkzeug erfordern würde.
+ 
+\paragraph{Szenario 3: Provozierter Fehlerfall.}
+Ein HTTP-Request an einen nicht existierenden Endpunkt (\texttt{GET /api/nonexistent}) erzeugte einen 404-Statuscode. In Tempo war der zugehörige Trace mit einem Fehler-Tag (\texttt{http.status\_code=404}) sichtbar. Im Errors-Panel des Dashboards erschien der Endpunkt in der Tabelle der fehlerhäufigsten Span-Operationen. Der Critical-Alert für die HTTP-5xx-Fehlerrate wurde durch dieses Szenario nicht ausgelöst, weil der Prototyp ausschließlich 5xx-Fehler als kritisch wertet. Ein gezielter Test des 5xx-Alerts, etwa durch temporäres Abschalten der Datenbank, wurde im Rahmen der prototypischen Umsetzung nicht durchgeführt und wäre für eine weitergehende Validierung empfehlenswert.
+ 
+\medskip
+ 
+Die drei Szenarien demonstrieren, dass Traces, Metriken und Logs im Prototyp tatsächlich erzeugt, gespeichert und im Dashboard dargestellt werden. Sie belegen die grundlegende Funktionsfähigkeit der Pipeline, ersetzen jedoch keine systematische Last- oder Fehlerinjektionsprüfung, wie sie für eine Produktivfreigabe erforderlich wäre.
+ 
+ 
+\section{Umsetzung des Golden-Signals-Dashboards}
+ 
+Das Golden-Signals-Dashboard wurde als Grafana-JSON-Modell erstellt und über den Import-Mechanismus in die Grafana-Instanz geladen. Es enthält 15~Panels in fünf Sektionen, die den vier Golden Signals und einer Infrastruktursektion entsprechen. Die Panelstruktur bildet die in Kapitel~6.4 definierte Signal-Matrix ab und übersetzt die dort festgelegten Messgrößen in konkrete Visualisierungen. Im Folgenden wird für jede Sektion erläutert, welches Diagnoseziel sie verfolgt und welche Prometheus-Abfragefamilien die Panels speisen.
+ 
+Die Sektion \emph{Latency} zeigt Backend-Antwortzeiten als Perzentil-Zeitreihen (p50, p95, p99) und eine aufgeschlüsselte Latenzansicht pro HTTP-Endpunkt. Die Panels basieren auf dem Histogramm \texttt{http\_server\_request\_duration\_seconds\_bucket} und nutzen die Prometheus-Funktion \texttt{histogram\_quantile}. Die Perzentildarstellung folgt dem Prinzip, dass eine rein arithmetisch gemittelte Latenz langsame Anfragen verbergen kann \parencite[S.~7]{ewaschukMonitoringDistributedSystems}. Die endpunktspezifische Aufschlüsselung ermöglicht es, Pfade wie \texttt{/livepoll/find} oder \texttt{/comment/} gezielt zu beobachten. Das Diagnoseziel dieser Sektion besteht darin, zwischen einer globalen Verlangsamung und endpunktspezifischen Ausreißern zu unterscheiden, was für die Nachverfolgung der User Journeys aus Kapitel~3.3 nützlich ist.
+ 
+Die Sektion \emph{Traffic} stellt die Anfragerate pro Dienst aus Span-Metriken (\texttt{traces\_spanmetrics\_calls\_total}) sowie die meistfrequentierten Endpunkte als gestapeltes Balkendiagramm dar. Das Diagnoseziel ist die Sichtbarkeit von Lastverteilung und Lastspitzen. Im Kontext von frag.jetzt macht diese Darstellung sichtbar, ob etwa Voting-Endpunkte unter Spitzenlast dominieren, was auf die in R2 beschriebene Row-Level Contention hindeuten könnte.
+ 
+Die Sektion \emph{Errors} kombiniert eine Span-basierte Fehlerrate pro Service mit einem Stat-Panel für die HTTP-5xx-Quote und einer Tabelle der fehlerhäufigsten Span-Operationen. Diese Kombination verfolgt ein gestuftes Diagnoseziel: Das Stat-Panel zeigt, \emph{ob} ein Fehlerproblem vorliegt, die Tabelle zeigt, \emph{wo} es auftritt, und über den Trace-Link lässt sich der Kontext des fehlerhaften Requests in Tempo aufrufen.
+ 
+Die Sektion \emph{Saturation} umfasst JVM-Heap-Auslastung, Thread-Zähler und CPU-Nutzung als Gauge-Panel mit Schwellenwertfärbung. Die Schwellenwerte orientieren sich an den in Kapitel~6.4 festgelegten initialen Startwerten (beispielsweise 80\,\% Heap-Auslastung als Warngrenze). Das Diagnoseziel ist die frühzeitige Erkennung von Ressourcenengpässen, bevor sie sich als Latenzanstieg oder Fehlerrate in den anderen Sektionen manifestieren.
+ 
+Die \emph{Infrastruktur}-Sektion zeigt PostgreSQL-Verbindungen (\texttt{pg\_stat\_activity\_count}), RabbitMQ-Queue-Tiefen (\texttt{rabbitmq\_queue\_messages}), Host-Ressourcen und GC-Pausen sowie den Service Graph aus Tempo. Die PostgreSQL-Panels adressieren den Sättigungsindikator der Datenbankkomponente, die in der Signal-Matrix als besonders kritisch bewertet wurde.
+ 
+Sämtliche Panels verwenden \texttt{\$\_\_rate\_interval} als dynamisches Zeitfenster für Rate-Berechnungen, sodass die Darstellung sich automatisch an den gewählten Betrachtungszeitraum anpasst. Das Dashboard greift ausschließlich auf die in Abschnitt~7.2 beschriebenen Datenquellen zu und erfordert keine zusätzliche Konfiguration. Die vollständige JSON-Definition befindet sich in Anhang~[VERWEIS].
+ 
+[HIER MÖGLICHES BILD EINFÜGEN: Screenshot des Golden-Signals-Dashboards mit befüllten Panels]
+ 
+Das vorliegende Dashboard ist ein technisches Übersichtsdashboard, das primär DevOps-Aufgaben unterstützt. Die in Kapitel~6.5 konzipierten rollenspezifischen Sichten für Entwicklung und Product Owner wurden im Prototyp nicht umgesetzt. Sie ließen sich aus denselben Prometheus- und Loki-Datenquellen ableiten, indem die Informationsdichte und der Abstraktionsgrad der Panels angepasst werden.
+ 
+ 
+\section{Alerting-Regeln und Beispiel-Runbooks}
+ 
+Die in Kapitel~6.6 konzipierte Alerting-Logik wird exemplarisch in konkrete Grafana-Alerting-Regeln überführt. Die Regeln nutzen Grafana Unified Alerting, das Schwellenwertbedingungen auf Prometheus-Abfragen auswertet und bei Überschreitung Benachrichtigungen über konfigurierbare Kanäle auslöst. Im Prototyp wurde ein E-Mail-Kanal konfiguriert; für den Produktivbetrieb wären zusätzlich Integrationen in Messaging-Dienste oder PagerDuty vorgesehen. Die Umsetzung adressiert Anforderung~A4 (handlungsfähige Alarmierung).
+ 
+Drei exemplarische Alerting-Regeln illustrieren die drei Schweregrade aus Kapitel~6.6:
+ 
+Die erste Regel (\emph{Critical}) löst aus, wenn die HTTP-5xx-Fehlerrate des Backends über fünf Minuten den Schwellenwert von 5\,\% überschreitet. Die Prometheus-Abfrage berechnet den Anteil der 5xx-Antworten an allen Antworten über ein gleitendes Fenster. Ein Alarm auf dieser Ebene signalisiert eine nutzerwirksame Beeinträchtigung und erfordert sofortiges Eingreifen.
+ 
+Die zweite Regel (\emph{Warning}) reagiert auf eine PostgreSQL-Verbindungsauslastung über 70\,\% des konfigurierten Limits von 100~Verbindungen. Der Schwellenwert basiert auf dem Indikator \texttt{pg\_stat\_activity\_count} im Verhältnis zur konfigurierten Maximalgröße. Ein wachsender Verbindungspool deutet auf einen bevorstehenden Engpass hin, der rechtzeitig adressiert werden kann.
+ 
+Die dritte Regel (\emph{Warning}) überwacht die Backend-Latenz im p95-Bereich und alarmiert bei einer anhaltenden Überschreitung von 500\,ms über drei Minuten.
+ 
+Alle drei Regeln folgen dem symptomorientierten Ansatz, der in der SRE-Literatur als Kern wirksamer Alerting-Konfigurationen beschrieben wird: Sie reagieren auf nutzerwirksame Zustände, nicht auf interne Ursachenindikatoren \parencite[S.~11--12]{ewaschukMonitoringDistributedSystems}. Die Evaluationsfenster von drei bis fünf Minuten fungieren als Debounce-Mechanismus, der transiente Spitzen toleriert und dadurch die Zahl falsch-positiver Alarme reduzieren soll \parencite[S.~176]{vinnakota2025creating}. Jede Regel enthält in ihrer Annotation-Konfiguration einen Link zum zugehörigen Runbook sowie zum relevanten Dashboard-Panel, sodass beim Eintreffen des Alarms der operative Kontext unmittelbar verfügbar ist. \textcite[S.~174]{vinnakota2025creating} betonen, dass jeder Alarm vier Fragen beantworten muss: Was ist betroffen? Warum vermutlich? Welche Sofortmaßnahme? Wer ist zuständig? Die Annotation-Links adressieren die ersten drei Fragen; die Zuständigkeitsfrage bleibt im Prototyp offen, da frag.jetzt derzeit kein formales On-Call-Modell betreibt.
+ 
+Einschränkend ist zu vermerken, dass die drei Regeln im Prototyp angelegt und konfiguriert, aber nicht durch gezielte Störungsinjektionen systematisch verifiziert wurden. Die Plausibilisierung beschränkt sich auf das in Abschnitt~\ref{sec:validierung} beschriebene Fehlerszenario, bei dem der 5xx-Alert erwartungsgemäß \emph{nicht} auslöste. Ein belastbarer Test, etwa durch temporäres Abschalten der Datenbank oder künstliche Latenzinjektionen, wäre für eine weitergehende Validierung erforderlich.
+ 
+Im Vergleich zu den in Kapitel~6.7 skizzierten anomaliebasierten Verfahren bleibt der Ansatz statisch: Die Schwellenwerte passen sich nicht automatisch an Lastschwankungen an, und es findet keine automatische Korrelation zwischen verschiedenen Alarmsignalen statt. \textcite[S.~173]{vinnakota2025creating} weisen darauf hin, dass starre Schwellwerte in dynamischen Umgebungen saisonale Muster und Abhängigkeiten zwischen Diensten unzureichend berücksichtigen. Für frag.jetzt mit seinen kalendergebundenen Lastspitzen während Vorlesungszeiten wäre eine spätere Ergänzung um dynamische Schwellen sinnvoll. Die konkreten Alerting-Definitionen im Grafana-JSON-Format befinden sich in Anhang~[VERWEIS].
+ 
+Ergänzend wurden zwei Runbooks als strukturierte Markdown-Dokumente erstellt, die der in Kapitel~6.6 definierten Fünf-Felder-Struktur (Symptom, Kontext, Diagnose, Behebung, Eskalation) folgen. Das erste Runbook behandelt den Alarm "`Backend-Fehlerrate über Schwellenwert"' und verweist auf das Golden-Signals-Dashboard, die Trace-Suche in Tempo und die Logabfrage in Loki als Diagnoseressourcen. Es beschreibt als Behebungsschritte die Inspektion der jüngsten Traces auf fehlerhafte Spans, die Prüfung der Datenbankverbindungen und den Neustart des Backend-Containers als Sofortmaßnahme. Das zweite Runbook adressiert den Alarm "`PostgreSQL-Verbindungspool nahe Limit"' und leitet durch die Prüfung der aktiven Verbindungen über den PostgreSQL Exporter, die Identifikation langlaufender Queries und die Erhöhung der \texttt{max\_connections} als Kapazitätsmaßnahme. Beide Runbooks sind bewusst so formuliert, dass sie auch von Personen ohne tiefe frag.jetzt-Kenntnis nachvollzogen werden können. Die vollständigen Runbooks befinden sich im Anhang~[VERWEIS].
+ 
+ 
+\section{Herausforderungen und Lösungen bei der Umsetzung}
+ 
+Die prototypische Implementierung verlief nicht friktionsfrei. Drei Kategorien von Herausforderungen traten auf, die in vergleichbaren Deployments ebenfalls zu erwarten wären und daher hier dokumentiert werden.
+ 
+ 
+\subsection{Ressourcendimensionierung}
+ 
+Das Trace-Backend Tempo wurde initial mit einem Speicherlimit von 256\,MB konfiguriert. Unter der Trace-Last, die Backend und WS-Gateway über den OTel Agent erzeugten, erschöpfte der Container seinen verfügbaren Speicher und wurde wiederholt durch den Kernel beendet (OOM-Kill, Exit Code~137). Jeder erzwungene Neustart hinterließ unvollständige WAL-Dateien (Write-Ahead Log), die beim nächsten Start erneut Fehler verursachten. Die Lösung bestand aus zwei Schritten: der Erhöhung des Speicherlimits auf 512\,MB und der einmaligen Bereinigung des WAL-Volumes.
+ 
+\textcite[S.~52]{bissig2024unified} berichten, dass Konfigurationsfehler bei Observability-Komponenten zu Datenverlust führen können und der operative Aufwand oft unterschätzt wird. Dieses Problem veranschaulicht zudem, dass die Ressourcendimensionierung von Observability-Komponenten auf einem Single-Host-System eine sorgfältige Abstimmung erfordert, insbesondere wenn die Anwendungscontainer bereits ohne Ressourcenlimits betrieben werden (vgl.~R5). Die Auto-Instrumentierung selbst erzeugt einen nicht trivialen Ressourcen-Overhead: \textcite[S.~50--51]{bissig2024unified} messen in einem Benchmark mit Java-Spring-Boot-Diensten einen CPU-Anstieg von rund 30\,\% und einen Speicherzuwachs von über 100\,MiB pro instrumentiertem Service. Für die Staging-Umgebung von frag.jetzt war dieser Overhead vertretbar, müsste aber bei einer Produktiveinführung in die Kapazitätsplanung einfließen.
+ 
+ 
+\subsection{Netzwerktopologie und Dienstkommunikation}
+ 
+Tempo generiert aus eingehenden Traces automatisch Span-Metriken, die über Remote Write an Prometheus übermittelt werden. Diese Metriken bilden die Grundlage für den Service Graph in Grafana. Damit dieser Mechanismus funktioniert, müssen Tempo und Prometheus innerhalb desselben Docker-Netzwerks erreichbar sein. Im initialen Deployment waren die Observability-Dienste in einem eigenen Netzwerk isoliert und Prometheus war zwar zusätzlich im Applikationsnetzwerk eingebunden, Tempo jedoch nicht. Der Remote-Write-Export scheiterte dadurch an der Netzwerktrennung, und der Service Graph blieb leer. Die Lösung bestand darin, Prometheus in beiden Netzwerken verfügbar zu machen, sodass es sowohl von Tempo als auch von den Applikations-Exportern erreichbar ist.
+ 
+Dieses Problem verdeutlicht eine Besonderheit Docker-Compose-basierter Deployments: Anders als in Kubernetes, wo alle Pods standardmäßig über ein flaches Netzwerk kommunizieren, erfordern separate Compose-Projekte explizite Netzwerkkonfigurationen. Für die Übertragbarkeit der Strategie auf andere Plattformen ist dieser Unterschied wesentlich.
+ 
+ 
+\subsection{Signalqualität und Rauschunterdrückung}
+ 
+Die Auto-Instrumentierung über den OTel Java Agent erfasst grundsätzlich alle erkennbaren Operationen, ohne zwischen geschäftsrelevanten und internen Abläufen zu unterscheiden. Im Prototyp führte dies dazu, dass periodische Hintergrundprozesse wie der \texttt{ScheduledMessageSender} des WS-Gateways (Sendeintervall 50\,ms) und der \texttt{MailScheduler} des Backends die Trace-Liste in Grafana dominierten. Diagnostisch relevante Traces, etwa Nutzeranfragen zum Fragestellen oder Abstimmen, waren in dieser Masse kaum auffindbar.
+ 
+\textcite[S.~10]{albuquerque2025tracing} weisen darauf hin, dass Sampling-Strategien erforderlich werden, um den Overhead der Tracing-Instrumentierung in ein vertretbares Verhältnis zu setzen. Der hier gewählte Ansatz geht einen Schritt weiter: Statt alle Spans gleichmäßig zu sampeln und dabei auch relevante zu verlieren, wurden gezielt Span-Namen identifiziert, die keinen diagnostischen Wert besitzen, und auf Collector-Ebene verworfen. Ein \texttt{filter/traces}-Processor im OTel Collector verwirft Spans mit definierten Namen (unter anderem \texttt{ScheduledMessageSender.send}, \texttt{UserRegistryTask.run}, \texttt{MailScheduler.onTick} und \texttt{clientInboundChannel process}), bevor sie an Tempo weitergeleitet werden. Dieser Filter ist transparent in der Collector-Konfiguration hinterlegt und kann bei veränderten Anforderungen angepasst werden. Das Vorgehen setzt das in Kapitel~6.2 formulierte Prinzip um, das Verhältnis von diagnostischem Nutzen zu Datenvolumen gezielt zu steuern.
+ 
+ 
+\section{Zwischenfazit}
+ 
+Die prototypische Implementierung zeigt, dass die in Kapitel~6 konzipierte Strategie mit vertretbarem Aufwand auf einem einzelnen Staging-Host umsetzbar ist. Die Telemetrie-Pipeline erzeugt für die instrumentierten Dienste Traces, Metriken und Logs, die im Dashboard entlang der Golden Signals dargestellt und über das Alerting-Framework mit Runbooks verknüpft werden. Die exemplarischen Validierungsszenarien in Abschnitt~\ref{sec:validierung} belegen die grundlegende Funktionsfähigkeit dieser Kette. Tabelle~\ref{tab:anforderungszuordnung} ordnet die umgesetzten Komponenten den Anforderungen aus Kapitel~3.5 zu und benennt die jeweiligen Einschränkungen.
+ 
+\begin{table}[ht]
+\centering
+\caption{Zuordnung der prototypischen Umsetzung zu den Observability-Anforderungen.}
+\label{tab:anforderungszuordnung}
+\small
+\begin{tabularx}{\textwidth}{l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}
+\toprule
+\textbf{Anf.} & \textbf{Umsetzung im Prototyp} & \textbf{Einschränkung} \\
+\midrule
+A1 & Distributed Tracing über OTel Agent; Span-Waterfall und Service Graph in Grafana; Trace-basierte Validierung in Szenario~1 & Nur Backend und WS-Gateway instrumentiert; AI Provider und Frontend nicht abgedeckt \\[4pt]
+A2 & Applikations- und Infrastrukturmetriken in Prometheus; Dashboard-Sektionen entlang der vier Golden Signals & Keine Browser-Telemetrie; Frontend-Ebene fehlt \\[4pt]
+A3 & Log-Weiterleitung an Loki über OTel Agent mit automatischer Trace-ID-Injektion & Debug-Level-Logging als Demonstrationskonfiguration; kein strukturiertes JSON-Format \\[4pt]
+A4 & Drei symptomorientierte Alerting-Regeln mit Debounce-Logik; zwei Runbooks mit Fünf-Felder-Struktur & Regeln angelegt, aber nicht durch Störungsinjektion systematisch verifiziert; keine dynamischen Schwellenwerte \\[4pt]
+A5 & cAdvisor, Node Exporter, PostgreSQL Exporter, RabbitMQ-Plugin; Infrastruktursektion im Dashboard & Im Prototyp für die vorhandene Infrastruktur abgebildet \\
+\bottomrule
+\end{tabularx}
+\end{table}
+ 
+Die fünf Anforderungen werden durch den Prototyp in unterschiedlicher Tiefe bearbeitet, aber nicht in allen Fällen vollständig erfüllt. Die wesentlichen Lücken betreffen die fehlende Frontend-Instrumentierung (A2), die fehlende Abdeckung des AI Providers (A1) und die nicht systematisch verifizierten Alerting-Regeln (A4). Die aufgetretenen Herausforderungen bei Ressourcendimensionierung, Netzwerktopologie und Signalqualität sind nicht spezifisch für frag.jetzt, sondern typisch für Docker-Compose-basierte Observability-Deployments auf Single-Host-Systemen \parencite[S.~52]{bissig2024unified}. Ihre Dokumentation soll künftige Implementierungen erleichtern. Die Evaluation in Kapitel~8 prüft, inwieweit die erreichte Umsetzung die Forschungsfragen beantwortet und wo methodische Grenzen die Aussagekraft einschränken.
