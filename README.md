@@ -71,7 +71,6 @@ Das Skript `build.sh` automatisiert die notwendigen Schritte (pdflatex → biber
 
 #### Optionen
 - `./build.sh`: Standard-Kompilierung.
-- `./build.sh clean`: Entfernt temporäre Dateien (build/, *.aux, *.log usw.).
 
 *Falls das Skript nicht ausführbar ist:*
 ```bash

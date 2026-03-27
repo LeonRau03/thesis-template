@@ -204,6 +204,17 @@
 }
 \DeclareCaptionOption{parskip}[]{}
 \DeclareCaptionOption{parindent}[]{}
+
+% Quellenangaben unter Abbildungen/Tabellen ohne Eintrag in Verzeichnisse
+\newcommand{\figsource}[1]{%
+	{\captionsetup{font={small,rm},labelformat=empty}%
+	\caption*{Quelle: #1}}%
+}
+
+\newcommand{\tabsource}[1]{%
+	{\captionsetup{font={small,rm},labelformat=empty}%
+	\caption*{Quelle: #1}}%
+}
  
 \usepackage{capt-of}
  

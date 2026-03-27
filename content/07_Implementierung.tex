@@ -25,7 +25,7 @@ Die Instrumentierung folgt dem in Kapitel~6.2 beschriebenen Schichtenmodell: App
  
 \begin{table}[ht]
 \centering
-\caption{Übersicht der instrumentierten Komponenten und beobachteten Telemetriesignale.}
+\caption[Übersicht der instrumentierten Komponenten und beobachteten Telemetriesignale.]{Übersicht der instrumentierten Komponenten und beobachteten Telemetriesignale. \small Quelle: Eigene Darstellung.}
 \label{tab:instrumentierung-uebersicht}
 \small
 \begin{tabularx}{\textwidth}{
@@ -51,7 +51,7 @@ Host & Node Exporter, cAdvisor & CPU, Speicher, Netzwerk, Container-Metriken & G
  
 Das Deployment umfasst acht Container, die über ein separates Docker-Compose-File orchestriert werden. Der OpenTelemetry Collector empfängt sämtliche Applikationstelemetrie über OTLP (gRPC auf Port~4317, HTTP auf Port~4318) und verteilt sie an die drei Speicher-Backends: Metriken an Prometheus, Logs an Loki und Traces an Tempo. Für die Infrastrukturschicht erfassen cAdvisor Container-Ressourcenmetriken, der Node Exporter Host-Kennzahlen und der PostgreSQL Exporter Datenbankmetriken. Die Metriken des RabbitMQ-Prometheus-Plugins werden von Prometheus direkt über das Docker-interne Netzwerk abgerufen, ohne dass ein zusätzlicher Port auf dem Host freigegeben werden muss. Damit implementiert die Pipeline das in Kapitel~6.2 entworfene Architekturschema mit den dort festgelegten Komponentenzuordnungen.
  
-Alle Observability-Container sind mit expliziten Speicherlimits konfiguriert, um das in Kapitel~3 beschriebene Risiko einer unkontrollierten Ressourcenverdrängung (R5) nicht im Observability-Stack selbst zu reproduzieren. Grafana wird mit provisionierten Datenquellen gestartet, sodass Prometheus, Loki und Tempo beim ersten Aufruf bereits konfiguriert sind. Die Datenquellen-Provisioning stellt insbesondere die Verknüpfungen zwischen den Backends her: Tempo-Traces können auf korrespondierende Loki-Logs verweisen und umgekehrt. Diese Korrelationsfähigkeit ist eine Voraussetzung für die in A1 geforderte Ende-zu-Ende-Nachvollziehbarkeit \parencite[S.~16]{sundstroem2025faults}.
+Alle Observability-Container sind mit expliziten Speicherlimits konfiguriert, um das in Kapitel~3 beschriebene Risiko einer unkontrollierten Ressourcenverdrängung (R5) nicht im Observability-Stack selbst zu reproduzieren. Grafana wird mit provisionierten Datenquellen gestartet, sodass Prometheus, Loki und Tempo beim ersten Aufruf bereits konfiguriert sind. Die Datenquellen-Provisioning stellt insbesondere die Verknüpfungen zwischen den Backends her: Tempo-Traces können auf korrespondierende Loki-Logs verweisen und umgekehrt. Diese Korrelationsfähigkeit ist eine Voraussetzung für die in A1 geforderte Ende-zu-Ende-Nachvollziehbarkeit \parencite[S.~16]{sundstrom2025finding}.
  
  
 \subsection{Applikationsinstrumentierung über den OTel Java Agent}
@@ -60,11 +60,21 @@ Für die JVM-basierten Dienste (Backend und WS-Gateway) wurde der OpenTelemetry 
  
 Der Agent instrumentiert automatisch HTTP-Anfragen (Spring WebFlux, Netty), R2DBC-Datenbankzugriffe, RabbitMQ-Interaktionen und Logback-Logausgaben. Im Ergebnis erzeugt jeder eingehende HTTP-Request einen Root-Span, der untergeordnete Spans für Datenbankoperationen enthält. Die Trace-Ansicht in Grafana zeigt diese Hierarchie als Span-Waterfall, in der beispielsweise ein \texttt{POST /livepoll/find}-Request mit seinen zugehörigen \texttt{SELECT}- und \texttt{UPDATE}-Operationen auf der PostgreSQL-Datenbank sichtbar wird. Für die instrumentierten Dienste ist damit der Verarbeitungspfad vom HTTP-Eingang über die Geschäftslogik bis zur Datenpersistierung in einem zusammenhängenden Trace rekonstruierbar, was Anforderung~A1 in Teilen adressiert.
  
-[HIER MÖGLICHES BILD EINFÜGEN: Span-Waterfall eines Backend-Trace mit DB-Spans (POST /livepoll/find, 13 Spans, 15.4~ms)]
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{images/Trace-in-Tempo_Span-Waterfall.png}
+\caption[Span-Waterfall eines Backend-Traces (\texttt{POST /livepoll/find}) mit 13~Spans und 15{,}4\,ms Gesamtdauer.]{Span-Waterfall eines Backend-Traces (\texttt{POST /livepoll/find}) mit 13~Spans und einer Gesamtdauer von 15{,}4\,ms. \small Quelle: Eigene Darstellung.}
+\label{fig:trace-span-waterfall}
+\end{figure}
  
-Der Service Graph in Grafana, der aus den von Tempo generierten Span-Metriken gespeist wird, visualisiert die Kommunikationsbeziehungen zwischen den instrumentierten Diensten. Im Prototyp zeigt er drei Knoten (\texttt{fragjetzt-backend}, \texttt{fragjetzt-ws-gateway} und \texttt{fragjetzt-postgres}) mit ihren jeweiligen Anfrageraten und durchschnittlichen Antwortzeiten. Die automatische Erzeugung dieses Graphen aus Trace-Daten bestätigt, dass die gewählte Kombination aus OTel Agent und Tempo die in Kapitel~5 als Vorteil beschriebene enge Grafana-Integration im Prototyp einlöst \parencite[S.~16]{sundstroem2025faults}.
+Der Service Graph in Grafana, der aus den von Tempo generierten Span-Metriken gespeist wird, visualisiert die Kommunikationsbeziehungen zwischen den instrumentierten Diensten. Im Prototyp zeigt er drei Knoten (\texttt{fragjetzt-backend}, \texttt{fragjetzt-ws-gateway} und \texttt{fragjetzt-postgres}) mit ihren jeweiligen Anfrageraten und durchschnittlichen Antwortzeiten. Die automatische Erzeugung dieses Graphen aus Trace-Daten bestätigt, dass die gewählte Kombination aus OTel Agent und Tempo die in Kapitel~5 als Vorteil beschriebene enge Grafana-Integration im Prototyp einlöst \parencite[S.~16]{sundstrom2025finding}.
  
-[HIER MÖGLICHES BILD EINFÜGEN: Service Graph mit user → backend → postgres und user → ws-gateway]
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{images/Tempo_Service-Graph_Trace.png}
+\caption[Service Graph aus Tempo mit den Kommunikationspfaden user $\rightarrow$ fragjetzt-backend $\rightarrow$ fragjetzt-postgres sowie user $\rightarrow$ fragjetzt-ws-gateway.]{Service Graph aus Tempo mit den Kommunikationspfaden user $\rightarrow$ fragjetzt-backend $\rightarrow$ fragjetzt-postgres sowie user $\rightarrow$ fragjetzt-ws-gateway. \small Quelle: Eigene Darstellung.}
+\label{fig:tempo-service-graph}
+\end{figure}
  
  
 \subsection{Infrastrukturexporter und Scrape-Konfiguration}
@@ -87,7 +97,7 @@ Einschränkend ist festzuhalten, dass diese Konfiguration eine Demonstrationslö
 Um die Funktionsfähigkeit der Telemetrie-Pipeline über die reine Konfigurationsbeschreibung hinaus zu belegen, wurden drei Szenarien auf dem Staging-Server exemplarisch durchgeführt. Die Szenarien folgen jeweils dem Muster: Ausgangsaktion, erwartete Telemetriesignale, beobachtetes Ergebnis. Sie erheben keinen Anspruch auf systematische Testabdeckung, sondern dienen als Plausibilitätsnachweis für die Kernmechanismen.
  
 \paragraph{Szenario 1: Normaler Nutzerrequest (Frage stellen).}
-Ein Nutzer erstellte über die Weboberfläche eine neue Frage in einem aktiven Raum. Erwartet wurde ein Root-Span für den \texttt{POST /comment/}-Endpunkt mit untergeordneten Spans für den Datenbank-Insert sowie ein Anstieg des Latenz- und Traffic-Panels im Dashboard. In Grafana war der entsprechende Trace mit 8~Spans sichtbar, darunter der \texttt{INSERT}-Span auf der PostgreSQL-Datenbank mit einer Dauer von 3,2\,ms. Das Dashboard zeigte für den betreffenden Endpunkt im betrachteten Zeitfenster ein p50-Latenzniveau von circa 12\,ms. Damit stimmen die aggregierte Metriksicht und die beobachtete Größenordnung des Einzeltraces plausibel überein. Dieses Ergebnis bestätigt, dass die in A1 geforderte Nachvollziehbarkeit für die instrumentierten Dienste funktional gegeben ist.
+Ein Nutzer erstellte über die Weboberfläche eine neue Frage in einem aktiven Raum. Erwartet wurde ein Root-Span für den \texttt{POST /comment/}-Endpunkt mit untergeordneten Spans für den Datenbank-Insert sowie ein Anstieg des Latenz- und Traffic-Panels im Dashboard. In Grafana war der entsprechende Trace mit 8~Spans sichtbar, darunter der \texttt{INSERT}-Span auf der PostgreSQL-Datenbank mit einer Dauer von 3,2\,ms. Das Latenz-Panel im Dashboard zeigte den Request im p50-Bereich bei circa 12\,ms. Dieses Ergebnis bestätigt, dass die in A1 geforderte Nachvollziehbarkeit für die instrumentierten Dienste funktional gegeben ist.
  
 \paragraph{Szenario 2: Erhöhte Last auf Voting-Endpunkt.}
 Durch wiederholte manuelle Abstimmungen auf mehrere Fragen wurde eine erhöhte Anfragerate auf dem \texttt{POST /vote/}-Endpunkt erzeugt. Erwartet wurde ein sichtbarer Anstieg im Traffic-Panel und ein messbarer Effekt auf die Datenbankverbindungsauslastung. Im Dashboard stieg die Anfragerate des Backends im Beobachtungszeitraum erkennbar an. Der PostgreSQL-Verbindungszähler (\texttt{pg\_stat\_activity\_count}) blieb im unkritischen Bereich, was bei manueller Last erwartbar ist. Das Szenario zeigt, dass Sättigungsindikatoren (A5) unter Last prinzipiell sichtbar werden, auch wenn ein belastbarer Stresstest ein automatisiertes Lastwerkzeug erfordern würde.
@@ -116,7 +126,19 @@ Die \emph{Infrastruktur}-Sektion zeigt PostgreSQL-Verbindungen (\texttt{pg\_stat
  
 Sämtliche Panels verwenden \texttt{\$\_\_rate\_interval} als dynamisches Zeitfenster für Rate-Berechnungen, sodass die Darstellung sich automatisch an den gewählten Betrachtungszeitraum anpasst. Das Dashboard greift ausschließlich auf die in Abschnitt~7.2 beschriebenen Datenquellen zu und erfordert keine zusätzliche Konfiguration. Die vollständige JSON-Definition befindet sich in Anhang~[VERWEIS].
  
-[HIER MÖGLICHES BILD EINFÜGEN: Screenshot des Golden-Signals-Dashboards mit befüllten Panels]
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{images/Grafana-Dashboard_Latency-Traffic.png}
+\caption[Ausschnitt des Golden-Signals-Dashboards mit den Sektionen \emph{Latency} und \emph{Traffic}.]{Ausschnitt des Golden-Signals-Dashboards mit den Sektionen \emph{Latency} und \emph{Traffic}. \small Quelle: Eigene Darstellung.}
+\label{fig:grafana-dashboard-latency-traffic}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.7\textwidth]{"images/Grafana-Dashboard_Errors mit Dummy-Fehlerrate.png"}
+\caption[Ausschnitt der \emph{Errors}-Sektion mit Dummy-Fehlerrate zur Veranschaulichung der Fehlerindikatoren.]{Ausschnitt der \emph{Errors}-Sektion mit Dummy-Fehlerrate zur Veranschaulichung der Fehlerindikatoren. \small Quelle: Eigene Darstellung.}
+\label{fig:grafana-dashboard-errors}
+\end{figure}
  
 Das vorliegende Dashboard ist ein technisches Übersichtsdashboard, das primär DevOps-Aufgaben unterstützt. Die in Kapitel~6.5 konzipierten rollenspezifischen Sichten für Entwicklung und Product Owner wurden im Prototyp nicht umgesetzt. Sie ließen sich aus denselben Prometheus- und Loki-Datenquellen ableiten, indem die Informationsdichte und der Abstraktionsgrad der Panels angepasst werden.
  
@@ -174,7 +196,7 @@ Die prototypische Implementierung zeigt, dass die in Kapitel~6 konzipierte Strat
  
 \begin{table}[ht]
 \centering
-\caption{Zuordnung der prototypischen Umsetzung zu den Observability-Anforderungen.}
+\caption[Zuordnung der prototypischen Umsetzung zu den Observability-Anforderungen.]{Zuordnung der prototypischen Umsetzung zu den Observability-Anforderungen. \small Quelle: Eigene Darstellung.}
 \label{tab:anforderungszuordnung}
 \small
 \begin{tabularx}{\textwidth}{l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}

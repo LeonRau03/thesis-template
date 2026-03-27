@@ -27,7 +27,6 @@ Thesis.tex              # Einstiegspunkt, Metadaten, Dokumentstruktur
 
 ```bash
 ./build.sh        # Vollständiger Build: pdflatex → biber → pdflatex → pdflatex
-./build.sh clean  # Temporäre Dateien löschen (*.aux, *.bbl, *.log, etc.)
 ```
 
 Manuell: `pdflatex Thesis.tex && biber Thesis && pdflatex Thesis.tex && pdflatex Thesis.tex`
