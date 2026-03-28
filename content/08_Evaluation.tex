@@ -1,29 +1,25 @@
 % =============================================================================
-% KAPITEL 8 – Evaluation der entwickelten Strategie (überarbeitet)
+% KAPITEL 8 – Evaluation der entwickelten Strategie (GEKÜRZT)
 % =============================================================================
- 
-\chapter{Evaluation der entwickelten Strategie}
- 
-Das vorliegende Kapitel prüft, inwieweit die in Kapitel~6 konzipierte und in Kapitel~7 prototypisch umgesetzte Observability-Strategie die Anforderungen aus Kapitel~3 erfüllt. Abschnitt~8.1 beschreibt die angewandte Evaluationsmethodik und ihre Rückbindung an den in Kapitel~4.3 definierten Bewertungsrahmen. Abschnitt~8.2 bewertet die Zielerreichung anhand der fünf Anforderungen A1--A5 und ordnet die Ergebnisse in abgestufte Erfüllungsgrade ein. Abschnitt~8.3 ergänzt drei übergreifende Bewertungsdimensionen, und Abschnitt~8.4 reflektiert die methodischen Grenzen der Evaluation.
- 
- 
-\section{Evaluationsmethodik}
- 
-Kapitel~4.3 hat für die Gesamtstrategie drei Evidenzquellen festgelegt: Artefaktanalyse, Konfigurations- und Instrumentierungsprüfung sowie Last- und Störungsszenarien. Gleichzeitig wurden für jede Anforderung A1--A5 konkrete Prüffragen formuliert, deren Beantwortung den Kern der nachfolgenden Bewertung bildet. Im Prototyp (Kapitel~7) wurden die ersten beiden Quellen ausgeschöpft. Die dritte blieb auf manuelle Plausibilitätstests beschränkt. Um diese Lücke zu verkleinern, wurde die Evaluation um gezielte Belastungsszenarien auf dem Staging-Server erweitert.
 
-Konkret wurden drei Testszenarien durchgeführt, die jeweils auf die Auslösung einer der drei konfigurierten Alerting-Regeln abzielten. Für den Latenz-Alert wurde CPU-Last auf den Backend-Container erzeugt, kombiniert mit parallelem HTTP-Traffic. Für den Fehler-Alert wurde die Datenbankverbindung temporär unterbrochen, um eine erhöhte HTTP-5xx-Rate zu provozieren. Für den Sättigungs-Alert wurden langlaufende PostgreSQL-Sessions geöffnet, um den Verbindungspool zu erschöpfen. Die Szenarien folgten einem einheitlichen Grundprinzip: Last oder Störungen gezielt injizieren, die erwartete Reaktion in Dashboard und Alerting beobachten und den Diagnosepfad aus den Runbooks exemplarisch nachvollziehen. Der prototypische Charakter dieser Tests wird in Abschnitt~8.4 eingeordnet.
- 
-Ergänzend wurde die in Kapitel~7 noch nicht validierte bidirektionale Log-Trace-Korrelation konfiguriert und auf dem Staging-Server verifiziert. Die Ergebnisse fließen in die Bewertung von A1 und A3 ein.
- 
- 
+\chapter{Evaluation der entwickelten Strategie}
+
+Das vorliegende Kapitel prüft, inwieweit die in Kapitel~6 konzipierte und in Kapitel~7 prototypisch umgesetzte Observability-Strategie die Anforderungen aus Kapitel~3 erfüllt.
+
+
+\section{Evaluationsmethodik}
+
+Die Evaluation folgt dem in Abschnitt~4.3 definierten Bewertungsrahmen mit drei Evidenzquellen: Artefaktanalyse, Konfigurations- und Instrumentierungsprüfung sowie Last- und Störungsszenarien. Im Prototyp (Kapitel~7) wurden die ersten beiden Quellen ausgeschöpft. Die dritte blieb auf manuelle Plausibilitätstests beschränkt. Um diese Lücke zu verkleinern, wurden drei gezielte Belastungsszenarien auf dem Staging-Server durchgeführt: CPU-Last auf dem Backend-Container für den Latenz-Alert, temporäre Unterbrechung der Datenbankverbindung für den Fehler-Alert und Erschöpfung des PostgreSQL-Verbindungspools für den Sättigungs-Alert. Ergänzend wurde die bidirektionale Log-Trace-Korrelation auf dem Staging-Server verifiziert.
+
+
 \section{Anforderungsbezogene Bewertung}
- 
-Die Bewertung folgt den Prüffragen aus Abschnitt~4.3. Für jede Anforderung wird der Befund aus der prototypischen Umsetzung und den Belastungsszenarien dargelegt und anschließend die verbleibende Einschränkung benannt. Da es sich um eine prototypische Validierung handelt, werden die Ergebnisse nicht binär als erfüllt oder nicht erfüllt eingestuft, sondern in abgestufte Erfüllungsgrade differenziert. Tabelle~\ref{tab:ergebnissynthese} gibt vorab einen kompakten Überblick.
+
+Tabelle~\ref{tab:eval-synthese} gibt vorab einen kompakten Überblick über die Erfüllungsgrade. Die folgenden Unterabschnitte begründen diese Einstufungen.
 
 \begin{table}[htb]
 \centering
 \caption[Ergebnissynthese der anforderungsbezogenen Evaluation.]{Ergebnissynthese der anforderungsbezogenen Evaluation. \small Quelle: Eigene Darstellung.}
-\label{tab:ergebnissynthese}
+\label{tab:eval-synthese}
 \small
 \begin{tabularx}{\textwidth}{l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X l}
 \toprule
@@ -38,14 +34,12 @@ A5 & Infrastrukturmetriken verfügbar und plausibel & Nicht alle Indikatoren unt
 \end{tabularx}
 \end{table}
 
-Die folgenden Unterabschnitte begründen diese Einstufungen im Einzelnen.
- 
- 
+
 \subsection{A1: Ende-zu-Ende-Nachvollziehbarkeit}
- 
+
 \emph{Prüffrage: Lässt sich ein Request Ende-zu-Ende rekonstruieren?}
- 
-Die Instrumentierung über den OTel Java Agent erzeugt für jeden eingehenden HTTP-Request einen Root-Span, der untergeordnete Spans für Datenbankoperationen, RabbitMQ-Interaktionen und interne Verarbeitungsschritte enthält. Abbildung~\ref{fig:trace-waterfall} zeigt exemplarisch einen Trace für den Endpunkt \texttt{GET /room/\{id\}/moderator} mit 11~Spans, darunter mehrere \texttt{SELECT}-Operationen auf der PostgreSQL-Datenbank. Der Verarbeitungspfad vom HTTP-Eingang über die Repository-Aufrufe bis zur Datenpersistierung ist vollständig rekonstruierbar. Diese Fähigkeit entspricht dem Entwurfsmuster \emph{Distributed Tracing}, das darauf abzielt, Anfragen über Dienstgrenzen hinweg nachzuverfolgen und Latenzengpässe sowie Fehlerpunkte zu identifizieren \parencite[S.~4--10]{albuquerque2025tracing}.
+
+Die Instrumentierung über den OTel Java Agent erzeugt für jeden eingehenden HTTP-Request einen Root-Span mit untergeordneten Spans für Datenbankoperationen und interne Verarbeitungsschritte. Abbildung~\ref{fig:trace-waterfall} zeigt exemplarisch einen Trace für den Endpunkt \texttt{GET /room/\{id\}/moderator} mit 11~Spans, darunter mehrere \texttt{SELECT}-Operationen auf der PostgreSQL-Datenbank. Der Verarbeitungspfad vom HTTP-Eingang bis zur Datenpersistierung ist vollständig rekonstruierbar. Der Service Graph in Grafana bildet die Kommunikationsbeziehungen zwischen den drei instrumentierten Diensten ab.
 
 \begin{figure}[htb]
 \centering
@@ -53,30 +47,22 @@ Die Instrumentierung über den OTel Java Agent erzeugt für jeden eingehenden HT
 \caption[Trace-Waterfall in Tempo für den Endpunkt \texttt{GET /room/\{id\}/moderator} mit 11~Spans und zugeordneten Datenbankoperationen.]{Trace-Waterfall in Tempo für den Endpunkt \texttt{GET /room/\{id\}/moderator} mit 11~Spans und zugeordneten Datenbankoperationen. Der rechte Bereich zeigt die korrelierten Loki-Logs, erreichbar über die Funktion \emph{Logs for this span}. \small Quelle: Eigene Darstellung (Screenshot, Staging-Server).}
 \label{fig:trace-waterfall}
 \end{figure}
- 
-Der Service Graph in Grafana, gespeist aus den Span-Metriken von Tempo, bildet die Kommunikationsbeziehungen zwischen den instrumentierten Diensten ab. Er zeigt drei Knoten (\texttt{fragjetzt-backend}, \texttt{fragjetzt-ws-gateway} und \texttt{fragjetzt-postgres}) mit Anfrageraten und durchschnittlichen Antwortzeiten. Damit wird die in Kapitel~6.2 beschriebene Zielarchitektur auf Ebene der erfassten Dienste bestätigt.
- 
-Die Nachvollziehbarkeit endet an den Grenzen der instrumentierten Komponenten. Der AI Provider (Python/FastAPI) und das Frontend (Angular) sind nicht instrumentiert. Ein Request, der über das Backend den AI Provider aufruft, verliert an der Dienstgrenze seinen Trace-Kontext. Für den instrumentierten Backend-Pfad ist die Request-Rekonstruktion funktional gegeben. Für das Gesamtsystem, insbesondere für User Journey~3 (KI-Zusammenfassung), bleibt sie unvollständig. Der Erfüllungsgrad wird daher als \emph{teilweise erfüllt} bewertet.
- 
- 
+
+Die Nachvollziehbarkeit endet an den Grenzen der instrumentierten Komponenten. Der AI Provider und das Frontend sind nicht instrumentiert. Für den instrumentierten Backend-Pfad ist die Request-Rekonstruktion funktional gegeben, für das Gesamtsystem bleibt sie unvollständig. Der Erfüllungsgrad wird daher als \emph{teilweise erfüllt} bewertet.
+
+
 \subsection{A2: Mehrstufige Messbarkeit entlang der Golden Signals}
- 
+
 \emph{Prüffrage: Deckt die Instrumentierung alle drei Messebenen ab?}
- 
-Das Golden-Signals-Dashboard bildet die vier Dimensionen Latency, Traffic, Errors und Saturation in separaten Sektionen ab. Die Latenz-Sektion zeigt Backend-Antwortzeiten als Perzentil-Zeitreihen (p50, p95, p99) und aufgeschlüsselt nach Endpunkt. Im Belastungsszenario stieg die p95-Latenz unter CPU-Last von rund 20\,ms auf über 500\,ms, was im Dashboard sofort sichtbar wurde.
- 
-Die Traffic-Sektion stellt die Anfragerate pro Dienst aus Span-Metriken dar. Während der Belastungstests war der Anstieg der Request-Rate für das Backend klar erkennbar. Die Aufschlüsselung nach Endpunkt machte sichtbar, welche Pfade den Traffic dominierten. Die Errors-Sektion kombiniert ein Stat-Panel für die HTTP-5xx-Quote mit einer Tabelle der fehlerhäufigsten Span-Operationen. Nach dem temporären Stopp der Datenbank stieg die 5xx-Rate auf 0,446\,\% und die betroffenen Endpunkte erschienen in der Tabelle.
- 
-Die Saturation-Sektion zeigt JVM-Heap-Auslastung, Thread-Zähler und CPU-Nutzung. Die Infrastruktur-Sektion ergänzt PostgreSQL-Verbindungszähler, RabbitMQ-Queue-Tiefen und Host-Ressourcen. \textcite[S.~10, 16]{albuquerque2025tracing} beschreiben \emph{Application Metrics} und \emph{Infrastructure Metrics} als komplementäre Entwurfsmuster, deren Zusammenspiel erst eine vollständige Sicht auf das Verhalten eines Dienstes ermöglicht. Das vorliegende Dashboard setzt genau dieses Zusammenspiel um, indem es applikationsbezogene Span-Metriken und Exporter-basierte Infrastrukturmetriken in einer gemeinsamen Oberfläche zusammenführt.
- 
-Die drei Messebenen, Applikationsmetriken (über den OTel Agent), Infrastrukturmetriken (über Exporter) und Trace-basierte Span-Metriken (über Tempo), sind damit für die instrumentierten Dienste abgedeckt. Die Lücke betrifft die fehlende Frontend-Telemetrie, die keine browserseitige Messung von Latenzen oder Fehlerraten ermöglicht. Der Erfüllungsgrad wird als \emph{weitgehend erfüllt} eingestuft.
- 
- 
+
+Das Golden-Signals-Dashboard bildet alle vier Dimensionen in separaten Sektionen ab. Im Belastungsszenario stieg die p95-Latenz unter CPU-Last von rund 20\,ms auf über 500\,ms, was im Dashboard sofort sichtbar wurde. Nach dem temporären Stopp der Datenbank stieg die 5xx-Rate und die betroffenen Endpunkte erschienen in der Fehlertabelle. Die drei Messebenen, Applikationsmetriken über den OTel Agent, Infrastrukturmetriken über Exporter und Trace-basierte Span-Metriken über Tempo, sind für die instrumentierten Dienste abgedeckt. Die Lücke betrifft die fehlende Frontend-Telemetrie. Der Erfüllungsgrad wird als \emph{weitgehend erfüllt} eingestuft.
+
+
 \subsection{A3: Strukturiertes, korrelierbares Logging}
- 
+
 \emph{Prüffrage: Können Logeinträge über Korrelations-IDs verknüpft werden?}
- 
-Die bidirektionale Korrelation zwischen Logs und Traces konnte auf dem Staging-Server nachgewiesen werden. Der OTel Java Agent injiziert die Felder \texttt{trace\_id} und \texttt{span\_id} automatisch als Stream-Labels in die an Loki weitergeleiteten Logeinträge. In Grafana sind beide Korrelationsrichtungen navigierbar: Von einem Trace in Tempo führt die Funktion \emph{Logs for this span} zu einer Loki-Abfrage, die nach der zugehörigen Trace-ID und dem Dienstnamen filtert. Abbildung~\ref{fig:trace-waterfall} zeigt diesen Pfad im rechten Bereich. In der Gegenrichtung enthält jeder Log-Eintrag in Loki ein klickbares \emph{TraceID}-Feld, das direkt zum zugehörigen Trace in Tempo navigiert. Diese Verknüpfung wurde über ein \emph{Derived Field} mit Label-Matching in der Loki-Datenquellenkonfiguration realisiert.
+
+Die bidirektionale Korrelation zwischen Logs und Traces konnte auf dem Staging-Server nachgewiesen werden. Von einem Trace in Tempo führt die Funktion \emph{Logs for this span} zu einer Loki-Abfrage, die nach Trace-ID und Dienstname filtert. In der Gegenrichtung enthält jeder Log-Eintrag in Loki ein klickbares \emph{TraceID}-Feld, das direkt zum zugehörigen Trace navigiert. Diese Verknüpfung wurde über ein Derived Field in der Loki-Datenquellenkonfiguration realisiert.
 
 \begin{figure}[htb]
 \centering
@@ -84,80 +70,64 @@ Die bidirektionale Korrelation zwischen Logs und Traces konnte auf dem Staging-S
 \caption[Log-to-Trace-Korrelation in Loki: Ein Logeintrag mit klickbarem TraceID-Link (links) navigiert zum zugehörigen Trace-Waterfall in Tempo (rechts).]{Log-to-Trace-Korrelation in Loki: Ein Logeintrag mit klickbarem TraceID-Link (links) navigiert zum zugehörigen Trace-Waterfall in Tempo (rechts). \small Quelle: Eigene Darstellung (Screenshot, Staging-Server).}
 \label{fig:log-to-trace}
 \end{figure}
- 
-Die Korrelation funktioniert zuverlässig für alle Logeinträge, die innerhalb eines aktiven Trace-Kontexts emittiert werden. Einschränkend ist anzumerken, dass die Logging-Konfiguration im Prototyp Debug-Level-Ausgaben umfasst, die ein hohes Volumen erzeugen. Für den Produktivbetrieb wäre eine Reduktion auf strukturierte, geschäftsrelevante Logeinträge erforderlich, wie in Abschnitt~7.2.4 beschrieben. Da die Kernfunktion der Korrelierbarkeit jedoch nachgewiesen wurde, wird A3 als \emph{erfüllt} bewertet.
- 
- 
+
+Da die Kernfunktion der Korrelierbarkeit nachgewiesen wurde, wird A3 als \emph{erfüllt} bewertet. Für den Produktivbetrieb wäre eine Reduktion auf strukturierte JSON-Protokollierung erforderlich.
+
+
 \subsection{A4: Handlungsfähige Alarmierung}
- 
+
 \emph{Prüffrage: Reagieren Alarme auf nutzerwirksame Zustände und enthalten sie ausreichend Kontext für eine Erstreaktion?}
- 
-Die Evaluation der Alarmierungsqualität profitiert von den gezielten Belastungsszenarien, die über die in Kapitel~7 beschriebenen manuellen Plausibilitätstests hinausgehen. Abbildung~\ref{fig:alert-firing} zeigt den Latenz-Alert im Zustand \emph{Firing}, ausgelöst durch künstlich erzeugten CPU-Druck auf den Backend-Container.
- 
+
+Der Latenz-Alert wurde durch künstlich erzeugten CPU-Druck auf den Backend-Container im Zustand \emph{Firing} ausgelöst. Abbildung~\ref{fig:alert-firing} zeigt den Alarm mit Symptombeschreibung, Prüfpfad und Runbook-Link in den Annotations. Die Multi-Signal-Logik bewährte sich: In Leerlaufphasen ohne aktive Requests verhinderte die Mindest-Traffic-Rate von 0,1\,req/s, dass der Alert fälschlicherweise auslöste.
+
 \begin{figure}[htb]
 \centering
 \includegraphics[width=\textwidth]{images/fig_firing_latency_alert.png}
 \caption[Latenz-Alert im Zustand \emph{Firing} nach 6~Minuten. Die Annotations enthalten Symptombeschreibung, Prüfpfad und Runbook-Link.]{Latenz-Alert im Zustand \emph{Firing} nach 6~Minuten. Die Annotations enthalten Symptombeschreibung, Prüfpfad und Runbook-Link. \small Quelle: Eigene Darstellung (Screenshot, Staging-Server).}
 \label{fig:alert-firing}
 \end{figure}
- 
-Der Alarm enthält in seinen Annotations eine deutschsprachige Symptombeschreibung, einen Prüfpfad zum zugehörigen Dashboard-Panel und einen Runbook-Link. Damit sind drei der vier von \textcite[S.~174]{vinnakota2025creating} geforderten Informationselemente unmittelbar verfügbar: Was ist betroffen, warum vermutlich und welche Sofortmaßnahme eingeleitet werden kann. Die vierte Frage (Wer ist zuständig?) bleibt offen, da frag.jetzt kein formales On-Call-Modell betreibt.
- 
-Die Multi-Signal-Logik der Regeln bewährte sich in einem konkreten Fall. Der Latenz-Alert erfordert neben der p95-Überschreitung gleichzeitig eine Mindest-Traffic-Rate von 0,1~req/s. In Leerlaufphasen ohne aktive Requests verhinderte diese Bedingung, dass der Alert fälschlicherweise auslöste, obwohl die Latenz einzelner sporadischer Anfragen über dem Schwellenwert lag. Dieses Verhalten entspricht dem in Kapitel~6.6 formulierten Grundsatz der symptomorientierten Alarmierung und deckt sich mit der Empfehlung, mehrere korrelierte Signale zu einem aussagekräftigeren Alarm zu kombinieren, anstatt auf isolierte Metriken zu reagieren \parencite[S.~175]{vinnakota2025creating}.
- 
-Der Fehler-Alert (HTTP-5xx-Rate über 5\,\%) konnte im Testzeitraum zwar zuverlässig ausgelöst werden, die Metrik \texttt{http\_server\_request\_duration\_seconds\_count} zeigte ebenso 500er-Antworten in Prometheus, doch die Rate-Berechnung lieferte bei kurzen Betrachtungszeiträumen keine konsistenten Werte. Die Ursache liegt vermutlich in einer Diskrepanz zwischen dem dynamisch berechneten Abfragefenster und der tatsächlichen Erfassungs- bzw. Exportsemantik der OTel-basierten Metriken (vgl.~Abschnitt~8.4). Der Sättigungs-Alert für PostgreSQL-Verbindungen wurde nicht als eigenständiges Szenario getestet. Die zugrunde liegende Metrik \texttt{pg\_stat\_activity\_count} war jedoch während aller Tests korrekt in Prometheus verfügbar und im Dashboard sichtbar.
- 
-Für den Latenz-Alert ist die Alerting-Konzeption aus Kapitel~6.6 damit funktional validiert: Der Alarm feuert bei nutzerwirksamer Symptomverschlechterung und stellt über Annotations den geforderten Handlungskontext bereit. Für den Fehler-Alert zeigt sich kein Auslöseproblem, sondern ein Datenqualitätsproblem in der kurzfristigen Metrikdarstellung: Die Fehler-Metriken lieferten in kurzen Zeitfenstern keine konsistent aktuellen Werte. Dieser Befund stellt die konzeptionelle Validität der Regel nicht infrage, schränkt aber die operative Kurzfristdiagnose ein. Für den Sättigungs-Alert ist die metrische Grundlage vorhanden, eine experimentelle Absicherung steht jedoch noch aus. In der Gesamtbetrachtung wird A4 als \emph{teilweise erfüllt} eingestuft.
- 
- 
+
+Der Fehler-Alert konnte zuverlässig ausgelöst werden. Die Rate-Berechnung lieferte allerdings bei kurzen Betrachtungszeiträumen keine konsistenten Werte, vermutlich aufgrund einer Diskrepanz zwischen dem dynamisch berechneten Abfragefenster und der Erfassungssemantik der OTel-basierten Metriken. Der Sättigungs-Alert wurde nicht als eigenständiges Szenario getestet, die zugrunde liegende Metrik war jedoch korrekt verfügbar.
+
+Für den Latenz-Alert ist die Alerting-Konzeption funktional validiert. Für den Fehler-Alert zeigt sich ein Datenqualitätsproblem in der kurzfristigen Metrikdarstellung, das die konzeptionelle Validität der Regel nicht infrage stellt, aber die operative Kurzfristdiagnose einschränkt. Der Erfüllungsgrad wird als \emph{teilweise erfüllt} eingestuft.
+
+
 \subsection{A5: Beobachtbarkeit der Infrastrukturschicht}
- 
+
 \emph{Prüffrage: Werden Container-Ressourcen, Datenbankpool-Auslastung und Queue-Tiefen erfasst?}
- 
-Die Infrastruktur-Sektion des Dashboards beantwortet diese Frage positiv. Abbildung~\ref{fig:infrastructure-dashboard} zeigt die Panel-Übersicht mit PostgreSQL-Verbindungszählern, RabbitMQ-Queue-Tiefen, Nginx-Verbindungsmetriken, GC-Pausen-Dauer und Host-Ressourcen als Gauge-Darstellung. Der im unteren Bereich eingebettete Service Graph visualisiert die Abhängigkeitsstruktur der instrumentierten Dienste.
- 
+
+Die Infrastruktur-Sektion des Dashboards beantwortet diese Frage positiv. Abbildung~\ref{fig:infrastructure-dashboard} zeigt PostgreSQL-Verbindungszähler, RabbitMQ-Queue-Tiefen, Host-Ressourcen und den Service Graph. Während der Belastungstests stieg die Zahl aktiver PostgreSQL-Verbindungen von einem Normalniveau um 3 auf temporär über 10. Alle fünf Infrastruktur-Exporter lieferten während des gesamten Evaluationszeitraums durchgängig Metriken. Da die Metriken verfügbar und plausibel sind, nicht aber alle Indikatoren unter gezielter Last geprüft wurden, wird A5 als \emph{weitgehend erfüllt} bewertet.
+
 \begin{figure}[htb]
 \centering
 \includegraphics[width=\textwidth]{images/Grafana-Dashboard_Infrastructure.png}
 \caption[Infrastruktur-Sektion des Golden-Signals-Dashboards mit PostgreSQL-Verbindungen, RabbitMQ-Queue-Tiefe, Host-Ressourcen und Service Graph.]{Infrastruktur-Sektion des Golden-Signals-Dashboards mit PostgreSQL-Verbindungen, RabbitMQ-Queue-Tiefe, Host-Ressourcen und Service Graph. \small Quelle: Eigene Darstellung (Screenshot, Staging-Server).}
 \label{fig:infrastructure-dashboard}
 \end{figure}
- 
-Während der Belastungstests zeigte das PostgreSQL-Panel einen Anstieg der aktiven Verbindungen von einem Normalniveau um 3 auf temporär über 10, als das Backend unter CPU-Druck mehr parallele Datenbankzugriffe öffnete. Die RabbitMQ-Queue-Tiefe blieb im niedrigen Bereich, was bei der gewählten Teststrategie ohne Message-Rückstau erwartbar war. Die Host-Gauges für Speicher (35,2\,\%) und CPU (2,35\,\%) lagen während des normalen Betriebs im unkritischen Bereich.
 
-Alle fünf in Abschnitt~7.2.3 beschriebenen Infrastruktur-Exporter lieferten während des gesamten Evaluationszeitraums durchgängig Metriken. Dabei ist zu berücksichtigen, dass Infrastrukturmetriken ihrer Natur nach eher auf mögliche Engpässe hinweisen als auf die tatsächliche Ursache eines Problems \parencite[S.~20]{albuquerque2025tracing}. Diese Indikatoren entfalten ihren diagnostischen Wert erst im Zusammenspiel mit den applikationsseitigen Metriken aus A2. Da die Metriken verfügbar und plausibel sind, nicht aber alle abgeleiteten Indikatoren unter gezielter Last geprüft wurden, wird A5 als \emph{weitgehend erfüllt} bewertet.
- 
- 
+
 \section{Übergreifende Bewertungsdimensionen}
- 
-Über die anforderungsbezogene Einzelbewertung hinaus hat Abschnitt~4.3 drei übergreifende Dimensionen definiert, die den praktischen Wert der Strategie einordnen.
- 
-\paragraph{Stakeholder-Tauglichkeit.}
-Forschungsfrage~3 zielt auf ein Alerting-Framework, das handlungsorientierte Informationen bereitstellt. Die Frage, ob diese Informationen die richtigen Adressaten erreichen, ist dabei eng mit der rollenbasierten Aufbereitung aus Kapitel~6.5 verknüpft. \textcite[S.~12]{Niedermaier2019onObservability} betonen, dass Beobachtbarkeit nicht nur ein technisches, sondern ein organisatorisches Konzept ist, das eine klare Governance mit definierten Rollen, Verantwortlichkeiten und Prozessen erfordert. Vor diesem Hintergrund fällt die Bewertung der Stakeholder-Tauglichkeit differenziert aus.
 
-Für die \emph{DevOps-Perspektive} ist der Prototyp funktional nutzbar: Das Golden-Signals-Dashboard liefert Latenz-, Traffic-, Fehler- und Sättigungsindikatoren in einer gemeinsamen Oberfläche, die Alerting-Regeln reagieren auf nutzerwirksame Symptome, und die Runbooks bieten strukturierte Diagnosepfade. Für die \emph{Entwicklungsperspektive} ist die Unterstützung teilweise gegeben. Grafana Explore ermöglicht die direkte Abfrage von Traces, Logs und Metriken, und die bidirektionale Korrelation zwischen Loki und Tempo erleichtert die Fehlersuche im Kontext konkreter Requests. Ein dediziertes Entwickler-Dashboard mit endpunktspezifischen Detailansichten wurde jedoch nicht umgesetzt. Für die \emph{Product-Owner-Perspektive} fehlt im Prototyp eine eigene Sicht. Aggregierte Verfügbarkeitsindikatoren oder Nutzungskennzahlen, wie sie in Kapitel~6.5 konzipiert wurden, sind technisch aus den vorhandenen Prometheus- und Span-Metriken ableitbar, aber nicht als separates Dashboard realisiert. Forschungsfrage~3 wird damit für DevOps prototypisch, für die Entwicklung teilweise und für Product Owner bisher nur konzeptionell beantwortet.
- 
+\paragraph{Stakeholder-Tauglichkeit.}
+Für die DevOps-Perspektive ist der Prototyp funktional nutzbar: Dashboard, Alerting-Regeln und Runbooks liefern eine zusammenhängende Diagnoseinfrastruktur. Für die Entwicklungsperspektive ermöglicht Grafana Explore die direkte Abfrage von Traces, Logs und Metriken mit bidirektionaler Korrelation, ein dediziertes Entwickler-Dashboard wurde jedoch nicht umgesetzt. Für die Product-Owner-Perspektive fehlt im Prototyp eine eigene Sicht, die technisch aus den vorhandenen Datenquellen ableitbar wäre.
+
 \paragraph{Abdeckung der Risikopunkte.}
-Von den sechs in Kapitel~3.4 identifizierten Risikopunkten werden R2 (DB-Contention bei Massenabstimmungen), R3 (Intransparenz ohne Tracing) und R5 (Ressourcenverdrängung auf dem Host) durch den Prototyp direkt adressiert. R3 wurde durch die Einführung von Distributed Tracing beseitigt. R2 ist über die PostgreSQL-Verbindungsmetriken und die endpunktspezifische Latenzaufschlüsselung beobachtbar geworden. R5 wird durch die Infrastrukturmetriken und die Sättigungsalarme abgedeckt. R1 (fehlende Timeouts) und R4 (Backend als Single Point of Failure) bleiben als architektonische Defizite bestehen, die über Beobachtbarkeit sichtbar, aber nicht lösbar sind. R6 (fehlende Ressourcenlimits auf Applikationscontainern) wurde für die Observability-Container selbst adressiert, bleibt für die Applikationscontainer aber offen.
- 
+Von den sechs identifizierten Risikopunkten werden R2 (DB-Contention), R3 (Intransparenz ohne Tracing) und R5 (Ressourcenverdrängung) durch den Prototyp direkt adressiert. R3 wurde durch die Einführung von Distributed Tracing beseitigt. R1 (fehlende Timeouts) und R4 (Backend als Single Point of Failure) bleiben als architektonische Defizite bestehen, die über Beobachtbarkeit sichtbar, aber nicht lösbar sind.
+
 \paragraph{Umsetzungsrealismus.}
-Die prototypische Implementierung bestätigt, dass der LGTM-Stack auf einem einzelnen Host mit vertretbarem Aufwand deploybar ist. Die Gesamtdauer von der initialen Stack-Konfiguration bis zum funktionierenden Dashboard betrug wenige Arbeitstage, wobei der Großteil der Zeit auf die in Abschnitt~7.5 dokumentierten Herausforderungen entfiel, insbesondere die Netzwerktopologie und die Ressourcendimensionierung von Tempo. \textcite[S.~52]{bissig2024unified} berichten von vergleichbaren Erfahrungen und identifizieren den operativen Konfigurationsaufwand als den wesentlichen Kostenfaktor bei der Einführung von Observability. Dass die größte mentale Belastung nicht aus der Instrumentierung selbst, sondern aus dem Betrieb der Observability-Komponenten resultiert, deckt sich mit den Beobachtungen im vorliegenden Prototyp. Für frag.jetzt lässt sich festhalten, dass die Strategie mit den vorhandenen Mitteln implementierbar ist. Der laufende Betrieb des Observability-Stacks erfordert allerdings ein eigenes Ressourcenbudget, das bei der Kapazitätsplanung des Hosts berücksichtigt werden muss.
- 
- 
+Die Gesamtdauer von der initialen Stack-Konfiguration bis zum funktionierenden Dashboard betrug wenige Arbeitstage. Der laufende Betrieb des Observability-Stacks erfordert allerdings ein eigenes Ressourcenbudget, das bei der Kapazitätsplanung des Hosts berücksichtigt werden muss.
+
+
 \section{Grenzen und methodische Einschränkungen}
- 
-Die Evaluation unterliegt Einschränkungen, die bei der Interpretation der Ergebnisse berücksichtigt werden müssen.
- 
-\emph{Erstens, unvollständige Dienstabdeckung.} Backend und WS-Gateway sind instrumentiert, AI Provider und Frontend nicht. Die Bewertung von A1 und A2 gilt daher nur für einen Teil des Gesamtsystems. Eine Aussage über die Beobachtbarkeit aller drei User Journeys aus Kapitel~3.3 ist mit dem aktuellen Prototyp nicht möglich, da die KI-Zusammenfassung (Journey~3) den nicht instrumentierten AI Provider durchläuft.
- 
-\emph{Zweitens, Stabilität des Observability-Stacks unter Last.} Während der Belastungstests wurde Tempo durch den Kernel wegen Speichererschöpfung beendet (Out of Memory-Abbruch). Dieser Ausfall löste eine Kaskade aus: Der OTel Collector konnte Trace-Daten nicht mehr exportieren und stellte den Betrieb ein. Damit fielen vorübergehend sowohl Traces als auch OTel-basierte Metriken aus. Infrastrukturmetriken über die Prometheus-Exporter blieben davon unberührt. Der Vorfall verdeutlicht, dass der Observability-Stack selbst eine Fehlerquelle darstellt, deren Auswirkungen auf einem Single-Host-System unmittelbar die Beobachtbarkeit des Gesamtsystems beeinträchtigen. Die in Kapitel~7.5.1 beschriebene Ressourcendimensionierung ist ein kritischer Betriebsparameter, der kontinuierlicher Überwachung bedarf.
- 
-\emph{Drittens, eingeschränkte Aussagekraft der Rate-Berechnung.} Die PromQL-Variable \texttt{\$\_\_rate\_interval}, die Grafana dynamisch an das gewählte Zeitfenster anpasst, lieferte bei kurzen Betrachtungszeiträumen inkonsistente Ergebnisse für die HTTP-5xx-Rate. Die Diskrepanz deutet auf ein Zusammenwirken mehrerer Faktoren hin: das dynamisch berechnete Abfragefenster, die Aggregationslogik von PromQL und die Erfassungssemantik der per Push übermittelten OTel-Metriken, die kein reguläres Scrape-Intervall aufweisen. Die genaue Ursache ist vermutlich architekturspezifisch und nicht allein aus dem Dashboard-Verhalten ableitbar. In längeren Zeitfenstern (ab etwa 12~Stunden) waren die Werte korrekt. Diese Einschränkung betrifft die Dashboard-Darstellung, nicht jedoch die übrigen Alerting-Regeln, die mit festen Zeitfenstern arbeiten.
- 
-\emph{Viertens, fehlende Produktivdaten.} Alle Tests wurden auf dem Staging-Server mit synthetischer Last durchgeführt. Reale Nutzungsmuster, insbesondere die in Kapitel~3.3 beschriebenen Lastspitzen während Lehrveranstaltungen mit vielen gleichzeitig Teilnehmenden, konnten nicht abgebildet werden. Die Schwellenwerte der Alerting-Regeln basieren auf Erfahrungswerten und müssten im Produktivbetrieb anhand realer Lastprofile kalibriert werden, wie in Kapitel~4.2 als vierter Schritt des Ableitungsverfahrens vorgesehen.
- 
-\emph{Fünftens, prototypische Testmethodik.} Die Belastungsszenarien wurden manuell über Konsolen-Schleifen und Container-Operationen durchgeführt, nicht über ein systematisches Lasttestwerkzeug. Die Reproduzierbarkeit und die Kontrolle über Lastvariablen wie Anfragerate, Parallelität und Dauer waren dadurch begrenzt. Für eine belastbarere Validierung wäre der Einsatz eines dedizierten HTTP-Lastgenerators empfehlenswert, der kontrollierte Lastprofile auf die Staging-Umgebung erzeugt und dabei die Auswirkungen auf die Golden-Signals-Metriken systematisch erfasst.
- 
-\medskip
- 
-In der Zusammenschau zeigt die Evaluation, dass die konzipierte Strategie für den instrumentierten Backend-Kern funktional tragfähig ist. Traces, Metriken und Logs sind für die erfassten Dienste verfügbar, korrelierbar und entlang der Golden Signals aufbereitet. Der Latenz-Alert reagiert auf nutzerwirksame Symptome und stellt über Annotations und Runbook-Links den für eine Erstreaktion benötigten Kontext bereit. Die Vollständigkeit und operative Belastbarkeit der Strategie bleiben jedoch durch die fehlende Frontend- und AI-Provider-Instrumentierung, die begrenzte Lasttesttiefe und eine noch unvollständige Alert-Validierung eingeschränkt. Diese Lücken betreffen die Reichweite der Beobachtbarkeit und die Kalibration an realen Betriebsdaten. Sie sind in einer iterativen Weiterentwicklung adressierbar, ohne die Grundarchitektur zu verändern.
+
+Die Evaluation unterliegt fünf Einschränkungen.
+
+\emph{Erstens, unvollständige Dienstabdeckung.} Backend und WS-Gateway sind instrumentiert, AI Provider und Frontend nicht. Die Bewertung von A1 und A2 gilt nur für einen Teil des Gesamtsystems.
+
+\emph{Zweitens, Stabilität des Observability-Stacks unter Last.} Tempo wurde während der Belastungstests durch Speichererschöpfung beendet (OOM-Kill), woraufhin auch der OTel Collector den Betrieb einstellte. Infrastrukturmetriken über die Prometheus-Exporter blieben unberührt. Der Vorfall verdeutlicht, dass der Observability-Stack selbst eine Fehlerquelle darstellt, deren Auswirkungen auf einem Single-Host-System die Beobachtbarkeit des Gesamtsystems beeinträchtigen.
+
+\emph{Drittens, eingeschränkte Aussagekraft der Rate-Berechnung.} Die PromQL-Variable \texttt{\$\_\_rate\_interval} lieferte bei kurzen Betrachtungszeiträumen inkonsistente Ergebnisse für die HTTP-5xx-Rate. In längeren Zeitfenstern (ab circa 12~Stunden) waren die Werte korrekt. Diese Einschränkung betrifft die Dashboard-Darstellung, nicht die Alerting-Regeln mit festen Zeitfenstern.
+
+\emph{Viertens, fehlende Produktivdaten.} Alle Tests wurden mit synthetischer Last durchgeführt. Reale Nutzungsmuster, insbesondere die Lastspitzen während Lehrveranstaltungen, konnten nicht abgebildet werden. Die Schwellenwerte müssten im Produktivbetrieb anhand realer Lastprofile kalibriert werden.
+
+\emph{Fünftens, prototypische Testmethodik.} Die Belastungsszenarien wurden manuell über Konsolen-Schleifen und Container-Operationen durchgeführt. Für eine belastbarere Validierung wäre ein dedizierter HTTP-Lastgenerator mit kontrollierten Lastprofilen erforderlich.
