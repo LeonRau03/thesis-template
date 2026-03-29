@@ -5,7 +5,7 @@
 
 \chapter{Evaluation und Auswahl des Observability-Stacks}
 
-Das vorliegende Kapitel wendet die in Abschnitt~4.3 hergeleiteten acht Vergleichskriterien auf drei vollständige Observability-Architekturen an, um Forschungsfrage~2 zu beantworten: Welche Observability-Stack-Kombination eignet sich am besten für die Überwachungsanforderungen von frag.jetzt?
+Das vorliegende Kapitel wendet die in Abschnitt~4.3 hergeleiteten acht Vergleichskriterien auf drei vollständige Observability-Architekturen an, um FF~2 zu beantworten: Welche Observability-Stack-Kombination eignet sich am besten für die Überwachungsanforderungen von frag.jetzt?
 
 
 \section{OpenTelemetry als verbindliche Instrumentierungsschicht}
@@ -120,4 +120,4 @@ Das dritte Argument betrifft die \emph{Austauschbarkeit bei stabilem Instrumenti
 
 Die Entscheidung geht mit bewussten Kompromissen einher. Tempo ist ein jüngeres Projekt als Jaeger, das als graduated CNCF-Projekt über einen breiteren Reifegrad verfügt \parencite[S.~15]{giamattei2024monitoring}. Die gewählte Architektur verzichtet auf Mimir als Metrik-Backend, weil die lokale Prometheus-TSDB für das moderate Telemetrievolumen von frag.jetzt ausreichend ist. Lokis labelbasierte Indexierung erfordert eine sorgfältige Label-Auswahl \parencite{grafana_loki_docs}, was bei der überschaubaren Zahl von Diensten beherrschbar bleibt.
 
-Diese Nachteile werden dadurch relativiert, dass die offizielle Grafana-Labs-Dokumentation für Standardkonfigurationen ausreichend ist, die Vorteile einer homogenen Komponentenfamilie für ein kleines Team überwiegen und OpenTelemetry als Instrumentierungsschicht einen späteren Wechsel einzelner Backend-Komponenten mit vertretbarem Aufwand ermöglicht. Damit beantwortet die gewählte Kombination aus Prometheus, Loki, Tempo und Grafana, instrumentiert über OpenTelemetry, Forschungsfrage~2.
+Diese Nachteile werden dadurch relativiert, dass die offizielle Grafana-Labs-Dokumentation für Standardkonfigurationen ausreichend ist, die Vorteile einer homogenen Komponentenfamilie für ein kleines Team überwiegen und OpenTelemetry als Instrumentierungsschicht einen späteren Wechsel einzelner Backend-Komponenten mit vertretbarem Aufwand ermöglicht. Damit beantwortet die gewählte Kombination aus Prometheus, Loki, Tempo und Grafana, instrumentiert über OpenTelemetry, FF~2.

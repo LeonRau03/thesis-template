@@ -1,11 +1,794 @@
-% !TEX root = ../Thesis.tex
+% =============================================================================
+% ANHANG – Gesamtdatei
+% =============================================================================
+% Hinweis: Diese Datei enthält alle Anhänge (A–F).
+% Einbindung in thesis.tex über \input{Anhang_Komplett} im Anhang-Bereich.
+% Voraussetzung: \usepackage{listings}, \usepackage{longtable},
+%   \usepackage{booktabs}, \usepackage{tabularx}, \usepackage{lscape}
+%   sowie die lstset-Konfiguration für YAML/JSON.
+% =============================================================================
+
+% ---- Listings-Stile (sofern noch nicht in preambel.tex definiert) -----------
+% Falls bereits definiert, diesen Block entfernen.
+\lstdefinestyle{yamlstyle}{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=6pt,
+  xleftmargin=1.5em,
+  commentstyle=\color{gray},
+  keywordstyle=\color{black}\bfseries,
+  stringstyle=\color{black},
+  tabsize=2
+}
+
+\lstdefinestyle{jsonstyle}{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=6pt,
+  xleftmargin=1.5em,
+  tabsize=2
+}
+
+\lstdefinestyle{bashstyle}{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  frame=single,
+  numbers=none,
+  xleftmargin=1em,
+  tabsize=2
+}
+% -----------------------------------------------------------------------------
+
+
+\appendix
+
+
+% =============================================================================
+% ANHANG A – OpenTelemetry Collector Konfiguration
+% =============================================================================
+\chapter{OpenTelemetry Collector Konfiguration}
+\label{app:otel-collector}
+
+Die folgende Datei zeigt die vollständige Konfiguration des OpenTelemetry Collector (Version~0.120.0), wie sie auf dem Staging-Server von frag.jetzt eingesetzt wird. Die Konfiguration definiert die Empfangs-, Verarbeitungs- und Exportpipelines für alle drei Telemetriearten.
+
+Der \texttt{filter/traces}-Processor (Zeilen~16--28) ist die zentrale projektspezifische Anpassung. Er verwirft acht namentlich benannte Span-Typen, die von periodischen Hintergrundprozessen erzeugt werden und keinen diagnostischen Wert für die Fehlersuche besitzen (vgl.\ Abschnitt~7.5.3). Dieser Ansatz ersetzt ein probabilistisches Sampling durch eine inhaltlich begründete Selektion.
+
+\begin{lstlisting}[style=yamlstyle, caption={OpenTelemetry Collector Konfiguration (\texttt{config.yaml}).}, label={lst:otel-config}]
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    send_batch_size: 1024
+    timeout: 5s
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: staging
+        action: upsert
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 200
+    spike_limit_mib: 50
+  filter/traces:
+    error_mode: ignore
+    traces:
+      span:
+        - 'name == "ScheduledMessageSender.send"'
+        - 'name == "LivepollEventSource.sendAndUpdate"'
+        - 'name == "ScheduledMessageSender.sendToTopic"'
+        - 'name == "UserRegistryTask.run"'
+        - 'name == "MailScheduler.onTick"'
+        - 'name == "CommentNotificationService.sendNotifications"'
+        - 'name == "clientInboundChannel process"'
+        - 'name == "clientOutboundChannel process"'
+
+exporters:
+  otlphttp/prometheus:
+    endpoint: http://prometheus:9090/api/v1/otlp
+    tls:
+      insecure: true
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  debug:
+    verbosity: basic
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlphttp/prometheus, debug]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlphttp/loki, debug]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, filter/traces, resource, batch]
+      exporters: [otlp/tempo, debug]
+  telemetry:
+    logs:
+      level: info
+\end{lstlisting}
+
+
+% =============================================================================
+% ANHANG B – Docker Compose Override (Instrumentierung)
+% =============================================================================
+\chapter{Docker Compose Override für die Instrumentierung}
+\label{app:compose-override}
+
+Die Instrumentierung der JVM-basierten Dienste erfolgt ohne Änderungen am Applikationscode oder an den Docker-Images. Der OpenTelemetry Java Agent wird als Read-Only-Volume in die Container gemountet und über Umgebungsvariablen aktiviert. Die folgende Datei zeigt das Docker-Compose-Override-File, das die Produktionskonfiguration um die Observability-relevanten Einstellungen ergänzt (vgl.\ Abschnitt~\ref{sec:instrumentierung}).
+
+\begin{lstlisting}[style=yamlstyle, caption={Docker Compose Override (\texttt{docker-compose.override.yml}).}, label={lst:compose-override}]
+services:
+  frontend:
+    volumes:
+      - './logs/nginx:/var/log/nginx'
+      - './configs/favicon-jetzt.png:/var/www/favicon.png'
+      - "./configs/nginx.conf:/etc/nginx/conf.d/default.conf"
+
+  backend:
+    volumes:
+      - "./backend:/data/"
+      - "/opt/containers/staging_frag_jetzt/otel/
+         opentelemetry-javaagent.jar:/opt/otel-agent.jar:ro"
+      - "/opt/containers/staging_frag_jetzt/otel/
+         logback-spring.xml:/app/config/logback-spring.xml:ro"
+    environment:
+      - JAVA_TOOL_OPTIONS=-javaagent:/opt/otel-agent.jar
+      - OTEL_SERVICE_NAME=fragjetzt-backend
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=staging
+      - OTEL_INSTRUMENTATION_LOGBACK_APPENDER_ENABLED=true
+      - OTEL_INSTRUMENTATION_LOG4J_APPENDER_ENABLED=true
+      - LOGGING_CONFIG=/app/config/logback-spring.xml
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB=DEBUG
+      - LOGGING_LEVEL_REACTOR_NETTY_HTTP_SERVER=DEBUG
+
+  ws-gateway:
+    volumes:
+      - "/opt/containers/staging_frag_jetzt/otel/
+         opentelemetry-javaagent.jar:/opt/otel-agent.jar:ro"
+    environment:
+      - JAVA_TOOL_OPTIONS=-javaagent:/opt/otel-agent.jar
+      - OTEL_SERVICE_NAME=fragjetzt-ws-gateway
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=staging
+
+networks:
+  fragjetzt:
+    name: fragjetzt-internal-network
+    driver: bridge
+    internal: false
+\end{lstlisting}
+
+
+% =============================================================================
+% ANHANG C – Alerting-Regeln
+% =============================================================================
+\chapter{Alerting-Regeln}
+\label{app:alerting-rules}
+
+Die folgenden drei Alerting-Regeln wurden in Grafana Alerting konfiguriert und bilden die prototypische Umsetzung des in Abschnitt~6.6 konzipierten Alerting-Frameworks. Alle Regeln verwenden Multi-Signal-Logik, bei der ein primäres Fehlersignal erst in Kombination mit einer Mindest-Traffic-Rate als handlungsrelevant gewertet wird (vgl.\ Abschnitt~7.4).
+
+
+\section*{Alert~1: User-facing Latency Degradation}
+
+\begin{description}[style=nextline, leftmargin=3.5cm]
+  \item[Severity] Warning
+  \item[Primäre Rolle] DevOps
+  \item[Zugehöriges Runbook] Anhang~\ref{app:runbook-latenz}
+\end{description}
+
+\paragraph{Logik.}
+Der Alert feuert, wenn \emph{beide} Bedingungen gleichzeitig für mindestens drei Minuten erfüllt sind:
+\begin{enumerate}
+  \item Die Backend-Antwortzeit im 95.\ Perzentil überschreitet 500\,ms.
+  \item Die Anfragerate liegt über 0{,}1\,req/s (kein Leerlauf).
+\end{enumerate}
+
+\paragraph{PromQL -- Condition~A (Latenz).}
+\begin{lstlisting}[style=bashstyle, numbers=none]
+histogram_quantile(0.95,
+  sum(rate(
+    http_server_request_duration_seconds_bucket{
+      job="fragjetzt-backend"
+    }[5m]
+  )) by (le)
+) > 0.5
+\end{lstlisting}
+
+\paragraph{PromQL -- Condition~B (Mindest-Traffic).}
+\begin{lstlisting}[style=bashstyle, numbers=none]
+sum(rate(
+  traces_spanmetrics_calls_total{
+    service="fragjetzt-backend",
+    span_kind="SPAN_KIND_SERVER"
+  }[5m]
+)) > 0.1
+\end{lstlisting}
+
+\paragraph{Grafana-Konfiguration.}
+Evaluation Group: \texttt{golden-signals}, Evaluation Interval: 1\,min, Pending Period: 3\,min, Condition: A~\texttt{AND}~B.
+
+\paragraph{Annotations.}
+\emph{Summary:} Backend-Antwortzeit erhöht (p95~>~500\,ms). \emph{Description:} Die Antwortzeit des Backends im 95.\ Perzentil liegt seit über drei Minuten über 500\,ms bei aktivem Traffic. Nutzende können Verzögerungen bei Frageerstellung, Abstimmungen oder Raumnavigation wahrnehmen.
+
+\paragraph{Labels.}
+\texttt{severity: warning}, \texttt{service: fragjetzt-backend}, \texttt{signal: latency}, \texttt{stakeholder: devops}.
+
+
+\bigskip
+\section*{Alert~2: Backend Error Spike}
+
+\begin{description}[style=nextline, leftmargin=3.5cm]
+  \item[Severity] Critical
+  \item[Primäre Rolle] Developer
+  \item[Zugehöriges Runbook] Anhang~\ref{app:runbook-fehlerquote}
+\end{description}
+
+\paragraph{Logik.}
+Der Alert feuert, wenn \emph{beide} Bedingungen gleichzeitig für mindestens drei Minuten erfüllt sind:
+\begin{enumerate}
+  \item Die HTTP-5xx-Fehlerrate des Backends überschreitet 5\,\%.
+  \item Die Anfragerate liegt über 0{,}1\,req/s.
+\end{enumerate}
+
+\paragraph{PromQL -- Condition~A (Fehlerrate).}
+\begin{lstlisting}[style=bashstyle, numbers=none]
+(
+  sum(rate(
+    http_server_request_duration_seconds_count{
+      job="fragjetzt-backend",
+      http_response_status_code=~"5.."
+    }[5m]
+  ))
+  /
+  clamp_min(sum(rate(
+    http_server_request_duration_seconds_count{
+      job="fragjetzt-backend"
+    }[5m]
+  )), 1e-9)
+) > 0.05
+\end{lstlisting}
+
+\paragraph{PromQL -- Condition~B (Mindest-Traffic).}
+\begin{lstlisting}[style=bashstyle, numbers=none]
+sum(rate(
+  http_server_request_duration_seconds_count{
+    job="fragjetzt-backend"
+  }[5m]
+)) > 0.1
+\end{lstlisting}
+
+\paragraph{Grafana-Konfiguration.}
+Evaluation Group: \texttt{golden-signals}, Evaluation Interval: 1\,min, Pending Period: 3\,min, Condition: A~\texttt{AND}~B.
+
+\paragraph{Annotations.}
+\emph{Summary:} Backend-Fehlerrate kritisch erhöht (5xx~>~5\,\%). \emph{Description:} Mehr als 5\,\% der Backend-Anfragen liefern HTTP-5xx-Fehler bei aktivem Traffic. Betroffene Endpunkte können über die Errors-Sektion des Dashboards und über Tempo (Trace-Suche, Status Error) identifiziert werden.
+
+\paragraph{Labels.}
+\texttt{severity: critical}, \texttt{service: fragjetzt-backend}, \texttt{signal: errors}, \texttt{stakeholder: developer}.
+
+
+\bigskip
+\section*{Alert~3: Infrastructure Saturation with Service Impact}
+
+\begin{description}[style=nextline, leftmargin=3.5cm]
+  \item[Severity] Warning
+  \item[Primäre Rolle] DevOps
+  \item[Zugehöriges Runbook] Anhang~\ref{app:runbook-saettigung}
+\end{description}
+
+\paragraph{Logik.}
+Der Alert feuert, wenn \emph{eine} der folgenden Variantenbedingungen für mindestens fünf Minuten erfüllt ist:
+
+\emph{Variante~A (Datenbank-Sättigung):} PostgreSQL aktive Verbindungen~>~70 \textbf{und} Backend p95-Latenz~>~200\,ms.
+
+\emph{Variante~B (Queue-Rückstau):} RabbitMQ Queue Messages~>~1000.
+
+\paragraph{PromQL -- Condition~A1 (DB Connections).}
+\begin{lstlisting}[style=bashstyle, numbers=none]
+sum(pg_stat_activity_count{
+  job="postgres", state="active"
+}) > 70
+\end{lstlisting}
+
+\paragraph{PromQL -- Condition~A2 (Latenz-Bestätigung).}
+\begin{lstlisting}[style=bashstyle, numbers=none]
+histogram_quantile(0.95,
+  sum(rate(
+    http_server_request_duration_seconds_bucket{
+      job="fragjetzt-backend"
+    }[5m]
+  )) by (le)
+) > 0.2
+\end{lstlisting}
+
+\paragraph{PromQL -- Condition~B1 (Queue Depth).}
+\begin{lstlisting}[style=bashstyle, numbers=none]
+sum(rabbitmq_queue_messages{job="rabbitmq"}) > 1000
+\end{lstlisting}
+
+\paragraph{Grafana-Konfiguration.}
+Evaluation Group: \texttt{infrastructure}, Evaluation Interval: 1\,min, Pending Period: 5\,min, Condition: (A1~\texttt{AND}~A2)~\texttt{OR}~B1.
+
+\paragraph{Annotations.}
+\emph{Summary:} Infrastruktur-Sättigung mit Servicewirkung. \emph{Description:} Infrastrukturressourcen (Datenbankverbindungen oder Message Queue) nähern sich ihren Kapazitätsgrenzen und gleichzeitig zeigen Servicemetriken eine Verschlechterung. Ohne Gegenmaßnahmen kann die Störung auf weitere Dienste kaskadieren.
+
+\paragraph{Labels.}
+\texttt{severity: warning}, \texttt{service: infrastructure}, \texttt{signal: saturation}, \texttt{stakeholder: devops}.
+
+
+% =============================================================================
+% ANHANG D – Runbooks
+% =============================================================================
+\chapter{Runbooks}
+\label{app:runbooks}
+
+Die folgenden Runbooks folgen der in Abschnitt~6.6 beschriebenen Fünf-Felder-Struktur und ergänzen die Alerting-Regeln aus Anhang~\ref{app:alerting-rules} um strukturierte Handlungsanweisungen. Jedes Runbook gliedert sich in Symptombeschreibung, relevante Beobachtungssignale, Sofortmaßnahmen, Diagnosepfade und Eskalationsregeln.
+
+
+% ---------------------------------------------------------------------------
+% Runbook 1: Erhöhte Backend-Latenz
+% ---------------------------------------------------------------------------
+\section{Runbook: Erhöhte Backend-Latenz}
+\label{app:runbook-latenz}
+
+\begin{description}[style=nextline, leftmargin=3.5cm]
+  \item[Incident-Typ] User-facing Latency Degradation
+  \item[Trigger] Alert \enquote{Backend p95-Latenz~>~500\,ms bei aktivem Traffic} feuert seit $\geq$~3~Minuten.
+\end{description}
+
+\paragraph{Nutzerwirkung.}
+Verzögerungen bei interaktiven Aktionen wie Frageerstellung, Abstimmungen und Raum-Navigation. Bei Lehrveranstaltungen mit synchroner Nutzung sind viele Teilnehmende gleichzeitig betroffen.
+
+\paragraph{Relevante Signale.}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l l >{\RaggedRight\arraybackslash}X}
+\toprule
+\textbf{Signal} & \textbf{Dashboard-Panel} & \textbf{Erwartetes Verhalten} \\
+\midrule
+Backend p95/p99 Latenz & Latency $\rightarrow$ Backend HTTP Latency & Anstieg über 500\,ms \\
+Request Rate & Traffic $\rightarrow$ Request Rate by Service & Aktiver Traffic ($>$~0{,}1\,req/s) \\
+Latenz pro Endpunkt & Latency $\rightarrow$ Latency by Endpoint & Einzelne Endpunkte auffällig \\
+DB Connection Count & Infrastructure $\rightarrow$ PostgreSQL Active Conn. & Möglicherweise erhöht \\
+JVM Heap / GC & Saturation $\rightarrow$ JVM Heap / GC Pause & Möglicherweise erhöht \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Sofortmaßnahmen (0--5~Minuten).}
+
+\emph{DevOps (primäre Rolle):}
+\begin{enumerate}
+  \item Dashboard öffnen: Golden Signals $\rightarrow$ Latency-Sektion prüfen.
+  \item Scope eingrenzen: Betrifft die Latenz alle Endpunkte oder nur bestimmte? Panel \enquote{Latency by Endpoint (p95)} prüfen.
+  \item Infrastruktur prüfen: Host-Ressourcen (CPU~$>$~80\,\%? Memory~$>$~90\,\%?), PostgreSQL (Verbindungen nahe 100?), RabbitMQ (Queue-Rückstau?).
+  \item Container-Status prüfen:
+\begin{lstlisting}[style=bashstyle]
+sudo docker ps --format "table {{.Names}}\t{{.Status}}" \
+  | grep fragjetzt
+sudo docker stats --no-stream | head -15
+\end{lstlisting}
+\end{enumerate}
+
+\emph{Developer (sekundäre Rolle):}
+\begin{enumerate}
+  \item Trace-Analyse: Grafana $\rightarrow$ Explore $\rightarrow$ Tempo $\rightarrow$ Search. Filter: Service~=~\texttt{fragjetzt-backend}, Duration~$>$~500\,ms. Span-Waterfall öffnen und prüfen, wo der Request die meiste Zeit verbringt.
+  \item DB-Spans prüfen: R2DBC-Spans (SELECT/UPDATE) mit Laufzeit $>$~50\,ms identifizieren.
+  \item Logs korrelieren: Vom langsamen Trace über die Funktion \emph{Logs for this span} zu den zugehörigen Loki-Logs navigieren.
+\end{enumerate}
+
+\paragraph{Diagnosepfad (5--15~Minuten).}
+
+\emph{Mögliche Ursache~1: Datenbankengpass.} Indikator: DB-Spans im Trace $>$~50\,ms, PostgreSQL Connections~$>$~70. Prüfung:
+\begin{lstlisting}[style=bashstyle]
+sudo docker exec fragjetzt-postgres psql -U fragjetzt -c \
+  "SELECT state, count(*) FROM pg_stat_activity
+   GROUP BY state;"
+sudo docker exec fragjetzt-postgres psql -U fragjetzt -c \
+  "SELECT pid, now()-query_start AS duration, query
+   FROM pg_stat_activity WHERE state='active'
+   ORDER BY duration DESC LIMIT 5;"
+\end{lstlisting}
+Maßnahme: Langlaufende Queries identifizieren und gegebenenfalls terminieren.
+
+\emph{Mögliche Ursache~2: JVM-Ressourcenerschöpfung.} Indikator: GC Pause Duration steigt, Heap nahe Limit. Maßnahme: Backend-Container neu starten.
+\begin{lstlisting}[style=bashstyle]
+cd /opt/containers/staging_frag_jetzt/\
+  frag.jetzt-docker-orchestration
+sudo docker compose restart backend
+\end{lstlisting}
+
+\emph{Mögliche Ursache~3: Externe Abhängigkeit (Keycloak, KI-Dienst).} Indikator: Trace zeigt langen ausgehenden HTTP-Span. Prüfung: Span-Details im Trace, Ziel-URL und Dauer. Maßnahme: Betroffenen Upstream-Dienst prüfen oder Request-Pfad isolieren.
+
+\paragraph{Eskalation.}
+Wenn die Latenz nach 15~Minuten nicht sinkt: Hauptentwickler kontaktieren. Bei Totalausfall: Proxy-Level-Wartungsseite aktivieren.
+
+\paragraph{Kriterium für Entwarnung.}
+Backend p95-Latenz unter 200\,ms für mindestens 5~Minuten, keine auffälligen Endpunkte im Latenz-Panel, PostgreSQL Connections im Normbereich ($<$~30~aktive).
+
+
+% ---------------------------------------------------------------------------
+% Runbook 2: Erhöhte Fehlerquote
+% ---------------------------------------------------------------------------
+\section{Runbook: Erhöhte Fehlerquote / HTTP~5xx}
+\label{app:runbook-fehlerquote}
+
+\begin{description}[style=nextline, leftmargin=3.5cm]
+  \item[Incident-Typ] Backend Error Spike
+  \item[Trigger] Alert \enquote{HTTP-5xx-Rate~>~5\,\% bei aktivem Traffic} feuert seit $\geq$~3~Minuten.
+\end{description}
+
+\paragraph{Nutzerwirkung.}
+Nutzende erhalten Fehlermeldungen bei Interaktionen mit der Plattform. Betroffene Funktionen können Frageerstellung, Abstimmungen, Login oder KI-gestützte Features sein. Bei synchroner Nutzung führen sichtbare Fehler zu Vertrauensverlust und Unterbrechung des Veranstaltungsablaufs.
+
+\paragraph{Relevante Signale.}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l l >{\RaggedRight\arraybackslash}X}
+\toprule
+\textbf{Signal} & \textbf{Dashboard-Panel} & \textbf{Erwartetes Verhalten} \\
+\midrule
+HTTP 5xx Rate & Errors $\rightarrow$ HTTP 5xx Rate (Backend) & Über 5\,\% \\
+Error Rate by Service & Errors $\rightarrow$ Error Rate by Service & Backend-Linie steigt \\
+Top Error Spans & Errors $\rightarrow$ Top Error Spans (5\,min) & Betroffene Operationen sichtbar \\
+Request Rate & Traffic $\rightarrow$ Request Rate by Service & Aktiver Traffic bestätigt \\
+Backend Logs & Loki $\rightarrow$ \texttt{\{service\_name=\char`\"fragjetzt-backend\char`\"\}} & Exception-Stacktraces \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Sofortmaßnahmen (0--5~Minuten).}
+
+\emph{Developer (primäre Rolle):}
+\begin{enumerate}
+  \item Fehlerquelle identifizieren: Golden Signals Dashboard $\rightarrow$ Errors-Sektion. Panel \enquote{Top Error Spans (5\,min)} prüfen und betroffene Funktionsbereiche eingrenzen (Q\&A, Voting, Auth, KI).
+  \item Fehlerhafte Traces öffnen: Grafana $\rightarrow$ Explore $\rightarrow$ Tempo $\rightarrow$ Search (Service~=~\texttt{fragjetzt-backend}, Status~=~Error). Span-Waterfall analysieren: HTTP Status Code und Exception Message prüfen.
+  \item Logs korrelieren: Vom fehlerhaften Trace zu Loki navigieren. Exception-Stacktraces lesen und Fehlermuster identifizieren.
+\end{enumerate}
+
+\emph{DevOps (sekundäre Rolle):}
+\begin{enumerate}
+  \item Container-Gesundheit prüfen:
+\begin{lstlisting}[style=bashstyle]
+sudo docker ps --format "table {{.Names}}\t{{.Status}}" \
+  | grep fragjetzt
+sudo docker logs fragjetzt-backend --since 5m 2>&1 \
+  | grep -i "error\|exception" | tail -20
+\end{lstlisting}
+  \item Letzte Änderungen prüfen: Gab es ein kürzliches Deployment oder eine Konfigurationsänderung?
+  \item Abhängigkeiten prüfen: Sind PostgreSQL, RabbitMQ und Keycloak erreichbar?
+\end{enumerate}
+
+\paragraph{Diagnosepfad (5--15~Minuten).}
+
+\emph{Mögliche Ursache~1: Datenbankverbindungsfehler.} Indikator: Error Spans enthalten \texttt{ConnectionException}, \texttt{R2dbcException} oder \texttt{TimeoutException}. Maßnahme: PostgreSQL-Container prüfen und gegebenenfalls neu starten.
+
+\emph{Mögliche Ursache~2: Fehler in einem spezifischen Endpunkt.} Indikator: Top Error Spans zeigt einen einzelnen Endpunkt. Maßnahme: Bug-Report erstellen, gegebenenfalls betroffene Funktion temporär deaktivieren.
+
+\emph{Mögliche Ursache~3: Externe Abhängigkeit nicht erreichbar.} Indikator: Error Spans auf ausgehenden HTTP-Calls (Keycloak, PayPal, LLM-Provider). Maßnahme: Externen Dienst prüfen, bei Nichterreichbarkeit Graceful Degradation erwägen.
+
+\emph{Mögliche Ursache~4: Ressourcenerschöpfung.} Indikator: JVM Heap nahe Limit, OOM-Fehler in Logs. Maßnahme: Backend-Container neu starten.
+
+\paragraph{Eskalation.}
+Wenn die Fehlerrate nach Backend-Restart nicht sinkt: Hauptentwickler kontaktieren. Wenn mehrere Endpunkte gleichzeitig betroffen sind: systemweites Problem vermuten und alle Abhängigkeiten prüfen.
+
+\paragraph{Kriterium für Entwarnung.}
+HTTP 5xx Rate unter 1\,\% für mindestens 5~Minuten, keine neuen Error Spans in der Top-Error-Tabelle, Backend-Logs ohne wiederkehrende Exceptions.
+
+
+% ---------------------------------------------------------------------------
+% Runbook 3: Infrastruktur-Sättigung
+% ---------------------------------------------------------------------------
+\section{Runbook: Infrastruktur-Sättigung (DB / Queue / Host)}
+\label{app:runbook-saettigung}
+
+\begin{description}[style=nextline, leftmargin=3.5cm]
+  \item[Incident-Typ] Database / Queue Saturation with Service Impact
+  \item[Trigger] Alert \enquote{Infrastruktur-Sättigung mit Servicewirkung} feuert, wenn eine der folgenden Bedingungen seit $\geq$~5~Minuten erfüllt ist: (a)~PostgreSQL aktive Verbindungen~$>$~70 \textbf{und} Backend p95-Latenz~$>$~200\,ms, oder (b)~RabbitMQ Queue Messages~$>$~1000 dauerhaft.
+\end{description}
+
+\paragraph{Nutzerwirkung.}
+Verzögerungen oder Ausfälle bei datenbankgestützten Funktionen (Frageerstellung, Abstimmungen, Raum-Verwaltung) oder bei Echtzeit-Updates über WebSocket (Live-Voting, Teilnehmerzählung). Die Störung kann von einer einzelnen Funktion auf weitere kaskadieren, wenn die Ressourcenerschöpfung zunimmt.
+
+\paragraph{Relevante Signale.}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l l >{\RaggedRight\arraybackslash}X}
+\toprule
+\textbf{Signal} & \textbf{Dashboard-Panel} & \textbf{Erwartetes Verhalten} \\
+\midrule
+PostgreSQL Connections & Infrastructure $\rightarrow$ PostgreSQL Active Conn. & $>$~70~aktive \\
+RabbitMQ Queue Depth & Infrastructure $\rightarrow$ RabbitMQ Messages & $>$~1000 oder steigend \\
+Backend p95 Latenz & Latency $\rightarrow$ Backend HTTP Latency & Korreliert erhöht \\
+Host Memory / CPU & Infrastructure $\rightarrow$ Host Memory \& CPU & Möglicherweise erhöht \\
+JVM Thread Count & Saturation $\rightarrow$ JVM Thread Count & Möglicherweise erhöht \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Sofortmaßnahmen (0--5~Minuten).}
+
+\emph{DevOps (primäre Rolle):}
+\begin{enumerate}
+  \item Sättigungsquelle identifizieren: Dashboard $\rightarrow$ Infrastructure-Sektion. PostgreSQL Panel, RabbitMQ Panel und Host Panel prüfen.
+  \item Container-Ressourcen prüfen:
+\begin{lstlisting}[style=bashstyle]
+sudo docker stats --no-stream \
+  --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" \
+  | head -15
+\end{lstlisting}
+  \item PostgreSQL-Verbindungen im Detail prüfen:
+\begin{lstlisting}[style=bashstyle]
+sudo docker exec fragjetzt-postgres psql -U fragjetzt -c \
+  "SELECT state, count(*),
+          avg(now()-query_start) as avg_duration
+   FROM pg_stat_activity
+   WHERE datname = 'fragjetzt'
+   GROUP BY state ORDER BY count DESC;"
+\end{lstlisting}
+  \item RabbitMQ-Queue-Status prüfen:
+\begin{lstlisting}[style=bashstyle]
+sudo docker exec fragjetzt-rabbitmq \
+  rabbitmqctl list_queues name messages consumers
+\end{lstlisting}
+\end{enumerate}
+
+\emph{Developer (sekundäre Rolle):}
+\begin{enumerate}
+  \item Langlaufende Queries identifizieren:
+\begin{lstlisting}[style=bashstyle]
+sudo docker exec fragjetzt-postgres psql -U fragjetzt -c \
+  "SELECT pid, now()-query_start AS duration,
+          left(query, 80) as query
+   FROM pg_stat_activity
+   WHERE state='active' AND datname='fragjetzt'
+   ORDER BY duration DESC LIMIT 10;"
+\end{lstlisting}
+  \item Trace-Korrelation: Grafana $\rightarrow$ Tempo $\rightarrow$ Search. Traces mit langen DB-Spans ($>$~100\,ms) suchen und prüfen, ob ein bestimmter Endpunkt unverhältnismäßig viele Verbindungen verbraucht.
+  \item Vote-Trigger prüfen (bekannter Engpass, vgl.\ Risikopunkt~R2): Sind viele parallele Abstimmungen aktiv? Zeigen Traces Row-Level Contention auf der \texttt{comment}-Tabelle?
+\end{enumerate}
+
+\paragraph{Diagnosepfad (5--15~Minuten).}
+
+\emph{Mögliche Ursache~1: Connection-Pool-Erschöpfung.} Indikator: Aktive Verbindungen $>$~70, idle Verbindungen niedrig. Maßnahme: Idle-in-Transaction-Verbindungen beenden:
+\begin{lstlisting}[style=bashstyle]
+sudo docker exec fragjetzt-postgres psql -U fragjetzt -c \
+  "SELECT pg_terminate_backend(pid)
+   FROM pg_stat_activity
+   WHERE state = 'idle in transaction'
+     AND query_start < now() - interval '5 minutes';"
+\end{lstlisting}
+
+\emph{Mögliche Ursache~2: RabbitMQ-Consumer-Rückstand.} Indikator: Queue-Tiefe steigt, Consumer-Zahl niedrig oder null. Maßnahme: WS-Gateway-Container prüfen und gegebenenfalls neu starten (\texttt{docker compose restart ws-gateway}).
+
+\emph{Mögliche Ursache~3: Host-Ressourcenverdrängung (R5).} Indikator: Host CPU $>$~80\,\% oder Memory $>$~90\,\%, mehrere Container betroffen. Maßnahme: Nicht-kritische Container temporär stoppen (z.\,B.\ AI Provider).
+
+\emph{Mögliche Ursache~4: Lastspitze durch Lehrveranstaltung.} Indikator: Request-Rate und WebSocket-Verbindungen gleichzeitig hoch. Maßnahme: Situation beobachten. Die Sättigung sinkt nach Veranstaltungsende. Bei wiederholtem Auftreten Kapazitätsplanung einleiten.
+
+\paragraph{Eskalation.}
+Wenn PostgreSQL-Verbindungen nach Bereinigung erneut ansteigen: Hauptentwickler einbeziehen (möglicherweise Connection-Leak im Code). Wenn Host-Ressourcen dauerhaft erschöpft: Infrastruktur-Skalierung besprechen.
+
+\paragraph{Kriterium für Entwarnung.}
+PostgreSQL aktive Verbindungen unter 30, RabbitMQ Queue-Tiefe unter 100, Backend p95-Latenz unter 200\,ms, Host CPU unter 60\,\% und Memory unter 75\,\%.
+
+
+% =============================================================================
+% ANHANG E – Golden-Signals-Dashboard
+% =============================================================================
+\chapter{Golden-Signals-Dashboard}
+\label{app:dashboard}
+
+Das Golden-Signals-Dashboard (\texttt{frag.jetzt -- Golden Signals}, UID: \texttt{fragjetzt-golden-signals}) umfasst 17~Panels in fünf Sektionen. Tabelle~\ref{tab:dashboard-panels} gibt eine Übersicht über alle Panels, ihre primäre Datenquelle und die zugeordnete Golden-Signal-Dimension.
+
+\begin{table}[H]
+\centering
+\caption[Panelübersicht des Golden-Signals-Dashboards.]{Panelübersicht des Golden-Signals-Dashboards. \small Quelle: Eigene Darstellung.}
+\label{tab:dashboard-panels}
+\small
+\begin{tabularx}{\textwidth}{l >{\RaggedRight\arraybackslash}X l}
+\toprule
+\textbf{Sektion} & \textbf{Panel} & \textbf{Datenquelle} \\
+\midrule
+Latency     & Backend HTTP Latency (p50/p95/p99)       & Prometheus (OTel) \\
+            & Latency by Endpoint (p95)                & Prometheus (Span-Metriken) \\[4pt]
+Traffic     & Request Rate by Service                  & Prometheus (Span-Metriken) \\
+            & Top Endpoints by Request Rate (Backend)  & Prometheus (Span-Metriken) \\[4pt]
+Errors      & Error Rate by Service (Span-based)       & Prometheus (Span-Metriken) \\
+            & HTTP 5xx Rate (Backend)                  & Prometheus (OTel) \\
+            & Top Error Spans (5\,min)                 & Prometheus (Span-Metriken) \\[4pt]
+Saturation  & JVM Heap Used                            & Prometheus (OTel) \\
+            & JVM Thread Count                         & Prometheus (OTel) \\
+            & JVM CPU Utilization                      & Prometheus (OTel) \\[4pt]
+Infrastr.   & PostgreSQL Active Connections             & Prometheus (Exporter) \\
+            & Nginx Connections                         & Prometheus (Exporter) \\
+            & Nginx Accepted vs Handled                & Prometheus (Exporter) \\
+            & GC Pause Duration                        & Prometheus (OTel) \\
+            & RabbitMQ Messages                        & Prometheus (Plugin) \\
+            & Host Memory \& CPU                       & Prometheus (Node Exp.) \\
+            & Service Map (Tempo)                      & Tempo \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Nachfolgend zeigt Listing~\ref{lst:dashboard-panel-latency} einen repräsentativen Auszug aus der Dashboard-JSON-Definition. Das Panel \enquote{Backend HTTP Latency} illustriert die PromQL-Queries für die drei Perzentil-Zeitreihen.
+
+\begin{lstlisting}[style=jsonstyle, caption={Auszug aus der Dashboard-JSON: Panel \enquote{Backend HTTP Latency} (gekürzt).}, label={lst:dashboard-panel-latency}]
+{
+  "title": "Backend HTTP Latency (p50 / p95 / p99)",
+  "type": "timeseries",
+  "datasource": { "type": "prometheus", "uid": "prometheus" },
+  "fieldConfig": {
+    "defaults": { "unit": "s" }
+  },
+  "targets": [
+    {
+      "expr": "histogram_quantile(0.50,
+        sum(rate(http_server_request_duration_seconds_bucket
+          {job=\"fragjetzt-backend\"}
+          [$__rate_interval])) by (le))",
+      "legendFormat": "p50"
+    },
+    {
+      "expr": "histogram_quantile(0.95,
+        sum(rate(http_server_request_duration_seconds_bucket
+          {job=\"fragjetzt-backend\"}
+          [$__rate_interval])) by (le))",
+      "legendFormat": "p95"
+    },
+    {
+      "expr": "histogram_quantile(0.99,
+        sum(rate(http_server_request_duration_seconds_bucket
+          {job=\"fragjetzt-backend\"}
+          [$__rate_interval])) by (le))",
+      "legendFormat": "p99"
+    }
+  ]
+}
+\end{lstlisting}
+
+Die vollständige JSON-Definition (1761~Zeilen) ist im öffentlichen Observability-Repository des Projekts verfügbar.\footnote{\url{https://github.com/thm-projects/frag.jetzt-observability}}
+
+
+% =============================================================================
+% ANHANG F – Verzeichnis der KI-Nutzung
+% =============================================================================
 
 \chapter{Verzeichnis der KI-Nutzung}
 \label{ch:ki-nutzung}
 
-\input{content/00_KIErklaerung}
+\section{Erklärung zur Nutzung von KI-basierten Werkzeugen}
+\label{app:ki-nutzung}
 
-Tabelle~\ref{tab:ki-nutzung} listet alle in dieser Arbeit verwendeten KI-Werkzeuge auf.
+Bei der Erstellung dieser Arbeit wurden KI-basierte Werkzeuge unterstützend eingesetzt. Der Einsatz umfasste vier primäre Anwendungsbereiche: (1)~Literaturrecherche und Zusammenfassung von Forschungsarbeiten, (2)~Strukturierungs- und Formulierungsverbesserungen im Fließtext, (3)~Unterstützung bei der technischen Implementierung (Instrumentierung, Dashboard-Konfiguration, Deployment) und (4)~Code-Exploration zur Architekturerhebung in Kapitel~3.
+
+Alle von KI-Systemen generierten Vorschläge wurden eigenständig geprüft, fachlich bewertet und bei Bedarf überarbeitet oder verworfen. Sämtliche inhaltlichen Entscheidungen, insbesondere die Auswahl und Bewertung von Quellen, die Interpretation der Ergebnisse sowie die endgültige Textfassung, liegen in der Verantwortung des Verfassers.
+
+Tabelle~\ref{tab:ki-nutzung} dokumentiert die eingesetzten Werkzeuge, den jeweiligen Verwendungszweck und die betroffenen Kapitel.
+
+\section{Declaration on the Use of AI-Based Tools}
+
+During the preparation of this thesis, AI-based tools were utilized for supportive purposes. Their application encompassed four primary areas: (1)~literature research and the summarization of research papers, (2)~structural and phrasing improvements within the text, (3)~support during the technical implementation (instrumentation, dashboard configuration, deployment), and (4)~code exploration for the architectural analysis in Chapter~3.
+
+All suggestions generated by AI systems were independently reviewed, technically evaluated, and either revised or discarded as deemed necessary. All content-related decisions, in particular the selection and evaluation of sources, the interpretation of the results, and the final wording of the text, remain the sole responsibility of the author.
+
+Table~\ref{tab:ki-nutzung} documents the specific tools employed, their respective purposes, and the affected chapters.
+
+\newpage
+
+% --- KI-Nutzungstabelle ---
+% Header-Linie für Landscape-Seiten deaktivieren
+\KOMAoptions{headsepline=false}%
+\begin{landscape}
+\begingroup
+\setlength{\LTleft}{0pt plus 1fill}
+\setlength{\LTright}{0pt plus 1fill}
+\small
+\begin{longtable}{@{} p{3cm} p{3.5cm} p{5cm} p{5cm} p{2cm} @{}}
+\caption[Verzeichnis der in dieser Arbeit genutzten KI-Werkzeuge.]{Verzeichnis der in dieser Arbeit genutzten KI-Werkzeuge. \small Quelle: Eigene Darstellung.}
+\label{tab:ki-nutzung}\\
+\toprule
+\textbf{KI-Tool} & \textbf{Zweck} & \textbf{Eingabe / Kontext} & \textbf{Generierte Ausgabe} & \textbf{Kapitel} \\
+\midrule
+\endfirsthead%
+
+\multicolumn{5}{@{}l@{}}{{\tablename\ \thetable{} --- Fortsetzung}} \\[0.5ex]
+\toprule
+\textbf{KI-Tool} & \textbf{Zweck} & \textbf{Eingabe / Kontext} & \textbf{Generierte Ausgabe} & \textbf{Kapitel} \\
+\midrule
+\endhead%
+
+\midrule
+\multicolumn{5}{r@{}}{\emph{Fortsetzung auf nächster Seite}} \\
+\endfoot%
+
+\bottomrule
+\endlastfoot%
+
+% ---- Tatsächliche Einträge (bitte prüfen und ergänzen/löschen) ----
+
+Consensus & Validierung von Forschungsinformationen & Behauptungen und Fakten aus der Literaturrecherche & Bestätigungen oder Korrekturen basierend auf aggregierten Forschungsergebnissen & Kap.~2-5 \\[0.5ex]
+
+Claude (Opus~4.5) & Konfigurationshilfe bei der Implementierung & OTel Collector Config, Docker Compose Files, Fehlermeldungen, Prometheus-Queries & Konfigurationsvorschläge, Debugging-Hinweise, PromQL-Korrekturen & Kap.~7 \\[0.5ex]
+
+Claude (Opus~4.6) & Strukturierung und Formulierungsverbesserungen & Gliederungsvorgaben, Feedback-Iterationen & LaTeX-Kapitelentwürfe mit Zitationsvorschlägen, Tabellenstrukturen & Kap.~1--10 \\[0.5ex]
+
+Claude (Opus~4.6) & Formatierung der Runbooks & Alerting-Konzept aus Kap.~6, Dashboard-Panel-Struktur, Fünf-Felder-Vorlage & Strukturierte Runbook-Entwürfe in Markdown & Anhang~D \\[0.5ex]
+
+Elicit & Suche nach relevanten Forschungsarbeiten & Forschungsfragen und Schlüsselbegriffe aus der Arbeit & Listen von relevanten Papers mit Kurzbeschreibungen & Kap.~2-5 \\[0.5ex]
+
+Gemini~3~Pro & Zusammenfassung von Forschungsarbeiten & Abstracts oder einzelne Kapitel aktueller Forschungsarbeiten zu Observability & Kompakte Zusammenfassungen und thematische Einordnungen sowie Relevanz & Kap.~2 \\[0.5ex]
+
+GitHub Copilot & Quellcode-Exploration für Architekturerhebung & Fragen zur Repository-Struktur, Controller-Anzahl, Kommunikationspfaden von frag.jetzt & Architekturübersichten, Abhängigkeitslisten, Konfigurationsextrakte & Kap.~3 \\[0.5ex]
+
+OpenAI GPT-5.2 & Formulierungs\-verbesserungen & Entwurf der Einleitung und Problemstellung & Alternative Formulierungen und Umstrukturierungsvorschläge & Kap.~1 \\[0.5ex]
+
+OpenAI GPT-5.3 & Unterstützung bei Dashboard-Konzeption & Beschreibung des gewünschten Dashboard-Layouts und der Metriken & Vorschläge zu Panel-Struktur und PromQL-Queries & Kap.~6, 7 \\[0.5ex]
+
+% ---- Platzhalter für weitere Einträge ----
+% Mistral Large 3 & Technische Zusammenfassung & ... & ... & Kap.~X \\[0.5ex]
+% Tool & Zweck & Eingabe & Ausgabe & Kapitel \\[0.5ex]
+
+\end{longtable}
+\endgroup
+
+\end{landscape}
+% Header-Linie wiederherstellen
+\KOMAoptions{headsepline=true}%
 \newpage
 
 
@@ -21,9 +804,6 @@ Analysiere die Datenbankschicht. Welche Entities/Tabellen gibt es, welche Reposi
 Beschreibe die WebSocket-Kommunikation. Welche STOMP-Topics oder Channels gibt es, welche Nachrichten werden darueber ausgetauscht, und wie wird die Verbindung verwaltet?
 Analysiere die Deployment-Konfiguration (docker-compose.yml, Kubernetes-Manifeste, CI/CD-Pipeline). Welche Container/Services werden deployt, wie sind sie vernetzt, und welche Ressourcenlimits sind konfiguriert?
 \end{lstlisting}
-\newpage
-
-\input{content/Z-Anhang-table}
 \newpage
 
 \section{C4-Container-Diagramm in Vollansicht}

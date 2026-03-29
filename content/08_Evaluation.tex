@@ -28,7 +28,7 @@ Tabelle~\ref{tab:eval-synthese} gibt vorab einen kompakten Überblick über die 
 A1 & Backend-Pfad rekonstruierbar, Gesamtsystem unvollständig & AI Provider und Frontend nicht instrumentiert & teilweise erfüllt \\[4pt]
 A2 & Drei Messebenen für instrumentierte Dienste vorhanden & Keine Browser-Telemetrie & weitgehend erfüllt \\[4pt]
 A3 & Bidirektionale Log-Trace-Korrelation validiert & Debug-Level-Logging, noch nicht produktionsorientiert strukturiert & erfüllt \\[4pt]
-A4 & Latenz-Alert validiert, Fehler-Alert ausgelöst, Sättigungs-Alert metrisch vorbereitet & Kurzfristige Fehler-Metriken lieferten keine konsistent aktuellen Werte; Sättigungs-Alert nicht experimentell getestet & teilweise erfüllt \\[4pt]
+A4 & Alle drei Alerts in Belastungsszenarien ausgelöst; Multi-Signal-Logik validiert & Kurzfristige Fehler-Metriken lieferten keine konsistent aktuellen Werte; Sättigungs-Alert mit angepasstem Schwellenwert getestet & weitgehend erfüllt \\[4pt]
 A5 & Infrastrukturmetriken verfügbar und plausibel & Nicht alle Indikatoren unter Last geprüft & weitgehend erfüllt \\
 \bottomrule
 \end{tabularx}
@@ -87,9 +87,9 @@ Der Latenz-Alert wurde durch künstlich erzeugten CPU-Druck auf den Backend-Cont
 \label{fig:alert-firing}
 \end{figure}
 
-Der Fehler-Alert konnte zuverlässig ausgelöst werden. Die Rate-Berechnung lieferte allerdings bei kurzen Betrachtungszeiträumen keine konsistenten Werte, vermutlich aufgrund einer Diskrepanz zwischen dem dynamisch berechneten Abfragefenster und der Erfassungssemantik der OTel-basierten Metriken. Der Sättigungs-Alert wurde nicht als eigenständiges Szenario getestet, die zugrunde liegende Metrik war jedoch korrekt verfügbar.
+Der Fehler-Alert konnte zuverlässig ausgelöst werden. Die Rate-Berechnung lieferte allerdings bei kurzen Betrachtungszeiträumen keine konsistenten Werte, vermutlich aufgrund einer Diskrepanz zwischen dem dynamisch berechneten Abfragefenster und der Erfassungssemantik der OTel-basierten Metriken. Der Sättigungs-Alert wurde durch gezielte Erschöpfung des PostgreSQL-Verbindungspools validiert. Über parallele \texttt{pg\_sleep}-Sitzungen wurden mehr als 70 aktive Verbindungen erzeugt, sodass die erste Bedingung der AND-Logik (Verbindungsauslastung über 70\,\%) dauerhaft erfüllt war. Da auf dem Staging-Server keine authentifizierten Requests mit datenbankgestützter Verarbeitung erzeugt werden konnten, wurde der Latenz-Schwellenwert der zweiten Bedingung für den Test an die Staging-Gegebenheiten angepasst. Nach Ablauf der fünfminütigen Pending-Periode wechselte der Alert korrekt in den Zustand \emph{Firing}. Die Multi-Signal-Logik, bei der beide Bedingungen gleichzeitig über die gesamte Debounce-Dauer erfüllt sein müssen, wurde damit funktional bestätigt.
 
-Für den Latenz-Alert ist die Alerting-Konzeption funktional validiert. Für den Fehler-Alert zeigt sich ein Datenqualitätsproblem in der kurzfristigen Metrikdarstellung, das die konzeptionelle Validität der Regel nicht infrage stellt, aber die operative Kurzfristdiagnose einschränkt. Der Erfüllungsgrad wird als \emph{teilweise erfüllt} eingestuft.
+Für den Latenz- und den Sättigungs-Alert ist die Alerting-Konzeption funktional validiert. Für den Fehler-Alert zeigt sich ein Datenqualitätsproblem in der kurzfristigen Metrikdarstellung, das die konzeptionelle Validität der Regel nicht infrage stellt, aber die operative Kurzfristdiagnose einschränkt. Da alle drei Regeln im Belastungstest korrekt ausgelöst wurden und die Multi-Signal-Logik falsch-positive Auslösungen in Leerlaufphasen nachweislich verhinderte, wird der Erfüllungsgrad als \emph{weitgehend erfüllt} eingestuft. Einschränkend bleibt, dass der Sättigungs-Alert mit einem angepassten Schwellenwert getestet wurde und die Fehler-Metriken bei kurzen Zeitfenstern Inkonsistenzen aufwiesen.
 
 
 \subsection{A5: Beobachtbarkeit der Infrastrukturschicht}

@@ -1,30 +1,51 @@
-% !TEX root = ../Thesis.tex
+% =============================================================================
+% KAPITEL 1 – Einleitung (gekürzt)
+% =============================================================================
 
 \chapter{Einleitung}
-\label{ch:einleitung}%
-\index{Observability}%
-\index{Four Golden Signals}%
-\index{frag.jetzt}%
+\label{ch:einleitung}
 
-Webbasierte Anwendungssysteme werden heute häufig als verteilte, cloud-native Anwendungen umgesetzt, die aus mehreren lose gekoppelten Services bestehen. Diese Architekturform erlaubt eine unabhängige Weiterentwicklung einzelner Komponenten sowie eine flexible Skalierung, erhöht jedoch zugleich den Aufwand für Betrieb, Überwachung und Fehleranalyse im Produktivsystem \cite{faseeha2025observability,sakinala2025observability}. Insbesondere bei Microservices entstehen verteilte Fehlerzustände und komplexe Abhängigkeiten zwischen Diensten, wodurch Ursachen von Störungen nicht mehr eindeutig einzelnen Komponenten zugeordnet werden können \cite{fischer2024microservice}.
+\section{Ausgangssituation und Problemstellung}
+\label{sec:ausgangssituation}
 
-Vor diesem Hintergrund gewinnt Observability als Erweiterung klassischer Monitoring-Konzepte an Bedeutung. Ziel von Observability ist es, den internen Zustand eines Systems anhand extern erfassbarer Anzeichen nachvollziehen zu können. Dazu werden Metriken, Logs und Traces kombiniert, um Zusammenhänge zwischen Systemverhalten, Fehlern und Leistungsmerkmalen sichtbar zu machen \cite{faseeha2025observability}. Empirische Untersuchungen aus dem Bereich cloud-nativer Anwendungen zeigen, dass ein strukturierter Einsatz von Observability-Praktiken die Analyse von Incidents unterstützt und die Reaktionszeit im Betrieb verkürzen kann \cite{giamattei2024monitoring,sakinala2025observability}.
+Die Open-Source-Plattform \emph{frag.jetzt} wird in der Hochschullehre eingesetzt, um anonyme Rückfragen in Echtzeit zu ermöglichen.\footnote{Das Projekt ist öffentlich zugänglich unter \url{https://gitlab.arsnova.eu/arsnova/frag.jetzt/}. Alle architekturbezogenen Aussagen in dieser Arbeit stützen sich auf die Analyse des öffentlich verfügbaren Quellcodes.} Die Architektur umfasst ein webbasiertes Frontend, mehrere Backend- und Kommunikationsdienste, eine relationale Datenbank sowie einen Message Broker, die gemeinsam über Docker Compose auf einem einzelnen Host betrieben werden. Die Plattform verfügt über eine funktionsfähige CI/CD-Pipeline und eine etablierte Deployment-Infrastruktur. Was dem Betrieb jedoch fehlt, ist eine durchgängige Erfassung und Auswertung von Betriebsdaten. Metriken, Logs und Traces werden nicht systematisch erhoben und nicht entlang des Anfragepfads korreliert. Störungen werden erst wahrgenommen, wenn Endnutzende direkt betroffen sind.
 
-Ein häufig verwendeter Orientierungsrahmen zur Strukturierung servicebezogener Beobachtungsdaten sind die von Google im Kontext des Site Reliability Engineering (SRE) beschriebenen \emph{Four Golden Signals}: Latenz, Traffic, Fehler und Sättigung \cite{ewaschukMonitoringDistributedSystems}. Diese Signalarten erfassen grundlegende technische Symptome eines Dienstes und eignen sich als Ausgangspunkt zur Ableitung erster Monitoring-Indikatoren. Für den produktiven Betrieb liefern sie jedoch primär Rohinformationen, die erst durch Kontext, Interpretation und Bewertung für Menschen handlungsrelevant werden. Google SRE weist selbst darauf hin, dass die Wirksamkeit solcher Signale maßgeblich davon abhängt, wie sie in Alerting, Entscheidungsprozesse und betriebliche Abläufe eingebettet sind \cite{ewaschukMonitoringDistributedSystems}.
+Dieses Defizit ist kein Einzelfall. Verteilte Anwendungen erzeugen durch die Kommunikation ihrer Dienste über Netzwerke komplexe Abhängigkeiten, in denen Fehlerursachen häufig nicht mehr einzelnen Komponenten zugeordnet werden können \parencite[S.~1]{mahida2023enhancing}. \textcite[S.~9]{Niedermaier2019onObservability} identifizieren knappe Ressourcen, fehlende Erfahrung und eine reaktive Implementierung von Monitoring als drei der häufigsten Probleme beim Betrieb solcher Systeme. Klassisches Monitoring, verstanden als Überwachung vordefinierter Metriken und statischer Schwellwerte, stößt unter diesen Bedingungen an Grenzen, weil es auf vorab bekannte Fehlerbilder beschränkt bleibt und diagnostische Tiefe für eine Ursachenanalyse vermissen lässt \parencite[S.~602]{hallur2024monitoring}. Observability erweitert diese Perspektive, indem sie aus extern erfassbaren Ausgaben eines Systems auf dessen internen Zustand schließen lässt und dabei auch neuartige, vorab nicht antizipierte Störungen nachvollziehbar macht \parencite[S.~86907]{usman2022survey}. Die diagnostische Kraft entsteht allerdings erst durch die gezielte Verknüpfung verschiedener Telemetriearten, die in der Praxis häufig isoliert erhoben werden \parencite[S.~1]{tzanettis2022data}.
 
-Die Open-Source-Plattform \emph{frag.jetzt} verfügt über eine solide Entwicklungs- und Deployment-Infrastruktur, jedoch ist die Erfassung und Auswertung von Betriebsdaten derzeit nicht als durchgängiges Observability-Konzept ausgelegt. Metriken, Logs, Traces und Alerting werden nicht konsistent entlang des gesamten Anfragepfads betrachtet, wodurch Zusammenhänge zwischen Nutzerverhalten, Backend-Verarbeitung und externen Abhängigkeiten nur eingeschränkt nachvollziehbar sind. Diese Einschätzung stützt sich auf die öffentlich verfügbare Projektdokumentation und Architekturübersicht des frag.jetzt-Repositories \cite{fragjetztRepo} sowie auf allgemeine Beobachtungen zu typischen Defiziten in vergleichbaren Systemen \cite{giamattei2024monitoring}.\\
+Als Ordnungsrahmen für die servicebezogene Strukturierung von Beobachtungsdaten dienen die im Kontext des Site Reliability Engineering (SRE) beschriebenen \emph{Four Golden Signals}: Latenz, Traffic, Fehler und Sättigung \parencite[S.~60]{ewaschukMonitoringDistributedSystems}. Diese vier Größen erfassen grundlegende Symptome eines Dienstes und eignen sich als Ausgangspunkt, wenn nur ein begrenzter Satz von Messgrößen erhoben werden kann. Ihre Wirksamkeit hängt allerdings davon ab, wie sie in Alarmierung, Kontextanreicherung und betriebliche Abläufe eingebettet werden \parencite[S.~63--64]{ewaschukMonitoringDistributedSystems}.
 
-Ziel dieser Arbeit ist die Entwicklung einer Observability-Strategie für \emph{frag.jetzt}, bei der technische Messgrößen systematisch mit nutzungsbezogenen Fragestellungen verknüpft werden. Die Four Golden Signals dienen dabei als unterstützender Referenzrahmen zur Strukturierung der Beobachtungsdaten, nicht jedoch als alleinige Grundlage für betriebliche Entscheidungen. Die Signale werden servicespezifisch für das PWA-Frontend, das Spring-Boot-Backend, die PostgreSQL-Datenbank sowie angebundene KI-Dienste konkretisiert und in messbare Indikatoren überführt. Ergänzend wird untersucht, welche Open-Source-Observability-Werkzeuge die Anforderungen von \emph{frag.jetzt} im Hinblick auf Erfassung und betriebliche Nutzbarkeit am besten erfüllen.
+Bestehende wissenschaftliche Arbeiten behandeln die genannten Konzepte weitgehend isoliert: Observability-Frameworks werden generisch beschrieben, Golden Signals als theoretischer Rahmen eingeführt und Alerting-Strategien losgelöst von konkreten Architekturen diskutiert. Eine methodisch transparente Übertragung dieser Bausteine auf ein spezifisches verteiltes System, bei der Systemanalyse, Signalableitung, Stack-Auswahl, Alerting und Evaluation ineinandergreifen, findet sich in den herangezogenen Quellen nicht. Die vorliegende Arbeit adressiert diese Lücke.
 
-Ein weiterer Schwerpunkt der Arbeit liegt auf der Ausgestaltung eines Alerting-Ansatzes, der Auffälligkeiten innerhalb der Plattform mit Fragen der Relevanz und Dringlichkeit verknüpft. Dabei steht nicht allein die Detektion von Abweichungen im Vordergrund, sondern insbesondere die Bewertung, ob eine Handlung erforderlich ist, wen ein Problem betrifft und welche Auswirkungen es auf die Nutzung der Plattform hat. Forschungsarbeiten zeigen, dass eine Kombination aus priorisiertem Alerting und datenbasierten Analyseverfahren dazu beitragen kann, irrelevante Alarmierungen zu reduzieren und menschliche Entscheidungsprozesse im Betrieb zu unterstützen \cite{jalalvand2024alert}. Aufbauend auf den definierten Alerts werden Runbooks konzipiert, die strukturierte Diagnose- und Handlungsschritte für wiederkehrende Incident-Szenarien bereitstellen.
+
+\section{Zielsetzung und Abgrenzung der Arbeit}
+\label{sec:zielsetzung}
+
+Ziel dieser Arbeit ist die Entwicklung einer Observability-Strategie für \emph{frag.jetzt}, die technische Messgrößen systematisch mit betrieblichen Fragestellungen verknüpft. Das \emph{wissenschaftliche Ziel} besteht in einer methodisch nachvollziehbaren Ableitungslogik von der Systemanalyse über die servicebezogene Operationalisierung der Four Golden Signals bis zur kriteriengestützten Evaluation. Das \emph{technische Ziel} umfasst die prototypische Umsetzung auf dem Staging-Server mit Instrumentierung ausgewählter Kernkomponenten, einem konsolidierten Dashboard und exemplarischen Alerting-Regeln. Das \emph{praktische Ziel} liegt in der Bereitstellung wiederverwendbarer Artefakte, insbesondere einer Signal-Matrix, strukturierter Runbooks und einer dokumentierten Alerting-Konfiguration.
+
+Die Arbeit grenzt sich bewusst von Aspekten ab, die den Rahmen einer Bachelorarbeit überschreiten. Die Instrumentierung beschränkt sich auf die JVM-basierten Dienste und die Infrastrukturschicht. Frontend-Telemetrie und die Instrumentierung des AI Providers werden nicht umgesetzt. Formale SLOs werden nicht definiert, ML-basierte Anomalieerkennung ist nicht Gegenstand der Arbeit, und die rollenspezifischen Dashboard-Sichten werden konzeptionell beschrieben, im Prototyp jedoch nicht vollständig realisiert.
+
 
 \section{Forschungsfragen}
 \label{sec:forschungsfragen}
 
-Die Forschungsfragen dieser Arbeit lauten:
+Aus der Problemstellung und der Zielsetzung ergeben sich drei aufeinander aufbauende Forschungsfragen.
 
-\begin{enumerate}
-    \item FF1: Wie können die Four Golden Signals für die spezifischen Services von \emph{frag.jetzt} (PWA-Frontend, Spring Boot Backend, PostgreSQL, KI-Services) konkret definiert und instrumentiert werden?
-    \item FF2: Welche Observability-Stack-Kombination (Prometheus/Grafana, ELK Stack, Jaeger) ist am besten geeignet für die Monitoring-Anforderungen von \emph{frag.jetzt}?
-    \item FF3: Wie kann ein intelligentes Alert-System entwickelt werden, das False Positives minimiert und actionable insights für verschiedene Stakeholder-Rollen (DevOps, Entwickler, Product Owner) bereitstellt?
-\end{enumerate}
+\begin{description}
+  \item[FF1:] Wie lassen sich die Four Golden Signals für die spezifischen Services (PWA-Frontend, Spring-Boot-Backend, PostgreSQL, KI-Services) von \emph{frag.jetzt} konkret definieren und instrumentieren?
+  \item[FF2:] Welche Observability-Stack-Kombination erfüllt die Anforderungen von \emph{frag.jetzt} unter Berücksichtigung der Single-Host-Topologie und der begrenzten Teamressourcen am besten?
+  \item[FF3:] Wie kann ein intelligentes Alerting-System konzipiert werden, das False Positives reduziert und actionable Insights für verschiedene Stakeholder-Rollen (DevOps, Entwickler, Product Owner) bereitstellt?
+\end{description}
+
+FF1 fragt nach der servicebezogenen Übersetzung eines allgemeinen Rahmenwerks auf eine konkrete Architektur. FF2 adressiert die kriteriengestützte Werkzeugauswahl unter den spezifischen Rahmenbedingungen des Projekts. FF3 zielt auf ein Alerting-Konzept, das Alarme mit operativem Kontext und strukturierten Handlungsanweisungen verbindet.
+
+
+\section{Methodisches Vorgehen}
+\label{sec:methodik-kurzfassung}
+
+Die Arbeit folgt einer konstruktiv-artefaktorientierten Arbeitslogik. Aus der theoretischen Fundierung und einer Systemanalyse von frag.jetzt werden Observability-Anforderungen abgeleitet. Darauf aufbauend erfolgen eine kriteriengestützte Stack-Evaluation, die Konzeption einer Observability-Strategie mit Alerting und Runbooks sowie deren prototypische Umsetzung auf dem Staging-Server. Abschließend prüft eine Evaluation die Strategie gegen die zuvor definierten Anforderungen. Die methodische Logik und die Bewertungskriterien werden in Kapitel~4 ausführlich dargelegt.
+
+
+\section{Aufbau der Arbeit}
+\label{sec:aufbau}
+
+Die Arbeit gliedert sich in zehn Kapitel. Kapitel~2 bis~4 schaffen die Grundlagen: die theoretische Fundierung mit Monitoring, Observability, Telemetriearten und Golden Signals (Kapitel~2), die Systemanalyse von frag.jetzt mit Risikopunkten und fünf Observability-Anforderungen (Kapitel~3) sowie der methodische Bewertungsrahmen (Kapitel~4). Kapitel~5 bis~7 bilden den Kern der Eigenleistung: die kriteriengestützte Stack-Auswahl (Kapitel~5), die Konzeption der Observability-Strategie mit Signal-Matrix, Dashboard-Konzept und Alerting-Framework (Kapitel~6) sowie die prototypische Implementierung auf dem Staging-Server (Kapitel~7). Kapitel~8 bis~10 schließen die Arbeit mit der Evaluation gegen die Anforderungen (Kapitel~8), der Einordnung in den Literaturkontext (Kapitel~9) sowie Fazit und Ausblick (Kapitel~10) ab.

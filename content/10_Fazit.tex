@@ -1,2 +1,58 @@
-% !TEX root = ../Thesis.tex
-
+% =============================================================================
+% KAPITEL 10 – Fazit und Ausblick (überarbeitet)
+% =============================================================================
+ 
+\chapter{Fazit und Ausblick}
+ 
+Die vorliegende Arbeit ging von einem konkreten betrieblichen Defizit aus: Die Plattform frag.jetzt verfügte über eine funktionsfähige Deployment-Infrastruktur, erhob jedoch weder Metriken noch Traces noch korrelierbare Logs. Störungen wurden erst sichtbar, wenn Endnutzende bereits betroffen waren. Um dieses Defizit zu adressieren, wurde eine Observability-Strategie entwickelt, die von der Systemanalyse über die servicebezogene Operationalisierung der Four Golden Signals und die kriteriengestützte Stack-Auswahl bis zur prototypischen Umsetzung und Evaluation reicht. Die folgenden Abschnitte beantworten die drei Forschungsfragen, verdichten die wesentlichen Erkenntnisse und skizzieren priorisierte Anknüpfungspunkte für die Weiterentwicklung.
+ 
+ 
+\section{Beantwortung der Forschungsfragen}
+ 
+\textbf{FF1: Wie lassen sich die Four Golden Signals für die spezifischen Services (PWA-Frontend, Spring-Boot-Backend, PostgreSQL, KI-Services) von frag.jetzt konkret definieren und instrumentieren?}
+ 
+Die Arbeit beantwortet diese Frage durch eine fünfstufige Ableitungslogik, die für jeden Dienst funktionale Rolle, kritische Interaktionen, geeignete Messgrößen, initiale Schwellenwerte sowie Visualisierungs- und Alarmierungskonsequenzen bestimmt. Das Ergebnis ist eine serviceübergreifende Signal-Matrix, die jedem Dienst pro Golden Signal eine primäre Messgröße, einen Erhebungszweck und eine Stakeholder-Zuordnung zuweist. Für die JVM-basierten Dienste ließ sich diese Ableitung über die Auto-Instrumentierung des OpenTelemetry Java Agent in eine funktionsfähige Telemetrie-Pipeline überführen, die HTTP-Spans, Datenbankoperationen und JVM-Metriken ohne Codeänderungen erfasst. Die Ableitung ist damit methodisch vollständig, praktisch jedoch bisher nur für einen Teil des Gesamtsystems nachgewiesen. Für den AI Provider und das Frontend steht die Instrumentierung noch aus.
+ 
+\bigskip
+ 
+\textbf{FF2: Welche Observability-Stack-Kombination erfüllt die Anforderungen von frag.jetzt unter Berücksichtigung der Single-Host-Topologie und der begrenzten Teamressourcen am besten?}
+ 
+Der kriteriengestützte Vergleich dreier Architekturkandidaten ergab den LGTM-Stack aus Prometheus, Loki, Tempo und Grafana als geeignetste Lösung. Drei Argumente waren ausschlaggebend: der geringere Integrationsaufwand gegenüber Elastic Observability, die enge bidirektionale Korrelation zwischen Metriken, Traces und Logs innerhalb einer einzigen Oberfläche sowie die Austauschbarkeit einzelner Backend-Komponenten bei stabilem Instrumentierungskern über OpenTelemetry. Die prototypische Umsetzung auf dem Staging-Server bestätigte die Praktikabilität dieser Wahl, machte aber auch Ressourcenkonflikte sichtbar, die auf einem Single-Host-System besondere Aufmerksamkeit erfordern.
+ 
+\bigskip
+ 
+\textbf{FF3: Wie kann ein intelligentes Alerting-System konzipiert werden, das False Positives reduziert und actionable Insights für verschiedene Stakeholder-Rollen (DevOps, Entwickler, Product Owner) bereitstellt?}
+ 
+Das entwickelte Alerting-Framework verfolgt zwei Prinzipien: symptomorientierte Auslösung, bei der Alarme an nutzerwirksame Zustände gekoppelt werden, und Multi-Signal-Logik, bei der ein primäres Fehlersignal erst in Kombination mit einer Mindest-Traffic-Rate als handlungsrelevant gewertet wird. Drei exemplarische Regeln wurden konfiguriert und mit strukturierten Runbooks in einer Fünf-Felder-Struktur verknüpft. Alle drei Alerts konnten in der Evaluation durch gezielte Belastungsszenarien ausgelöst werden. In Leerlaufphasen ohne aktive Anfragen verhinderte die Traffic-Bedingung eine falsch-positive Auslösung, unter künstlicher CPU-Last feuerte der Latenz-Alarm korrekt. Der Sättigungs-Alert wurde durch Erschöpfung des PostgreSQL-Verbindungspools mit angepasstem Schwellenwert validiert und bestätigte die AND-Logik über die gesamte Debounce-Dauer. Für den Fehler-Alert zeigte sich ein Datenqualitätsproblem bei kurzfristigen Rate-Berechnungen, das die konzeptionelle Validität nicht infrage stellt. Das Konzept ist damit funktional abgesichert, bedarf aber für den Produktivbetrieb einer Kalibrierung der Schwellenwerte anhand realer Lastprofile.
+ 
+\bigskip
+ 
+Zusammenfassend lässt sich festhalten, dass das betriebliche Ausgangsdefizit nicht vollständig beseitigt, aber substanziell verkleinert wurde. frag.jetzt ist von einem weitgehend intransparenten Produktionsbetrieb ohne jegliche Telemetrie zu einer teilweise validierten, methodisch fundierten Observability-Basis überführt worden. Von den fünf Anforderungen aus Kapitel~3 wurden A3 (korrelierbare Logs) als erfüllt und A2 (mehrstufige Messbarkeit), A4 (handlungsfähige Alarmierung) sowie A5 (Infrastrukturbeobachtbarkeit) als weitgehend erfüllt bewertet. A1 (Ende-zu-Ende-Nachvollziehbarkeit) erreichte als einziges den Grad \emph{teilweise erfüllt}, weil die Instrumentierungsabdeckung unvollständig blieb. Die verbleibenden Lücken sind identifiziert und adressierbar, ohne die grundlegende Architektur verändern zu müssen.
+ 
+ 
+\section{Zentrale Erkenntnisse und übertragbare Artefakte}
+ 
+Über die Beantwortung der Forschungsfragen hinaus lassen sich drei übergreifende Erkenntnisse festhalten, die auch für vergleichbare Projekte von Bedeutung sind.
+ 
+Die erste betrifft die \emph{operative Komplexität einer Observability-Einführung}. Die prototypische Umsetzung zeigte, dass die eigentlichen Engpässe weniger in der konzeptionellen Ableitung von Messgrößen liegen als in deren technischer Realisierung. Speichererschöpfung bei Tempo, Netzwerktrennung zwischen Docker-Compose-Projekten und diagnostisch wertloses Span-Rauschen durch Auto-Instrumentierung traten als wiederkehrende Problemkategorien auf. Diese operativen Hürden werden in der herangezogenen Literatur eher abstrakt behandelt \parencite[S.~9]{Niedermaier2019onObservability}, erwiesen sich im vorliegenden Prototyp jedoch als die bestimmenden Faktoren für den Implementierungsaufwand. Insbesondere der OOM-Kill von Tempo verdeutlichte, dass die Beobachtungsinfrastruktur selbst zur Fehlerquelle werden kann, wenn ihre Ressourcendimensionierung nicht sorgfältig auf die verfügbaren Host-Kapazitäten abgestimmt ist \parencite[S.~52]{bissig2024unified}.
+ 
+Die zweite Erkenntnis betrifft die \emph{praktische Einstiegshürde}. Die Auto-Instrumentierung über den OpenTelemetry Java Agent ermöglichte die Erfassung von HTTP-Spans, Datenbankoperationen und JVM-Metriken ohne Codeänderungen an der Anwendung. Für ein Projekt, das Observability erstmals einführt und über begrenzte Teamressourcen verfügt, senkt dieser Ansatz den initialen Aufwand erheblich. Zugleich erfordert die resultierende Signalflut eine bewusste Qualitätssicherung. Statt probabilistischen Samplings, das relevante Traces anteilig verlieren kann, erwies sich im vorliegenden Prototyp ein inhaltlich begründetes Filtering auf Collector-Ebene als zweckmäßig: Periodische Hintergrundprozesse ohne diagnostischen Wert wurden gezielt verworfen, sodass die verbleibenden Traces eine höhere Aussagekraft besaßen.
+ 
+Die dritte Erkenntnis betrifft den \emph{eigentlichen Mehrwert der Arbeit über den Einzelfall hinaus}. Drei Artefakte sind als methodische Bausteine auch auf vergleichbare cloud-native Plattformen übertragbar: die Signal-Matrix-Methodik, die für jeden Dienst die vier Golden Signals auf konkrete Messgrößen, Erhebungszwecke und Stakeholder-Rollen abbildet, die symptomorientierte Multi-Signal-Alert-Logik, die nutzerwirksame Zustände als Auslöser mit einer Traffic-Vorbedingung verknüpft, und die Fünf-Felder-Runbook-Struktur, die jeden Alarm mit Symptom, Kontext, Diagnoseschritten, Erstmaßnahmen und Eskalationspfad verbindet. Diese Artefakte sind unabhängig vom konkreten Technologie-Stack einsetzbar.
+ 
+ 
+\section{Ausblick}
+ 
+Die prototypische Umsetzung hat eine funktionsfähige Grundlage geschaffen, deren Weiterentwicklung sich nach Dringlichkeit und Nähe zu den beobachteten Einschränkungen priorisieren lässt.
+ 
+Den unmittelbar nächsten Schritt bildet die \emph{Validierung unter produktionsnahen Bedingungen}. Die Belastungsszenarien in Kapitel~8 wurden manuell über Konsolen-Schleifen durchgeführt und bilden reale Nutzungsmuster nur eingeschränkt ab. Ein dedizierter HTTP-Lastgenerator mit kontrollierten Lastprofilen, ergänzt um gezielte Fault-Injection-Szenarien, würde die Aussagekraft der Alerting-Regeln und Schwellenwerte erheblich stärken. Auch das in der Evaluation beobachtete Datenqualitätsproblem bei kurzfristigen Rate-Berechnungen ließe sich unter systematischeren Testbedingungen gezielter eingrenzen.
+ 
+Der zweite Schritt betrifft die \emph{Erweiterung der Instrumentierungsabdeckung}. Der AI Provider ist als Python-basierter Dienst mit FastAPI nicht durch den Java Agent abgedeckt und müsste über das OpenTelemetry Python SDK instrumentiert werden. Ebenso fehlt eine Browser-Telemetrie für das Angular-Frontend. Erst mit diesen Erweiterungen ließe sich die Ende-zu-Ende-Nachvollziehbarkeit (A1) vollständig realisieren und die in Kapitel~6 konzipierte Signal-Matrix auch für die bisher nicht instrumentierten Dienste praktisch einlösen.
+ 
+Drittens steht die \emph{Ableitung formaler Service Level Objectives} aus. Die Arbeit hat SLOs bewusst ausgeklammert, weil für frag.jetzt keine historischen Produktivdaten vorliegen. Sobald die Instrumentierung im Produktivbetrieb aktive Lastprofile erfasst, können aus den erhobenen Metriken SLIs abgeleitet und mit Zielwerten hinterlegt werden. Dieser Schritt würde das regelbasierte Alerting um eine geschäftsbezogene Steuerungsebene erweitern \parencite[S.~11--12]{Niedermaier2019onObservability}.
+ 
+Viertens hat die prototypische Umsetzung gezeigt, dass die \emph{Ressourcendimensionierung des Observability-Stacks} auf einem Single-Host-System sorgfältiger Abstimmung bedarf. Eine systematische Ermittlung von Mindest-, Durchschnitts- und Maximalverbräuchen der einzelnen Observability-Container unter verschiedenen Lastszenarien würde die Grundlage für belastbare Speicherlimits schaffen und das Risiko von OOM-Kills reduzieren.
+ 
+Fünftens fehlt im Prototyp die in Kapitel~6 konzipierte \emph{rollenspezifische Dashboard-Sicht für den Product Owner}. Die Evaluation hat gezeigt, dass die DevOps-Perspektive funktional nutzbar und die Entwicklungsperspektive über Grafana Explore adressierbar ist. Für die Product-Owner-Perspektive, die verdichtete Indikatoren wie aktive Raumsitzungen und globale Fehlerraten zeigen soll, wäre ein eigenes Dashboard aus den vorhandenen Datenquellen ableitbar und würde die Stakeholder-Tauglichkeit der Strategie vervollständigen.
+ 
+Langfristig könnte das regelbasierte Alerting um \emph{anomaliebasierte Verfahren} ergänzt werden \parencite[S.~40]{mistry2025future}. Statische Schwellenwerte bilden saisonale Lastschwankungen nur unzureichend ab \parencite[S.~176]{vinnakota2025creating}. Ansätze, die aus historischen Metriken dynamische Baselines ableiten, könnten die Erkennungsrate verbessern und die Anzahl falsch-positiver Alarme weiter senken \parencite[S.~75]{alsubaie2025exploring}. Eine solche Erweiterung setzt allerdings einen ausreichenden Bestand an Produktivdaten voraus \parencite[S.~273]{abieba2025advanced} und wäre als spätere Ausbaustufe zu betrachten. Vorrangig ist für frag.jetzt daher nicht eine weitere funktionale Ausweitung, sondern zunächst die Konsolidierung, Vervollständigung und empirische Absicherung der entwickelten Observability-Basis.

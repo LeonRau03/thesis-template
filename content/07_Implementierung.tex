@@ -11,7 +11,7 @@ Dieses Kapitel dokumentiert die praktische Umsetzung der in Kapitel~6 konzipiert
 
 Die Umsetzung erfolgte auf dem Staging-Server von frag.jetzt, auf dem der vollständige Anwendungsstack in einer produktionsnahen Docker-Compose-Konfiguration betrieben wird. Der Observability-Stack wurde als eigenständiges Compose-Projekt deployt und über ein gemeinsames Docker-Netzwerk an die Applikationscontainer angebunden.
 
-Die Implementierung umfasst drei Schwerpunkte: das Deployment des LGTM-Stacks mit allen Speicher-Backends und Infrastruktur-Exportern, die Instrumentierung von Backend und WS-Gateway über den OpenTelemetry Java Agent und die Erstellung eines Golden-Signals-Dashboards mit zugehörigen Alerting-Regeln. Bewusst ausgeklammert wurden die Instrumentierung des AI Providers und des Frontends, die clientseitige Browser-Telemetrie, die Produktivhärtung sowie die rollenspezifischen Dashboard-Sichten aus Kapitel~6.5. Eine durchgängige Ende-zu-Ende-Beobachtbarkeit aller Systemgrenzen kann daher nicht nachgewiesen werden. Die Teilumsetzung erlaubt jedoch die Prüfung der zentralen Mechanismen \parencite[vgl.][S.~52]{bissig2024unified}.
+Die Implementierung umfasst drei Schwerpunkte: das Deployment des LGTM-Stacks mit allen Speicher-Backends und Infrastruktur-Exportern, die Instrumentierung von Backend und WS-Gateway über den OpenTelemetry Java Agent und die Erstellung eines Golden-Signals-Dashboards mit zugehörigen Alerting-Regeln. Bewusst ausgeklammert wurden die Instrumentierung des AI Providers und des Frontends, die clientseitige Browser-Telemetrie, die Produktivhärtung sowie die rollenspezifischen Dashboard-Sichten aus Kapitel~6.5. Eine durchgängige Ende-zu-Ende-Beobachtbarkeit aller Systemgrenzen kann daher nicht nachgewiesen werden. Die Teilumsetzung erlaubt jedoch die Prüfung der zentralen Mechanismen \parencite[S.~52]{bissig2024unified}.
 
 
 \section{Instrumentierung ausgewählter Kernkomponenten}
@@ -96,7 +96,7 @@ Ein Request an einen nicht existierenden Endpunkt erzeugte einen 404-Statuscode.
 
 \section{Umsetzung des Golden-Signals-Dashboards}
 
-Das Dashboard enthält 15~Panels in fünf Sektionen. Die Panelstruktur bildet die Signal-Matrix aus Kapitel~6.4 ab.
+Das Dashboard enthält 17~Panels in fünf Sektionen. Die Panelstruktur bildet die Signal-Matrix aus Kapitel~6.4 ab.
 
 Die Sektion \emph{Latency} zeigt Backend-Antwortzeiten als Perzentil-Zeitreihen (p50, p95, p99) und eine aufgeschlüsselte Latenzansicht pro Endpunkt, basierend auf \texttt{http\_server\_request\_duration\_seconds\_bucket}. Die Sektion \emph{Traffic} stellt die Anfragerate pro Dienst aus Span-Metriken sowie die meistfrequentierten Endpunkte als gestapeltes Balkendiagramm dar. Die Sektion \emph{Errors} kombiniert eine Span-basierte Fehlerrate pro Service mit einem Stat-Panel für die HTTP-5xx-Quote und einer Tabelle der fehlerhäufigsten Span-Operationen. Die Sektion \emph{Saturation} umfasst JVM-Heap-Auslastung, Thread-Zähler und CPU-Nutzung als Gauge-Panel mit Schwellenwertfärbung. Die \emph{Infrastruktur}-Sektion zeigt PostgreSQL-Verbindungen, RabbitMQ-Queue-Tiefen, Host-Ressourcen, GC-Pausen und den Service Graph aus Tempo.
 
@@ -114,7 +114,7 @@ Die Sektion \emph{Latency} zeigt Backend-Antwortzeiten als Perzentil-Zeitreihen 
 \label{fig:grafana-dashboard-errors}
 \end{figure}
 
-Sämtliche Panels verwenden \texttt{\$\_\_rate\_interval} als dynamisches Zeitfenster für Rate-Berechnungen. Die vollständige JSON-Definition befindet sich in Anhang~[VERWEIS].
+Sämtliche Panels verwenden \texttt{\$\_\_rate\_interval} als dynamisches Zeitfenster für Rate-Berechnungen. Die vollständige JSON-Definition befindet sich in Anhang~ref{app:grafana-json}.
 
 
 \section{Alerting-Regeln und Beispiel-Runbooks}
@@ -123,9 +123,9 @@ Die Alerting-Logik aus Kapitel~6.6 wird exemplarisch in drei Grafana-Alerting-Re
 
 Die erste Regel (\emph{Critical}) löst aus, wenn die HTTP-5xx-Fehlerrate des Backends über fünf Minuten den Schwellenwert von 5\,\% überschreitet. Die zweite Regel (\emph{Warning}) reagiert auf eine PostgreSQL-Verbindungsauslastung über 70\,\% des konfigurierten Limits von 100~Verbindungen. Die dritte Regel (\emph{Warning}) überwacht die Backend-Latenz im p95-Bereich und alarmiert bei einer anhaltenden Überschreitung von 500\,ms über drei Minuten.
 
-Die Evaluationsfenster von drei bis fünf Minuten fungieren als Debounce-Mechanismus, der transiente Spitzen toleriert \parencite[S.~176]{vinnakota2025creating}. Jede Regel enthält in ihrer Annotation-Konfiguration einen Link zum zugehörigen Runbook sowie zum relevanten Dashboard-Panel. Die drei Regeln wurden im Prototyp angelegt und konfiguriert, eine systematische Verifikation durch gezielte Störungsinjektionen steht noch aus.
+Die Evaluationsfenster von drei bis fünf Minuten fungieren als Debounce-Mechanismus, der transiente Spitzen toleriert \parencite[S.~176]{vinnakota2025creating}. Jede Regel enthält in ihrer Annotation-Konfiguration einen Link zum zugehörigen Runbook sowie zum relevanten Dashboard-Panel. Die drei Regeln wurden im Prototyp angelegt und konfiguriert. Ihre Verifikation erfolgte durch gezielte Belastungsszenarien auf dem Staging-Server und wird in Kapitel~8 dokumentiert.
 
-Ergänzend wurden zwei Runbooks als strukturierte Markdown-Dokumente erstellt, die der Fünf-Felder-Struktur (Symptom, Kontext, Diagnose, Behebung, Eskalation) aus Kapitel~6.6 folgen. Das erste behandelt den Alarm ``Backend-Fehlerrate über Schwellenwert'', das zweite den Alarm ``PostgreSQL-Verbindungspool nahe Limit''. Beide Runbooks befinden sich im Anhang~[VERWEIS].
+Ergänzend wurden drei Runbooks als strukturierte Dokumente erstellt, die der Fünf-Felder-Struktur (Symptom, Kontext, Diagnose, Behebung, Eskalation) aus Kapitel~6.6 folgen. Das erste behandelt den Alarm ``Erhöhte Backend-Latenz'', das zweite den Alarm ``Backend-Fehlerrate über Schwellenwert'' und das dritte den Alarm ``Infrastruktur-Sättigung'' Die Runbooks befinden sich im Anhang~ref{app:runbooks}.
 
 
 \section{Herausforderungen und Lösungen bei der Umsetzung}
@@ -162,7 +162,7 @@ Tabelle~\ref{tab:anforderungszuordnung} ordnet die umgesetzten Komponenten den A
 A1 & Distributed Tracing über OTel Agent; Span-Waterfall und Service Graph in Grafana; Trace-basierte Validierung in Szenario~1 & Nur Backend und WS-Gateway instrumentiert; AI Provider und Frontend nicht abgedeckt \\[4pt]
 A2 & Applikations- und Infrastrukturmetriken in Prometheus; Dashboard-Sektionen entlang der vier Golden Signals & Keine Browser-Telemetrie; Frontend-Ebene fehlt \\[4pt]
 A3 & Log-Weiterleitung an Loki über OTel Agent mit automatischer Trace-ID-Injektion & Debug-Level-Logging als Demonstrationskonfiguration; kein strukturiertes JSON-Format \\[4pt]
-A4 & Drei symptomorientierte Alerting-Regeln mit Debounce-Logik; zwei Runbooks mit Fünf-Felder-Struktur; 5xx-Alert in Störungsszenario ausgelöst & Kurzfristige Fehler-Metriken lieferten keine konsistent aktuellen Werte; keine dynamischen Schwellenwerte \\[4pt]
+A4 & Drei symptomorientierte Alerting-Regeln mit Debounce-Logik; drei Runbooks mit Fünf-Felder-Struktur; alle drei Alerts in Belastungsszenarien ausgelöst & Kurzfristige Fehler-Metriken lieferten keine konsistent aktuellen Werte; Sättigungs-Alert mit angepasstem Schwellenwert validiert; keine dynamischen Schwellenwerte \\[4pt]
 A5 & cAdvisor, Node Exporter, PostgreSQL Exporter, RabbitMQ-Plugin; Infrastruktursektion im Dashboard & Im Prototyp für die vorhandene Infrastruktur abgebildet \\
 \bottomrule
 \end{tabularx}

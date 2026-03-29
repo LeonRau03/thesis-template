@@ -14,7 +14,7 @@ Die vorangegangenen Kapitel haben den theoretischen Bezugsrahmen gelegt, den Ist
 Vier Prinzipien greifen die Anforderungen A1--A5 aus Kapitel~3 auf und übersetzen sie in Gestaltungsleitlinien für die nachfolgenden Entwurfsentscheidungen.
  
 \paragraph{P1: Servicebezogene Messbarkeit.}
-Jeder Dienst von frag.jetzt wird als eigenständige Beobachtungseinheit behandelt, für die Messgrößen entlang der vier Golden Signals abgeleitet werden. Das Vorgehen folgt der Empfehlung, Beobachtungsgrößen an den Schnittstellen der Dienste zu erheben, weil sich dort Symptome manifestieren, bevor tieferliegende Ursachen sichtbar werden \parencite[S.~7--8]{ewaschukMonitoringDistributedSystems}. Anforderung~A2 wird damit unmittelbar adressiert.
+Jeder Dienst von frag.jetzt wird als eigenständige Beobachtungseinheit behandelt, für die Messgrößen entlang der vier Golden Signals abgeleitet werden. Das Vorgehen folgt der Empfehlung, Beobachtungsgrößen an den Schnittstellen der Dienste zu erheben, weil sich dort Symptome manifestieren, bevor tieferliegende Ursachen sichtbar werden \parencite[S.~59]{ewaschukMonitoringDistributedSystems}. Anforderung~A2 wird damit unmittelbar adressiert.
  
 \paragraph{P2: Ende-zu-Ende-Nachvollziehbarkeit.}
 An jedem der in Abschnitt~3.2 identifizierten Dienstübergänge muss Trace-Kontext propagiert werden, damit kausal zusammenhängende Aktivitäten über Dienstgrenzen hinweg korrelierbar bleiben \parencite[S.~32]{bissig2024unified}. Ohne diese Verknüpfung bleiben Logs und Metriken isolierte Datenpunkte \parencite[S.~14--15]{sundstrom2025finding}. Das Prinzip greift Anforderung~A1 und den Korrelationsaspekt von A3 auf.
@@ -23,7 +23,7 @@ An jedem der in Abschnitt~3.2 identifizierten Dienstübergänge muss Trace-Konte
 Unterschiedliche Stakeholder stellen unterschiedliche Fragen an dasselbe Laufzeitverhalten \parencite[S.~54]{bissig2024unified}. Abschnitt~6.5 überführt dieses Prinzip in drei konkrete Sichtebenen.
  
 \paragraph{P4: Schrittweise Erweiterbarkeit.}
-Da frag.jetzt Observability erstmals einführt und knappe Ressourcen eine eigenständige Herausforderung darstellen \parencite[S.~9--10]{Niedermaier2019onObservability}, wird die Strategie als erweiterbarer Ausgangspunkt angelegt. Die standardisierte Instrumentierung über OpenTelemetry stellt sicher, dass Backend-Komponenten austauschbar bleiben \parencite[S.~502]{gudimetla2025transitioning}.
+Da frag.jetzt Observability erstmals einführt und knappe Ressourcen eine eigenständige Herausforderung darstellen \parencite[S.~9--10]{Niedermaier2019onObservability}, wird die Strategie als erweiterbarer Ausgangspunkt angelegt. Die Instrumentierung über OpenTelemetry stellt sicher, dass Backend-Komponenten austauschbar bleiben \parencite[S.~502]{gudimetla2025transitioning}.
  
  
 \section{Logische Zielarchitektur der Observability}
@@ -31,12 +31,19 @@ Da frag.jetzt Observability erstmals einführt und knappe Ressourcen eine eigens
  
 Die Observability-Architektur folgt einem vierstufigen Schichtenmodell, wie es \textcite[S.~73037--73038]{kosinska2023toward} als grundlegendes Muster für cloud-native Anwendungen beschreiben. Abbildung~\ref{fig:zielarchitektur-observability} zeigt den Datenfluss von der Instrumentierung über Sammlung und Speicherung bis zur Auswertung. Die werkzeugspezifische Konfiguration wird in Kapitel~7 dokumentiert.
  
- 
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.95\textwidth]{images/fig_zielarchitektur.png}
+\caption[Logische Zielarchitektur der Observability-Pipeline fuer frag.jetzt]{Logische Zielarchitektur der Observability-Pipeline fuer frag.jetzt. Gestrichelte Querverbindungen kennzeichnen Korrelationsmechanismen zwischen den Speicher-Backends. \small Quelle: Eigene Darstellung.}
+\label{fig:zielarchitektur-observability}
+\end{figure}
+
+
 \subsection{Instrumentierungsschicht}
  
 Aus der Architektur von frag.jetzt ergibt sich eine differenzierte Instrumentierungsstrategie. Backend, WebSocket Gateway und AI Provider sind als Eigenentwicklungen über Auto-Instrumentierung mit selektiver manueller Ergänzung beobachtbar. Die Quellcodeanalyse in Kapitel~3 hat gezeigt, dass keine dieser Komponenten bislang Telemetrie emittiert (R3). Demgegenüber agieren die externen LLM-Provider als Black-Box-Abhängigkeiten, bei denen mindestens die Ein- und Ausgangsseite jedes Aufrufs instrumentiert werden muss \parencite[S.~31]{bissig2024unified}.
  
-OpenTelemetry übernimmt die Rolle der standardisierten Instrumentierungsschicht (vgl.~Abschnitt~5.2). Die relevanten Übergabepunkte für die Kontextpropagation sind die Verbindungen zwischen Frontend und Reverse-Proxy, zwischen Reverse-Proxy und Backend, zwischen Backend und Datenbank sowie zwischen Backend und AI Provider. Eine besondere Herausforderung stellt die Echtzeitkommunikation über den Message Broker dar, da dort eine manuelle Injektion des Trace-Kontexts in das Nachrichtenformat erforderlich wird \parencite[S.~25]{sundstrom2025finding}. Ergänzend werden Container-Metriken und datenbankspezifische Indikatoren über spezialisierte Exporter erhoben, die Prometheus-kompatible Endpunkte bereitstellen.
+OpenTelemetry übernimmt die Rolle der standardisierten Instrumentierungsschicht (vgl.~Abschnitt~5.2). Die entscheidenden Übergabepunkte für die Kontextpropagation sind die Verbindungen zwischen Frontend und Reverse-Proxy, zwischen Reverse-Proxy und Backend, zwischen Backend und Datenbank sowie zwischen Backend und AI Provider. Eine besondere Herausforderung stellt die Echtzeitkommunikation über den Message Broker dar, da dort eine manuelle Injektion des Trace-Kontexts in das Nachrichtenformat erforderlich wird \parencite[S.~25]{sundstrom2025finding}. Ergänzend werden Container-Metriken und datenbankspezifische Indikatoren über spezialisierte Exporter erhoben, die Prometheus-kompatible Endpunkte bereitstellen.
  
  
 \subsection{Sammel- und Verarbeitungsschicht}
@@ -56,22 +63,13 @@ Grafana bildet die einheitliche Oberfläche für Abfrage, Visualisierung und Ala
  
 \subsection{Einordnung im Kontext von frag.jetzt}
  
-Die beschriebene Vier-Schichten-Architektur orientiert sich an Referenzmodellen für Kubernetes-basierte Umgebungen \parencite[S.~501]{gudimetla2025transitioning}. frag.jetzt weicht davon in drei Punkten ab. Erstens läuft das Ökosystem auf einem einzelnen Host, sodass der Collector nicht als Sidecar, sondern als eigenständiger Container betrieben wird. Zweitens fehlt ein Service Mesh, weshalb die Telemetrieerzeugung vollständig auf Anwendungsebene erfolgen muss. Drittens erlaubt das geringe Telemetrievolumen einen Verzicht auf Sampling und vorgelagerte Aggregation, erfordert aber eine bewusste Kapazitätsbeobachtung bei wachsendem Einsatz.
- 
-Die Architektur hält den Einstieg bewusst schlank und lässt Erweiterungspfade wie Mimir für Langzeitmetriken oder Tail-Based Sampling offen, ohne die Grundstruktur zu verändern \parencite[S.~1--2]{borges2024informed}.
- 
-\begin{figure}[htb]
-\centering
-\includegraphics[width=0.95\textwidth]{images/fig_zielarchitektur.png}
-\caption[Logische Zielarchitektur der Observability-Pipeline fuer frag.jetzt. Das Schichtenmodell zeigt den Datenfluss von der Instrumentierung ueber Sammlung und Speicherung bis zur Auswertung. Gestrichelte Querverbindungen kennzeichnen Korrelationsmechanismen zwischen den Speicher-Backends.]{Logische Zielarchitektur der Observability-Pipeline fuer frag.jetzt. Das Schichtenmodell zeigt den Datenfluss von der Instrumentierung ueber Sammlung und Speicherung bis zur Auswertung. Gestrichelte Querverbindungen kennzeichnen Korrelationsmechanismen zwischen den Speicher-Backends. \small Quelle: Eigene Darstellung.}
-\label{fig:zielarchitektur-observability}
-\end{figure}
+Die beschriebene Vier-Schichten-Architektur orientiert sich an Referenzmodellen für Kubernetes-basierte Umgebungen \parencite[S.~501]{gudimetla2025transitioning}. frag.jetzt weicht davon in drei Punkten ab. Erstens läuft das Ökosystem auf einem einzelnen Host, sodass der Collector nicht als Sidecar, sondern als eigenständiger Container betrieben wird. Zweitens fehlt ein Service Mesh, weshalb die Telemetrieerzeugung vollständig auf Anwendungsebene erfolgen muss. Drittens erlaubt das geringe Telemetrievolumen einen Verzicht auf Sampling und vorgelagerte Aggregation, erfordert aber eine bewusste Kapazitätsbeobachtung bei wachsendem Einsatz. Die Architektur hält den Einstieg bewusst schlank und lässt Erweiterungspfade wie Mimir für Langzeitmetriken oder Tail-Based Sampling offen, ohne die Grundstruktur zu verändern \parencite[S.~1--2]{borges2024informed}.
  
  
 \section{Servicebezogene Operationalisierung der Four Golden Signals}
 \label{sec:golden-signals-operationalisierung}
  
-Die Ableitung der Beobachtungsgrößen folgt dem in Abschnitt~4.2 beschriebenen Vorgehen und konzentriert sich auf die vier für die Forschungsfragen zentralen Beobachtungseinheiten: Frontend, Backend, Datenbank und externe KI-Dienste. Nginx, RabbitMQ und das WebSocket Gateway werden als Infrastruktur- bzw.\ Integrationskomponenten über die Infrastrukturmetriken mitbeobachtet, erhalten aber keine eigenständige Signal-Matrix. \textcite[S.~7]{ewaschukMonitoringDistributedSystems} bezeichnet die Wahl des Traffic-Indikators ausdrücklich als \emph{high-level system-specific metric}, was bedeutet, dass die Übertragung der vier Dimensionen auf jeden Dienst eine eigenständige Entwurfsleistung erfordert. Tabelle~\ref{tab:signal-matrix} fasst die Ergebnisse dieser Ableitung in einer Signal-Matrix zusammen. Die folgenden Unterabschnitte erläutern nur die Besonderheiten, die sich nicht unmittelbar aus der Matrix erschließen.
+Die Ableitung der Beobachtungsgrößen folgt dem in Abschnitt~4.2 beschriebenen Vorgehen und konzentriert sich auf die vier für die Forschungsfragen zentralen Beobachtungseinheiten: Frontend, Backend, Datenbank und externe KI-Dienste. Nginx, RabbitMQ und das WebSocket Gateway werden als Infrastruktur- bzw.\ Integrationskomponenten über die Infrastrukturmetriken mitbeobachtet, erhalten aber keine eigenständige Signal-Matrix. \textcite[S.~60]{ewaschukMonitoringDistributedSystems} bezeichnet die Wahl des Traffic-Indikators ausdrücklich als \emph{high-level system-specific metric}, was bedeutet, dass die Übertragung der vier Dimensionen auf jeden Dienst eine eigenständige Entwurfsleistung erfordert. Tabelle~\ref{tab:signal-matrix} fasst die Ergebnisse dieser Ableitung in einer Signal-Matrix zusammen. Die folgenden Unterabschnitte erläutern nur die Besonderheiten, die sich nicht unmittelbar aus der Matrix erschließen.
  
  
 \subsection{PWA-Frontend}
@@ -85,9 +83,9 @@ Die Nachfrageintensität lässt sich über aktive WebSocket-Verbindungen und HTT
 \subsection{Spring-Boot-Backend}
 \label{sec:gs-backend}
  
-Das Backend ist die zentrale Verarbeitungskomponente und der in Kapitel~3 identifizierte Single Point of Failure. Der primäre Latenzindikator ist die Antwortdauer je REST-Endpunkt als Histogramm (p50, p95, p99), weil Durchschnittswerte die Erfahrung langsam bedienter Nutzer verbergen können \parencite[S.~7]{ewaschukMonitoringDistributedSystems}. Ebenso muss die Latenz erfolgreicher und fehlgeschlagener Anfragen getrennt erfasst werden, da schnell zurückgegebene Fehler den Gesamtdurchschnitt verzerren. Ergänzend werden die Latenzen ausgehender Aufrufe an PostgreSQL, den Message Broker und den AI Provider separat erhoben. Das reaktive Programmiermodell auf Basis von WebFlux erfordert dabei besondere Aufmerksamkeit, da die Messung auf Span-Ebene innerhalb der reaktiven Kette erfolgen muss \parencite[S.~25]{sundstrom2025finding}.
+Das Backend ist die zentrale Verarbeitungskomponente und der in Kapitel~3 identifizierte kritische Punkt. Der primäre Latenzindikator ist die Antwortdauer je REST-Endpunkt als Histogramm (p50, p95, p99), weil Durchschnittswerte die Erfahrung langsam bedienter Nutzer verbergen können \parencite[S.~60]{ewaschukMonitoringDistributedSystems}. Ebenso muss die Latenz erfolgreicher und fehlgeschlagener Anfragen getrennt erfasst werden, da schnell zurückgegebene Fehler den Gesamtdurchschnitt verzerren. Ergänzend werden die Latenzen ausgehender Aufrufe an PostgreSQL, den Message Broker und den AI Provider separat erhoben. Das reaktive Programmiermodell auf Basis von WebFlux erfordert dabei besondere Aufmerksamkeit, da die Messung auf Span-Ebene innerhalb der reaktiven Kette erfolgen muss \parencite[S.~25]{sundstrom2025finding}.
  
-Die Anfragerate pro Endpunkt bildet den Traffic ab. Für die geschäftskritischen Abläufe aus Abschnitt~3.3 ist eine gesonderte Erfassung sinnvoll. Fehler werden auf mehreren Ebenen erfasst: HTTP-5xx-Statuscodes, unbehandelte Exceptions und fehlgeschlagene Downstream-Aufrufe. Da kein externer Aufruf einen Timeout besitzt (R1), äußern sich Timeout-bedingte Fehler als hängende Anfragen, was die Latenzüberwachung umso dringlicher macht. Die Sättigung wird über Container-Metriken und den R2DBC-Connection-Pool gemessen. \textcite[S.~8]{ewaschukMonitoringDistributedSystems} empfiehlt, Sättigung indirekt über steigende Latenz am 99.\,Perzentil zu erkennen, weil Latenzzunahmen häufig ein Frühindikator für Ressourcenerschöpfung sind.
+Die Anfragerate pro Endpunkt bildet den Traffic ab. Für die geschäftskritischen Abläufe aus Abschnitt~3.3 ist eine gesonderte Erfassung sinnvoll. Fehler werden auf mehreren Ebenen erfasst: HTTP-5xx-Statuscodes, unbehandelte Exceptions und fehlgeschlagene Downstream-Aufrufe. Da kein externer Aufruf einen Timeout besitzt (R1), äußern sich Timeout-bedingte Fehler als hängende Anfragen, was die Latenzüberwachung umso dringlicher macht. Die Sättigung wird über Container-Metriken und den R2DBC-Connection-Pool gemessen. \textcite[S.~60--61]{ewaschukMonitoringDistributedSystems} empfiehlt, Sättigung indirekt über steigende Latenz am 99.\,Perzentil zu erkennen, weil Latenzzunahmen häufig ein Frühindikator für Ressourcenerschöpfung sind.
  
  
 \subsection{PostgreSQL}
@@ -105,11 +103,11 @@ Die Beobachtung der externen KI-Dienste beschränkt sich auf die Schnittstelle z
 \section{Serviceübergreifende Signal-Matrix}
 \label{sec:signal-matrix}
  
-Tabelle~\ref{tab:signal-matrix} verdichtet die vorangehenden Ableitungen in einer kompakten Gesamtübersicht. Sie bildet die Grundlage für das rollenbasierte Dashboard-Design (Abschnitt~6.5) und definiert den Rahmen für das Alerting-Konzept (Abschnitt~6.6), weil nicht jede Messgröße als Alarmauslöser geeignet ist.
+Tabelle~\ref{tab:signal-matrix} verdichtet die vorangehenden Ableitungen in einer Gesamtübersicht. Sie bildet die Grundlage für das rollenbasierte Dashboard-Design (Abschnitt~6.5) und definiert den Rahmen für das Alerting-Konzept (Abschnitt~6.6), weil nicht jede Messgröße Alarmrelevant ist.
  
-\begin{table}[htbp]
+\begin{table}[htb]
 \centering
-\caption[Serviceübergreifende Signal-Matrix mit Zuordnung von Dienst, Golden Signal, konkreter Messgröße, Erhebungszweck und primärer Stakeholder-Rolle.]{Serviceübergreifende Signal-Matrix mit Zuordnung von Dienst, Golden Signal, konkreter Messgröße, Erhebungszweck und primärer Stakeholder-Rolle. \small Quelle: Eigene Darstellung.}
+\caption[Serviceübergreifende Signal-Matrix mit Zuordnung von Dienst, Golden Signal, Messgröße, Erhebungszweck und primärer Stakeholder-Rolle.]{Serviceübergreifende Signal-Matrix mit Zuordnung von Dienst, Golden Signal, Messgröße, Erhebungszweck und primärer Stakeholder-Rolle. \small Quelle: Eigene Darstellung.}
 \label{tab:signal-matrix}
 \small
 \begin{tabularx}{\textwidth}{
@@ -161,7 +159,7 @@ Diese Ebene beantwortet die Frage, was genau im Code passiert. Sie bietet endpun
 \section{Alerting-Konzept und Runbook-Logik}
 \label{sec:alerting-konzept}
  
-Aufbauend auf den in Abschnitt~2.7 erarbeiteten Grundlagen folgt das Alerting-Konzept drei Grundsätzen: Alarme reagieren symptomorientiert auf nutzerwirksame Zustände statt auf interne Ursachenindikatoren \parencite[S.~11--12]{ewaschukMonitoringDistributedSystems}. Jeder Alarm muss handlungsfähig sein, also Problem, betroffene Komponente und empfohlene Erstmaßnahme erkennbar machen \parencite[S.~174]{vinnakota2025creating}. Schweregrade orientieren sich an der Nutzerwirkung: \emph{Critical} für akute Ausfälle geschäftskritischer Funktionen, \emph{Warning} für sich abzeichnende Verschlechterungen.
+Aufbauend auf den in Abschnitt~2.7 erarbeiteten Grundlagen folgt das Alerting-Konzept drei Grundsätzen. Alarme reagieren symptomorientiert auf nutzerwirksame Zustände statt auf interne Ursachenindikatoren \parencite[S.~63--64]{ewaschukMonitoringDistributedSystems}. Jeder Alarm muss handlungsfähig sein, also Problem, betroffene Komponente und empfohlene Erstmaßnahme erkennbar machen \parencite[S.~174]{vinnakota2025creating}. Schweregrade orientieren sich an der Nutzerwirkung: \emph{Critical} für akute Ausfälle geschäftskritischer Funktionen, \emph{Warning} für sich abzeichnende Verschlechterungen.
  
  
 \subsection{Alarmkategorien}
@@ -178,7 +176,7 @@ Steigt die Antwortzeit eines Kernendpunkts über einen definierten Grenzwert, et
 Eine Fehlerrate oberhalb eines definierten Anteils löst eine Warnung aus. Die explizite Trennung von client- (4xx) und serverseitigen (5xx) Fehlern verhindert, dass ungültige Eingaben denselben Alarm wie interne Serverfehler erzeugen.
  
 \paragraph{Sättigungsalarme (Warning).}
-Ressourcenmetriken wie CPU-Auslastung und Datenbankverbindungspool-Nutzung werden als vorausschauende Warnung konfiguriert. \textcite[S.~8]{ewaschukMonitoringDistributedSystems} empfiehlt, Sättigung indirekt über steigende Latenz am 99.\,Perzentil zu erkennen.
+Ressourcenmetriken wie CPU-Auslastung und Datenbankverbindungspool-Nutzung werden als vorausschauende Warnung konfiguriert. \textcite[S.~60--61]{ewaschukMonitoringDistributedSystems} empfiehlt, Sättigung indirekt über steigende Latenz am 99.\,Perzentil zu erkennen.
  
  
 \subsection{Runbook-Verknüpfung}
