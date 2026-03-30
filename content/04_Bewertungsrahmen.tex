@@ -8,18 +8,18 @@ Dieses Kapitel beschreibt die methodische Logik, mit der die Arbeit allgemeine O
  
 \section{Arbeitslogik der Arbeit}
 
-Die Arbeitslogik umfasst fünf aufeinander aufbauende Schritte. Im ersten Schritt werden aus Architektur, Nutzungspfaden, Risikopunkten und dem Observability-Ist-Zustand konkrete Anforderungen an die spätere Lösung abgeleitet. Im zweiten Schritt werden diese Anforderungen in zwei Richtungen operationalisiert: einerseits als Vergleichsmaßstab für die Auswahl eines geeigneten Technologie-Stacks, andererseits als Ableitungsrahmen für servicebezogene Golden-Signals-Messgrößen, Visualisierungen und Alarmierungsregeln. Im dritten Schritt erfolgt die Auswahl einer Zielkombination aus Instrumentierungs-, Speicher-, Visualisierungs- und Alerting-Komponenten. Im vierten Schritt wird darauf aufbauend eine konkrete Observability-Strategie mit Signal-Matrix, Dashboard-Konzept, symptomorientierter Alert-Logik und Runbook-Struktur entworfen und in ausgewählten Kernkomponenten prototypisch umgesetzt. Im fünften Schritt wird geprüft, inwieweit die entwickelte Strategie die zuvor abgeleiteten Anforderungen erfüllt.
+Die Arbeitslogik umfasst fünf aufeinander aufbauende Schritte. Im ersten, bereits abgeschlossenen Schritt wurden aus Architektur, Nutzungspfaden, Risikopunkten und dem Istzustand der Observability konkrete Anforderungen an die spätere Lösung abgeleitet. Im zweiten Schritt werden diese Anforderungen in zwei Richtungen operationalisiert. Einerseits als Vergleichsmaßstab für die Auswahl eines geeigneten Technologie-Stacks, andererseits als Ableitungsrahmen für servicebezogene Golden-Signals-Messgrößen, Visualisierungen und Alarmierungsregeln. Im dritten Schritt erfolgt die Auswahl einer Zielkombination aus Instrumentierungs-, Speicher-, Visualisierungs- und Alerting-Komponenten. Im vierten Schritt wird darauf aufbauend eine konkrete Observability-Strategie mit Signal-Matrix, Dashboard-Konzept, symptomorientierter Alert-Logik und Runbook-Struktur entworfen und in ausgewählten Kernkomponenten prototypisch umgesetzt. Im fünften Schritt wird geprüft, inwieweit die entwickelte Strategie die zuvor abgeleiteten Anforderungen erfüllt.
 
-Methodisch entsteht damit eine durchgängige Kette von der Problemanalyse über die Anforderungs- und Strategieableitung bis zur prototypischen Validierung. Der Schwerpunkt der Eigenleistung liegt in der Übersetzung allgemeiner Observability-Prinzipien in dienstspezifische Messgrößen, Entscheidungsregeln und betriebliche Artefakte für frag.jetzt. Die Architekturerhebung in Kapitel~3 stützt sich ergänzend auf eine KI-gestützte Quellcodeexploration mithilfe von GitHub Copilot, das als Explorationshilfe für Architekturübersichten, Controller-Strukturen und bestehende Konfigurationen diente. Sämtliche architekturrelevanten Befunde wurden anschließend durch manuelle Prüfung gegen Quellcode, Docker-Compose-Dateien und Konfigurationsartefakte validiert.
+Methodisch entsteht damit eine durchgängige Kette von der Problemanalyse über die Anforderungs- und Strategieableitung bis zur prototypischen Validierung. Der Schwerpunkt der Eigenleistung liegt in der Übersetzung allgemeiner Observability-Prinzipien in dienstspezifische Messgrößen, Entscheidungsregeln und betriebliche Artefakte für frag.jetzt. Die folgende Konzeption stützt sich auf die in Kapitel 3 erhobenen Architekturbefunde.
  
  
 \section{Vorgehen bei der Ableitung der Golden Signals pro Service}
  
 Die Herausforderung liegt weniger in der Kenntnis der vier Golden Signals als in ihrer konkreten Übersetzung auf heterogene Dienste mit unterschiedlichen Rollen und Kommunikationsmustern. Damit diese Übersetzung nachvollziehbar erfolgt, folgt die Arbeit einer fünfstufigen Ableitungslogik.
  
-Im ersten Schritt wird die \emph{Rolle des Dienstes im Gesamtsystem} bestimmt, weil die funktionale Einordnung maßgeblich beeinflusst, welche Beobachtungsgrößen aussagekräftig sind. Der zweite Schritt identifiziert die \emph{kritischen Interaktionen} anhand der User Journeys und Risikopunkte aus Kapitel~3, da Metriken an realen Nutzungspfaden ausgerichtet sein sollten \parencite[S.~10--11]{Niedermaier2019onObservability}. Im dritten Schritt werden \emph{geeignete Messgrößen} abgeleitet, wobei pro Golden Signal mindestens eine primäre Messgröße bestimmt wird. Nicht jedes Signal lässt sich bei jedem Dienst als White-Box-Metrik erfassen. Bei externen KI-Services etwa ist Saturation nur indirekt beobachtbar.
+Im ersten Schritt wird die Rolle des Dienstes im Gesamtsystem bestimmt, weil die funktionale Einordnung maßgeblich beeinflusst, welche Beobachtungsgrößen aussagekräftig sind. Der zweite Schritt identifiziert die kritischen Interaktionen anhand der User Journeys und Risikopunkte aus Kapitel~3, da Metriken an realen Nutzungspfaden ausgerichtet sein sollten \parencite[S.~10--11]{Niedermaier2019onObservability}. Im dritten Schritt werden geeignete Messgrößen abgeleitet, wobei pro Golden Signal mindestens eine primäre Messgröße bestimmt wird. Nicht jedes Signal lässt sich bei jedem Dienst als White-Box-Metrik erfassen. Bei externen KI-Services etwa ist Saturation nur indirekt beobachtbar.
  
-Der vierte Schritt begründet \emph{initiale Schwellenwerte}. Da für frag.jetzt keine historischen Produktivdaten vorliegen, werden operative Startschwellen auf Basis von Lasttests und Erfahrungswerten festgelegt, die in einer Staging-Umgebung überprüft und im Betrieb angepasst werden. Formale SLOs existieren derzeit nicht und werden als zukünftige Weiterentwicklung betrachtet. \textcite[S.~9]{Niedermaier2019onObservability} bestätigen, dass unklare nichtfunktionale Anforderungen und reaktive Monitoring-Entwicklung zu den häufigsten Herausforderungen verteilter Systeme gehören. Im fünften Schritt wird bestimmt, welche \emph{Visualisierung und Alarmierung} aus den Messgrößen folgen. Nicht jede Metrik rechtfertigt einen Alarm, und die Zielgruppe bestimmt die Aufbereitung \parencite[S.~175]{vinnakota2025creating}.
+Der vierte Schritt begründet initiale Schwellenwerte. Da für frag.jetzt keine historischen Produktivdaten vorliegen, werden operative Startschwellen auf Basis von Lasttests und Erfahrungswerten festgelegt, die in einer Staging-Umgebung überprüft und im Betrieb angepasst werden können. Formale SLOs existieren derzeit nicht und werden als zukünftige Weiterentwicklung betrachtet. \textcite[S.~9]{Niedermaier2019onObservability} bestätigen, dass unklare nichtfunktionale Anforderungen und reaktive Monitoring-Entwicklung zu den häufigsten Herausforderungen verteilter Systeme gehören. Im fünften Schritt wird bestimmt, welche Visualisierung und Alarmierung aus den Messgrößen folgen. Nicht jede Metrik rechtfertigt einen Alarm, und die Zielgruppe bestimmt die Aufbereitung \parencite[S.~175]{vinnakota2025creating}.
  
  
 \section{Kriterien für Stack-Auswahl und spätere Evaluation}
@@ -28,17 +28,17 @@ Die Arbeit verwendet zwei bewusst getrennte Kriterienebenen. Die Stack-Auswahl (
  
 \subsection{Vergleichskriterien für die Stack-Auswahl}
  
-Aufbauend auf den Anforderungen A1--A5 und der einschlägigen Literatur \parencite[S.~104]{sakinala2025observability}; \parencite[S.~72015]{faseeha2025observability}; \parencite[S.~3]{giamattei2024monitoring} werden folgende acht Vergleichskriterien verwendet:
+Aufbauend auf den Anforderungen A1--A5 und der einschlägigen Literatur \parencite[S.~72015]{faseeha2025observability}; \parencite[S.~3]{giamattei2024monitoring} werden folgende acht Vergleichskriterien verwendet:
  
 \begin{itemize}
-    \item \textbf{Abdeckung der Telemetriepfeiler.} Unterstützung von Metriken, Logs und Traces in integrierter Form.
-    \item \textbf{Korrelationsfähigkeit.} Verknüpfung verschiedener Telemetriearten über gemeinsame Bezeichner (Trace-IDs, Korrelations-IDs).
-    \item \textbf{OpenTelemetry-Kompatibilität.} Unterstützung des herstellerneutralen CNCF-Standards für Instrumentierung und Datenexport.
-    \item \textbf{Dashboarding und Alerting.} Eignung für rollenspezifische Dashboards und differenzierte Alarmregeln.
-    \item \textbf{Integrationsaufwand.} Technischer Aufwand für die Einbindung in die bestehende Docker-Compose-Topologie.
-    \item \textbf{Ressourcenbedarf.} Zusätzlicher Speicher-, CPU- und Festplattenbedarf auf einem einzelnen Host (vgl.~R6).
-    \item \textbf{Erweiterbarkeit.} Anpassungsfähigkeit bei wachsendem Telemetrievolumen oder zusätzlichen Diensten.
-    \item \textbf{Community und Ökosystem.} Breite der Nutzerbasis, Dokumentationsreife und Framework-Integrationen.
+    \item \textbf{Abdeckung der Telemetriepfeiler:} Unterstützung von Metriken, Logs und Traces in integrierter Form.
+    \item \textbf{Korrelationsfähigkeit:} Verknüpfung verschiedener Telemetriearten über gemeinsame Bezeichner (Trace-IDs, Korrelations-IDs).
+    \item \textbf{OpenTelemetry-Kompatibilität:} Unterstützung des herstellerneutralen CNCF-Standards für Instrumentierung und Datenexport.
+    \item \textbf{Dashboarding und Alerting:} Eignung für rollenspezifische Dashboards und differenzierte Alarmregeln.
+    \item \textbf{Integrationsaufwand:} Technischer Aufwand für die Einbindung in die bestehende Docker-Compose-Topologie.
+    \item \textbf{Ressourcenbedarf:} Zusätzlicher Speicher-, CPU- und Festplattenbedarf auf einem einzelnen Host (vgl.~R6).
+    \item \textbf{Erweiterbarkeit:} Anpassungsfähigkeit bei wachsendem Telemetrievolumen oder zusätzlichen Diensten.
+    \item \textbf{Community und Ökosystem:} Breite der Nutzerbasis, Dokumentationsreife und Framework-Integrationen.
 \end{itemize}
  
 \subsection{Bewertungskriterien für die Gesamtstrategie}

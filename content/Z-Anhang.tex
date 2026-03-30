@@ -1,7 +1,7 @@
 % =============================================================================
 % ANHANG – Gesamtdatei
 % =============================================================================
-% Hinweis: Diese Datei enthält alle Anhänge (A–F).
+% Hinweis: Diese Datei enthält alle Anhänge (A–G).
 % Einbindung in thesis.tex über \input{Anhang_Komplett} im Anhang-Bereich.
 % Voraussetzung: \usepackage{listings}, \usepackage{longtable},
 %   \usepackage{booktabs}, \usepackage{tabularx}, \usepackage{lscape}
@@ -82,7 +82,7 @@
 \chapter{OpenTelemetry Collector Konfiguration}
 \label{app:otel-collector}
 
-Die folgende Datei zeigt die vollständige Konfiguration des OpenTelemetry Collector (Version~0.120.0), wie sie auf dem Staging-Server von frag.jetzt eingesetzt wird. Die Konfiguration definiert die Empfangs-, Verarbeitungs- und Exportpipelines für alle drei Telemetriearten.
+Alle nachfolgenden Konfigurationsdateien, Alert-Regeln und Runbooks sind auch im öffentlichen Repository verfügbar.\footnote{\url{https://github.com/LeonRau03/frag.jetzt-observability}} Die folgende Datei zeigt die vollständige Konfiguration des OpenTelemetry Collector (Version~0.120.0), wie sie auf dem Staging-Server von frag.jetzt eingesetzt wird. Die Konfiguration definiert die Empfangs-, Verarbeitungs- und Exportpipelines für alle drei Telemetriearten.
 
 Der \texttt{filter/traces}-Processor (Zeilen~16--28) ist die zentrale projektspezifische Anpassung. Er verwirft acht namentlich benannte Span-Typen, die von periodischen Hintergrundprozessen erzeugt werden und keinen diagnostischen Wert für die Fehlersuche besitzen (vgl.\ Abschnitt~7.5.3). Dieser Ansatz ersetzt ein probabilistisches Sampling durch eine inhaltlich begründete Selektion.
 
@@ -721,7 +721,7 @@ Nachfolgend zeigt Listing~\ref{lst:dashboard-panel-latency} einen repräsentativ
 }
 \end{lstlisting}
 
-Die vollständige JSON-Definition (1761~Zeilen) ist im öffentlichen Observability-Repository des Projekts verfügbar.\footnote{\url{https://github.com/thm-projects/frag.jetzt-observability}}
+Die vollständige JSON-Definition (1761~Zeilen) ist im öffentlichen Observability-Repository des Projekts verfügbar.\footnote{\url{https://github.com/LeonRau03/frag.jetzt-observability}}
 
 
 % =============================================================================
