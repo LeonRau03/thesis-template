@@ -25,12 +25,14 @@
 % Setzt das Zugriffsdatum (urldate) automatisch auf das aktuelle Kompilierdatum (ISO-Format)
 \DeclareSourcemap{
   \maps[datatype=bibtex]{
-    \map[overwrite]{
-      \pertype{online}
-      \pertype{misc}
-      \pertype{software}
-      \step[fieldset=urldate, fieldvalue=\the\year-\ifnum\month<10 0\fi\the\month-\ifnum\day<10 0\fi\the\day]
-    }
+    % Deaktiviert: automatische Setzung von urldate auf das Build-Datum.
+    % Fuehrt sonst immer zu "(besucht am ...)" auch ohne urldate in der .bib.
+    % \map[overwrite]{
+    %   \pertype{online}
+    %   \pertype{misc}
+    %   \pertype{software}
+    %   \step[fieldset=urldate, fieldvalue=\the\year-\ifnum\month<10 0\fi\the\month-\ifnum\day<10 0\fi\the\day]
+    % }
     \map{
       \step[fieldsource=note, match=\regexp{Accessed:}, final]
       \step[fieldset=note, null]

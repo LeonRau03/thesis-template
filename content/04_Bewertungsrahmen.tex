@@ -4,16 +4,13 @@
  
 \chapter{Methodisches Vorgehen und Bewertungsrahmen}
  
-Dieses Kapitel legt das methodische Vorgehen offen, mit dem aus den theoretischen Grundlagen (Kapitel~2) und der Systemanalyse (Kapitel~3) eine konkrete Observability-Strategie für frag.jetzt entsteht.
- 
+Dieses Kapitel beschreibt die methodische Logik, mit der die Arbeit allgemeine Observability-Konzepte in einen anwendungsbezogenen Strategieentwurf für frag.jetzt überführt. 
  
 \section{Arbeitslogik der Arbeit}
- 
-Die Arbeit folgt einer konstruktiv-artefaktorientierten Arbeitslogik. Auf Basis der theoretischen Fundierung und der Systemanalyse werden Observability-Anforderungen abgeleitet, darauf aufbauend eine Strategie entwickelt, in ausgewählten Komponenten prototypisch umgesetzt und anhand zuvor definierter Kriterien bewertet.
- 
-Die Arbeitsschritte gliedern sich in fünf Phasen: Die theoretische Fundierung (Kapitel~2) erarbeitet die begrifflichen Grundlagen. Die Systemanalyse (Kapitel~3) überführt diese in den Kontext von frag.jetzt und leitet fünf Observability-Anforderungen (A1--A5) ab. Die Stack-Evaluation (Kapitel~5) bewertet verfügbare Technologiekombinationen. Die Strategiekonzeption mit prototypischer Umsetzung (Kapitel~6 und~7) bildet den Kern der Eigenleistung. Abschließend prüft die Evaluation (Kapitel~8) die Strategie gegen die Anforderungen aus Kapitel~3.
- 
-Die Architekturerhebung in Kapitel~3 stützt sich ergänzend auf eine KI-gestützte Quellcodeexploration mithilfe von GitHub Copilot, das als Explorationshilfe für Architekturübersichten, Controller-Strukturen und bestehende Konfigurationen diente. Sämtliche architekturrelevanten Befunde wurden anschließend durch manuelle Prüfung gegen Quellcode, Docker-Compose-Dateien und Konfigurationsartefakte validiert. Das Verfahren erfasst implizite Laufzeitabhängigkeiten außerhalb des versionierten Quellcodes nur eingeschränkt.
+
+Die Arbeitslogik umfasst fünf aufeinander aufbauende Schritte. Im ersten Schritt werden aus Architektur, Nutzungspfaden, Risikopunkten und dem Observability-Ist-Zustand konkrete Anforderungen an die spätere Lösung abgeleitet. Im zweiten Schritt werden diese Anforderungen in zwei Richtungen operationalisiert: einerseits als Vergleichsmaßstab für die Auswahl eines geeigneten Technologie-Stacks, andererseits als Ableitungsrahmen für servicebezogene Golden-Signals-Messgrößen, Visualisierungen und Alarmierungsregeln. Im dritten Schritt erfolgt die Auswahl einer Zielkombination aus Instrumentierungs-, Speicher-, Visualisierungs- und Alerting-Komponenten. Im vierten Schritt wird darauf aufbauend eine konkrete Observability-Strategie mit Signal-Matrix, Dashboard-Konzept, symptomorientierter Alert-Logik und Runbook-Struktur entworfen und in ausgewählten Kernkomponenten prototypisch umgesetzt. Im fünften Schritt wird geprüft, inwieweit die entwickelte Strategie die zuvor abgeleiteten Anforderungen erfüllt.
+
+Methodisch entsteht damit eine durchgängige Kette von der Problemanalyse über die Anforderungs- und Strategieableitung bis zur prototypischen Validierung. Der Schwerpunkt der Eigenleistung liegt in der Übersetzung allgemeiner Observability-Prinzipien in dienstspezifische Messgrößen, Entscheidungsregeln und betriebliche Artefakte für frag.jetzt. Die Architekturerhebung in Kapitel~3 stützt sich ergänzend auf eine KI-gestützte Quellcodeexploration mithilfe von GitHub Copilot, das als Explorationshilfe für Architekturübersichten, Controller-Strukturen und bestehende Konfigurationen diente. Sämtliche architekturrelevanten Befunde wurden anschließend durch manuelle Prüfung gegen Quellcode, Docker-Compose-Dateien und Konfigurationsartefakte validiert.
  
  
 \section{Vorgehen bei der Ableitung der Golden Signals pro Service}

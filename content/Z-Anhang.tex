@@ -59,9 +59,25 @@
 
 \appendix
 
+% =============================================================================
+% ANHANG A – C4-Container-Diagramm in Vollansicht
+% =============================================================================
+
+\KOMAoptions{headsepline=false}%
+\begin{landscape}
+\chapter{C4-Container-Diagramm in Vollansicht}
+\label{sec:anhang-c4-vollansicht}
+\thispagestyle{plain}
+\begin{center}
+\includegraphics[width=0.95\linewidth,keepaspectratio]{images/frag.jetzt C4-Container-Diagram.png}
+\captionof{figure}[C4-Container-Diagramm der frag.jetzt-Architektur in Vollseitenansicht]{C4-Container-Diagramm der frag.jetzt-Architektur in Vollseitenansicht. \small Quelle: Eigene Darstellung.}
+\label{fig:c4-fragjetzt-architektur-vollseite}
+\end{center}
+\end{landscape}
+
 
 % =============================================================================
-% ANHANG A – OpenTelemetry Collector Konfiguration
+% ANHANG B – OpenTelemetry Collector Konfiguration
 % =============================================================================
 \chapter{OpenTelemetry Collector Konfiguration}
 \label{app:otel-collector}
@@ -104,6 +120,7 @@ processors:
         - 'name == "CommentNotificationService.sendNotifications"'
         - 'name == "clientInboundChannel process"'
         - 'name == "clientOutboundChannel process"'
+
 
 exporters:
   otlphttp/prometheus:
@@ -149,7 +166,7 @@ service:
 
 
 % =============================================================================
-% ANHANG B – Docker Compose Override (Instrumentierung)
+% ANHANG C – Docker Compose Override (Instrumentierung)
 % =============================================================================
 \chapter{Docker Compose Override für die Instrumentierung}
 \label{app:compose-override}
@@ -209,20 +226,23 @@ networks:
 
 
 % =============================================================================
-% ANHANG C – Alerting-Regeln
+% ANHANG D – Alerting-Regeln
 % =============================================================================
 \chapter{Alerting-Regeln}
 \label{app:alerting-rules}
 
+% Sorgt bei run-in-\paragraph fuer einen sauberen Zeilenumbruch vor Listings.
+\newcommand{\promqlheading}[1]{\paragraph{#1}\leavevmode\par\vspace{0.25\baselineskip}}
+
 Die folgenden drei Alerting-Regeln wurden in Grafana Alerting konfiguriert und bilden die prototypische Umsetzung des in Abschnitt~6.6 konzipierten Alerting-Frameworks. Alle Regeln verwenden Multi-Signal-Logik, bei der ein primäres Fehlersignal erst in Kombination mit einer Mindest-Traffic-Rate als handlungsrelevant gewertet wird (vgl.\ Abschnitt~7.4).
 
 
-\section*{Alert~1: User-facing Latency Degradation}
+\section{Alert~1: User-facing Latency Degradation}
 
-\begin{description}[style=nextline, leftmargin=3.5cm]
+\begin{description}[style=sameline, leftmargin=5.4cm, labelwidth=4.6cm, labelsep=0.8cm]
   \item[Severity] Warning
   \item[Primäre Rolle] DevOps
-  \item[Zugehöriges Runbook] Anhang~\ref{app:runbook-latenz}
+  \item[Zugehöriges Runbook] Erhöhte Backend-Latenz (Anhang~\ref{app:runbook-latenz})
 \end{description}
 
 \paragraph{Logik.}
@@ -232,7 +252,7 @@ Der Alert feuert, wenn \emph{beide} Bedingungen gleichzeitig für mindestens dre
   \item Die Anfragerate liegt über 0{,}1\,req/s (kein Leerlauf).
 \end{enumerate}
 
-\paragraph{PromQL -- Condition~A (Latenz).}
+\promqlheading{PromQL -- Condition~A (Latenz).}
 \begin{lstlisting}[style=bashstyle, numbers=none]
 histogram_quantile(0.95,
   sum(rate(
@@ -243,7 +263,7 @@ histogram_quantile(0.95,
 ) > 0.5
 \end{lstlisting}
 
-\paragraph{PromQL -- Condition~B (Mindest-Traffic).}
+\promqlheading{PromQL -- Condition~B (Mindest-Traffic).}
 \begin{lstlisting}[style=bashstyle, numbers=none]
 sum(rate(
   traces_spanmetrics_calls_total{
@@ -264,12 +284,12 @@ Evaluation Group: \texttt{golden-signals}, Evaluation Interval: 1\,min, Pending 
 
 
 \bigskip
-\section*{Alert~2: Backend Error Spike}
+\section{Alert~2: Backend Error Spike}
 
-\begin{description}[style=nextline, leftmargin=3.5cm]
+\begin{description}[style=sameline, leftmargin=5.4cm, labelwidth=4.6cm, labelsep=0.8cm]
   \item[Severity] Critical
   \item[Primäre Rolle] Developer
-  \item[Zugehöriges Runbook] Anhang~\ref{app:runbook-fehlerquote}
+  \item[Zugehöriges Runbook] Erhöhte Fehlerquote / HTTP~5xx (Anhang~\ref{app:runbook-fehlerquote})
 \end{description}
 
 \paragraph{Logik.}
@@ -279,7 +299,7 @@ Der Alert feuert, wenn \emph{beide} Bedingungen gleichzeitig für mindestens dre
   \item Die Anfragerate liegt über 0{,}1\,req/s.
 \end{enumerate}
 
-\paragraph{PromQL -- Condition~A (Fehlerrate).}
+\promqlheading{PromQL -- Condition~A (Fehlerrate).}
 \begin{lstlisting}[style=bashstyle, numbers=none]
 (
   sum(rate(
@@ -297,7 +317,7 @@ Der Alert feuert, wenn \emph{beide} Bedingungen gleichzeitig für mindestens dre
 ) > 0.05
 \end{lstlisting}
 
-\paragraph{PromQL -- Condition~B (Mindest-Traffic).}
+\promqlheading{PromQL -- Condition~B (Mindest-Traffic).}
 \begin{lstlisting}[style=bashstyle, numbers=none]
 sum(rate(
   http_server_request_duration_seconds_count{
@@ -317,12 +337,12 @@ Evaluation Group: \texttt{golden-signals}, Evaluation Interval: 1\,min, Pending 
 
 
 \bigskip
-\section*{Alert~3: Infrastructure Saturation with Service Impact}
+\section{Alert~3: Infrastructure Saturation with Service Impact}
 
-\begin{description}[style=nextline, leftmargin=3.5cm]
+\begin{description}[style=sameline, leftmargin=5.4cm, labelwidth=4.6cm, labelsep=0.8cm]
   \item[Severity] Warning
   \item[Primäre Rolle] DevOps
-  \item[Zugehöriges Runbook] Anhang~\ref{app:runbook-saettigung}
+  \item[Zugehöriges Runbook] Infrastruktur-Sättigung (DB / Queue / Host) (Anhang~\ref{app:runbook-saettigung})
 \end{description}
 
 \paragraph{Logik.}
@@ -332,14 +352,14 @@ Der Alert feuert, wenn \emph{eine} der folgenden Variantenbedingungen für minde
 
 \emph{Variante~B (Queue-Rückstau):} RabbitMQ Queue Messages~>~1000.
 
-\paragraph{PromQL -- Condition~A1 (DB Connections).}
+\promqlheading{PromQL -- Condition~A1 (DB Connections).}
 \begin{lstlisting}[style=bashstyle, numbers=none]
 sum(pg_stat_activity_count{
   job="postgres", state="active"
 }) > 70
 \end{lstlisting}
 
-\paragraph{PromQL -- Condition~A2 (Latenz-Bestätigung).}
+\promqlheading{PromQL -- Condition~A2 (Latenz-Bestätigung).}
 \begin{lstlisting}[style=bashstyle, numbers=none]
 histogram_quantile(0.95,
   sum(rate(
@@ -350,7 +370,7 @@ histogram_quantile(0.95,
 ) > 0.2
 \end{lstlisting}
 
-\paragraph{PromQL -- Condition~B1 (Queue Depth).}
+\promqlheading{PromQL -- Condition~B1 (Queue Depth).}
 \begin{lstlisting}[style=bashstyle, numbers=none]
 sum(rabbitmq_queue_messages{job="rabbitmq"}) > 1000
 \end{lstlisting}
@@ -366,7 +386,7 @@ Evaluation Group: \texttt{infrastructure}, Evaluation Interval: 1\,min, Pending 
 
 
 % =============================================================================
-% ANHANG D – Runbooks
+% ANHANG E – Runbooks
 % =============================================================================
 \chapter{Runbooks}
 \label{app:runbooks}
@@ -412,7 +432,7 @@ JVM Heap / GC & Saturation $\rightarrow$ JVM Heap / GC Pause & Möglicherweise e
 \begin{enumerate}
   \item Dashboard öffnen: Golden Signals $\rightarrow$ Latency-Sektion prüfen.
   \item Scope eingrenzen: Betrifft die Latenz alle Endpunkte oder nur bestimmte? Panel \enquote{Latency by Endpoint (p95)} prüfen.
-  \item Infrastruktur prüfen: Host-Ressourcen (CPU~$>$~80\,\%? Memory~$>$~90\,\%?), PostgreSQL (Verbindungen nahe 100?), RabbitMQ (Queue-Rückstau?).
+  \item Infrastruktur prüfen: Host-Ressourcen (CPU~$>$~80\,\%? Memory~$>$~90\,\%?), PostgreSQL (Verbindungen nahe 100?), RabbitMQ (Queue-Rückstau?).\\
   \item Container-Status prüfen:
 \begin{lstlisting}[style=bashstyle]
 sudo docker ps --format "table {{.Names}}\t{{.Status}}" \
@@ -456,7 +476,7 @@ Wenn die Latenz nach 15~Minuten nicht sinkt: Hauptentwickler kontaktieren. Bei T
 
 \paragraph{Kriterium für Entwarnung.}
 Backend p95-Latenz unter 200\,ms für mindestens 5~Minuten, keine auffälligen Endpunkte im Latenz-Panel, PostgreSQL Connections im Normbereich ($<$~30~aktive).
-
+\clearpage
 
 % ---------------------------------------------------------------------------
 % Runbook 2: Erhöhte Fehlerquote
@@ -498,7 +518,7 @@ Backend Logs & Loki $\rightarrow$ \texttt{\{service\_name=\char`\"fragjetzt-back
   \item Fehlerhafte Traces öffnen: Grafana $\rightarrow$ Explore $\rightarrow$ Tempo $\rightarrow$ Search (Service~=~\texttt{fragjetzt-backend}, Status~=~Error). Span-Waterfall analysieren: HTTP Status Code und Exception Message prüfen.
   \item Logs korrelieren: Vom fehlerhaften Trace zu Loki navigieren. Exception-Stacktraces lesen und Fehlermuster identifizieren.
 \end{enumerate}
-
+\clearpage
 \emph{DevOps (sekundäre Rolle):}
 \begin{enumerate}
   \item Container-Gesundheit prüfen:
@@ -527,7 +547,7 @@ Wenn die Fehlerrate nach Backend-Restart nicht sinkt: Hauptentwickler kontaktier
 
 \paragraph{Kriterium für Entwarnung.}
 HTTP 5xx Rate unter 1\,\% für mindestens 5~Minuten, keine neuen Error Spans in der Top-Error-Tabelle, Backend-Logs ohne wiederkehrende Exceptions.
-
+\clearpage
 
 % ---------------------------------------------------------------------------
 % Runbook 3: Infrastruktur-Sättigung
@@ -628,12 +648,12 @@ PostgreSQL aktive Verbindungen unter 30, RabbitMQ Queue-Tiefe unter 100, Backend
 
 
 % =============================================================================
-% ANHANG E – Golden-Signals-Dashboard
+% ANHANG F – Golden-Signals-Dashboard
 % =============================================================================
 \chapter{Golden-Signals-Dashboard}
 \label{app:dashboard}
 
-Das Golden-Signals-Dashboard (\texttt{frag.jetzt -- Golden Signals}, UID: \texttt{fragjetzt-golden-signals}) umfasst 17~Panels in fünf Sektionen. Tabelle~\ref{tab:dashboard-panels} gibt eine Übersicht über alle Panels, ihre primäre Datenquelle und die zugeordnete Golden-Signal-Dimension.
+Das Dashboard (\texttt{"frag.jetzt -- Golden Signals"}) umfasst 17~Panels in fünf Sektionen. Tabelle~\ref{tab:dashboard-panels} gibt eine Übersicht über alle Panels, ihre primäre Datenquelle und die zugeordnete Golden-Signal-Dimension.
 
 \begin{table}[H]
 \centering
@@ -665,7 +685,7 @@ Infrastr.   & PostgreSQL Active Connections             & Prometheus (Exporter) 
 \end{tabularx}
 \end{table}
 
-Nachfolgend zeigt Listing~\ref{lst:dashboard-panel-latency} einen repräsentativen Auszug aus der Dashboard-JSON-Definition. Das Panel \enquote{Backend HTTP Latency} illustriert die PromQL-Queries für die drei Perzentil-Zeitreihen.
+Nachfolgend zeigt Listing~\ref{lst:dashboard-panel-latency} einen repräsentativen Auszug aus der Dashboard-JSON-Definition. Das Panel \enquote{Backend HTTP Latency} illustriert die PromQL-Queries für die drei Perzentil-Zeitreihen. \\
 
 \begin{lstlisting}[style=jsonstyle, caption={Auszug aus der Dashboard-JSON: Panel \enquote{Backend HTTP Latency} (gekürzt).}, label={lst:dashboard-panel-latency}]
 {
@@ -705,7 +725,7 @@ Die vollständige JSON-Definition (1761~Zeilen) ist im öffentlichen Observabili
 
 
 % =============================================================================
-% ANHANG F – Verzeichnis der KI-Nutzung
+% ANHANG G – Verzeichnis der KI-Nutzung
 % =============================================================================
 
 \chapter{Verzeichnis der KI-Nutzung}
@@ -761,21 +781,21 @@ Table~\ref{tab:ki-nutzung} documents the specific tools employed, their respecti
 
 % ---- Tatsächliche Einträge (bitte prüfen und ergänzen/löschen) ----
 
-Consensus & Validierung von Forschungsinformationen & Behauptungen und Fakten aus der Literaturrecherche & Bestätigungen oder Korrekturen basierend auf aggregierten Forschungsergebnissen & Kap.~2-5 \\[0.5ex]
+Consensus & Validierung von Forschungsinformationen & Behauptungen und Fakten aus der Literaturrecherche & Bestätigungen oder Korrekturen basierend auf aggregierten Forschungsergebnissen & Kap.~2--5 \\[0.5ex]
 
-Claude (Opus~4.5) & Konfigurationshilfe bei der Implementierung & OTel Collector Config, Docker Compose Files, Fehlermeldungen, Prometheus-Queries & Konfigurationsvorschläge, Debugging-Hinweise, PromQL-Korrekturen & Kap.~7 \\[0.5ex]
+Claude Opus~4.5/4.6 & Konfigurationshilfe bei der Implementierung & OTel Collector Config, Docker Compose Files, Fehlermeldungen, Prometheus-Queries & Konfigurationsvorschläge, Debugging-Hinweise, PromQL-Korrekturen & Kap.~7 \\[0.5ex]
 
-Claude (Opus~4.6) & Strukturierung und Formulierungsverbesserungen & Gliederungsvorgaben, Feedback-Iterationen & LaTeX-Kapitelentwürfe mit Zitationsvorschlägen, Tabellenstrukturen & Kap.~1--10 \\[0.5ex]
+Claude Opus~4.6 & Formatierung der Runbooks & Vorlage der Runbooks & Strukturierte Runbook-Entwürfe in LaTeX und Markdown & Anhang~\ref{app:runbooks} \\[0.5ex]
 
-Claude (Opus~4.6) & Formatierung der Runbooks & Alerting-Konzept aus Kap.~6, Dashboard-Panel-Struktur, Fünf-Felder-Vorlage & Strukturierte Runbook-Entwürfe in Markdown & Anhang~D \\[0.5ex]
+Claude Sonnet~4.6 & Strukturierung und Formulierungsverbesserungen & Gliederungsvorgaben, Feedback-Iterationen & Tabellenstrukturen, LaTeX-Formatierungen und Formulierungen für Fließtext & Kap.~1--10 \\[0.5ex]
 
-Elicit & Suche nach relevanten Forschungsarbeiten & Forschungsfragen und Schlüsselbegriffe aus der Arbeit & Listen von relevanten Papers mit Kurzbeschreibungen & Kap.~2-5 \\[0.5ex]
+Elicit & Suche nach relevanten Forschungsarbeiten & Forschungsfragen und Schlüsselbegriffe aus der Arbeit & Listen von relevanten Papers mit Kurzbeschreibungen & Kap.~2--5 \\[0.5ex]
 
-Gemini~3~Pro & Zusammenfassung von Forschungsarbeiten & Abstracts oder einzelne Kapitel aktueller Forschungsarbeiten zu Observability & Kompakte Zusammenfassungen und thematische Einordnungen sowie Relevanz & Kap.~2 \\[0.5ex]
+Gemini~3~Pro & Zusammenfassung von Forschungsarbeiten & Abstracts oder einzelne Kapitel aktueller Forschungsarbeiten zu Observability & Kompakte Zusammenfassungen, thematische Einordnung und Relevanzbewertung & Kap.~2 \\[0.5ex]
 
 GitHub Copilot & Quellcode-Exploration für Architekturerhebung & Fragen zur Repository-Struktur, Controller-Anzahl, Kommunikationspfaden von frag.jetzt & Architekturübersichten, Abhängigkeitslisten, Konfigurationsextrakte & Kap.~3 \\[0.5ex]
 
-OpenAI GPT-5.2 & Formulierungs\-verbesserungen & Entwurf der Einleitung und Problemstellung & Alternative Formulierungen und Umstrukturierungsvorschläge & Kap.~1 \\[0.5ex]
+OpenAI GPT-5.2 & Formulierungs\-verbesserungen & Entwurf einzelner Absätze & Alternative Formulierungen und Umstrukturierungsvorschläge & Kap.~1--10 \\[0.5ex]
 
 OpenAI GPT-5.3 & Unterstützung bei Dashboard-Konzeption & Beschreibung des gewünschten Dashboard-Layouts und der Metriken & Vorschläge zu Panel-Struktur und PromQL-Queries & Kap.~6, 7 \\[0.5ex]
 
@@ -788,7 +808,6 @@ OpenAI GPT-5.3 & Unterstützung bei Dashboard-Konzeption & Beschreibung des gew�
 
 \end{landscape}
 % Header-Linie wiederherstellen
-\KOMAoptions{headsepline=true}%
 \newpage
 
 
@@ -804,14 +823,3 @@ Analysiere die Datenbankschicht. Welche Entities/Tabellen gibt es, welche Reposi
 Beschreibe die WebSocket-Kommunikation. Welche STOMP-Topics oder Channels gibt es, welche Nachrichten werden darueber ausgetauscht, und wie wird die Verbindung verwaltet?
 Analysiere die Deployment-Konfiguration (docker-compose.yml, Kubernetes-Manifeste, CI/CD-Pipeline). Welche Container/Services werden deployt, wie sind sie vernetzt, und welche Ressourcenlimits sind konfiguriert?
 \end{lstlisting}
-\newpage
-
-\section{C4-Container-Diagramm in Vollansicht}
-\label{sec:anhang-c4-vollansicht}
-
-\begin{figure}[p]
-\centering
-\includegraphics[angle=90,height=0.75\textheight,keepaspectratio]{images/frag.jetzt C4-Container-Diagram.png}
-\caption[C4-Container-Diagramm der frag.jetzt-Architektur in Vollseitenansicht]{C4-Container-Diagramm der frag.jetzt-Architektur in Vollseitenansicht. \small Quelle: Eigene Darstellung.}
-\label{fig:c4-fragjetzt-architektur-vollseite}
-\end{figure}
