@@ -10,12 +10,12 @@
 }
 
 @article{faseeha2025observability,
-  author = {Faseeha, U. and Syed, H. J. and Samad, F. and Zehra, S. and Ahmed, H.},
+  author={Faseeha, Ummay and Jamil Syed, Hassan and Samad, Fahad and Zehra, Sehar and Ahmed, Hamza},
   title = {Observability in Microservices: An In-Depth Exploration of Frameworks, Challenges, and Deployment Paradigms},
   journal = {IEEE Access},
   year = {2025},
   volume = {13},
-  pages = {72011--72035},
+  pages={72011-72039},
   doi = {10.1109/ACCESS.2025.3562125}
 }
 
@@ -228,18 +228,13 @@
   doi={10.1145/3736755}
 }
 
-@inbook{Niedermaier2019onObservability,
-  title={On Observability and Monitoring of Distributed Systems – An Industry Interview Study},
-  ISBN={9783030337025},
-  ISSN={1611-3349},
-  DOI={10.1007/978-3-030-33702-5_3},
-  booktitle={Service-Oriented Computing},
-  publisher={Springer International Publishing},
+@article{Niedermaier2019onObservability,
+  title={On Observability and Monitoring of Distributed Systems -- An Industry Interview Study},
   author={Niedermaier, Sina and Koetter, Falko and Freymann, Andreas and Wagner, Stefan},
+  journal={arXiv preprint arXiv:1907.12240},
   year={2019},
-  pages={36–52},
-  url={https://arxiv.org/pdf/1907.12240}
-} % Seitenzahlen nochmal überprüfen, da die Arbeit auch als arXiv Preprint veröffentlicht wurde und dort andere Seitenzahlen hat.
+  DOI={10.48550/arXiv.1907.12240},
+}
 
 @online{fragjetztRepo,
   author  = {ARSnova},
@@ -257,19 +252,19 @@
   organization = {Cloud Native Computing Foundation}
 }
 
-@online{prometheusMetricTypes,
+@online{prometheuscAdvisorDocs,
   author       = {{Prometheus Authors}},
-  title        = {Metric Types -- Prometheus Documentation},
-  year         = {2025},
-  url          = {https://prometheus.io/docs/concepts/metric_types/},
-  organization = {Cloud Native Computing Foundation}
+  title        = {Monitoring Docker container metrics using cAdvisor},
+  year         = {nodate},
+  url          = {https://prometheus.io/docs/guides/cadvisor/},
+  organization = {The Linux Foundation}
 }
 
 @online{grafanaDocs,
   author       = {{Grafana Labs}},
-  title        = {Grafana Documentation},
+  title        = {Configure Grafana},
   year         = {2025},
-  url          = {https://grafana.com/docs/grafana/latest/},
+  url          = {https://grafana.com/docs/grafana/latest/setup-grafana/configure-grafana/},
   organization = {Grafana Labs},
 }
 
@@ -323,7 +318,7 @@
 
 @online{grafana_tempo_docs,
   author    = {{Grafana Labs}},
-  title     = {Introduction to Grafana Tempo},
+  title     = {Set up for tracing},
   organization = {Grafana Tempo documentation},
   date      = {nodate},
   url       = {https://grafana.com/docs/tempo/latest/set-up-for-tracing/},

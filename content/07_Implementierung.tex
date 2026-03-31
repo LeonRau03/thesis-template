@@ -11,7 +11,7 @@ Dieses Kapitel dokumentiert die praktische Umsetzung der in Kapitel~6 konzipiert
 
 Die Umsetzung erfolgte auf dem Staging-Server von frag.jetzt, auf dem der vollständige Anwendungsstack in einer produktionsnahen Docker-Compose-Konfiguration betrieben wird. Der Observability-Stack wurde als eigenständiges Compose-Projekt deployt und über ein gemeinsames Docker-Netzwerk an die Applikationscontainer angebunden.
 
-Die Implementierung umfasst drei Schwerpunkte: das Deployment des LGTM-Stacks mit allen Speicher-Backends und Infrastruktur-Exportern, die Instrumentierung von Backend und WS-Gateway über den OpenTelemetry Java Agent und die Erstellung eines Golden-Signals-Dashboards mit zugehörigen Alerting-Regeln. Bewusst ausgeklammert wurden die Instrumentierung des AI Providers und des Frontends, die clientseitige Browser-Telemetrie, die Produktivhärtung sowie die rollenspezifischen Dashboard-Sichten aus Kapitel~6.5. Eine durchgängige Ende-zu-Ende-Beobachtbarkeit aller Systemgrenzen kann daher nicht nachgewiesen werden. Die Teilumsetzung erlaubt jedoch die Prüfung der zentralen Mechanismen \parencite[S.~52]{bissig2024unified}.
+Die Implementierung umfasst drei Schwerpunkte: das Deployment des LGTM-Stacks mit allen Speicher-Backends und Infrastruktur-Exportern, die Instrumentierung von Backend und WS-Gateway über den OpenTelemetry Java Agent und die Erstellung eines Golden-Signals-Dashboards mit zugehörigen Alerting-Regeln. Bewusst ausgeklammert wurden die Instrumentierung des AI Providers und des Frontends, die clientseitige Browser-Telemetrie, die Produktivhärtung sowie die rollenspezifischen Dashboard-Sichten aus Kapitel~6.4. Eine durchgängige Ende-zu-Ende-Beobachtbarkeit aller Systemgrenzen kann daher nicht nachgewiesen werden. Die Teilumsetzung erlaubt jedoch die Prüfung der zentralen Mechanismen.
 
 
 \section{Instrumentierung ausgewählter Kernkomponenten}
@@ -26,7 +26,7 @@ Die Instrumentierung folgt dem in Kapitel~6.2 beschriebenen Schichtenmodell. Tab
 \small
 \begin{tabularx}{\textwidth}{
   >{\RaggedRight\arraybackslash}p{2.2cm}
-  >{\RaggedRight\arraybackslash}p{2.5cm}
+  >{\RaggedRight\arraybackslash}p{3cm}
   >{\RaggedRight\arraybackslash}X
   >{\RaggedRight\arraybackslash}X
 }
@@ -37,7 +37,7 @@ Backend (Spring Boot) & OTel Java Agent (Auto-Instr.) & HTTP-Spans, DB-Spans, Lo
 WS-Gateway (Netty) & OTel Java Agent (Auto-Instr.) & WebSocket-Spans, RabbitMQ-Spans, JVM-Metriken & Service Graph zeigt Knoten mit Anfragerate \\[4pt]
 PostgreSQL & PostgreSQL Exporter & Verbindungszähler, Transaktionsraten, Lock-Statistiken & \texttt{pg\_stat\_activity\_count} in Prometheus abfragbar \\[4pt]
 RabbitMQ & Prometheus-Plugin & Queue-Tiefen, Nachrichten\-raten & \texttt{rabbitmq\_queue\_messages} in Dashboard-Panel sichtbar \\[4pt]
-Host & Node Exporter, cAdvisor & CPU, Speicher, Netzwerk, Container-Metriken & Gauge-Panels im Dashboard mit Schwellenwertfärbung \\
+Host & Node Exporter, cAdvisor & CPU, Speicher, Netzwerk, Container-Metriken & Kapazitätsanzeige im Dashboard mit Schwellenwertfärbung \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -52,7 +52,7 @@ Das Deployment umfasst acht Container. Der OpenTelemetry Collector empfängt sä
 
 Für die JVM-basierten Dienste wurde der OpenTelemetry Java Agent in Version~2.26.0 eingesetzt. Der Agent wird als Read-Only-Volume in den Container gemountet und über Umgebungsvariablen im Docker-Compose-Override-File konfiguriert. Dieser Ansatz vermeidet Änderungen am Applikationscode und an den bestehenden Docker-Images.
 
-Der Agent instrumentiert automatisch HTTP-Anfragen (Spring WebFlux, Netty), R2DBC-Datenbankzugriffe, RabbitMQ-Interaktionen und Logback-Logausgaben. Im Ergebnis erzeugt jeder eingehende HTTP-Request einen Root-Span, der untergeordnete Spans für Datenbankoperationen enthält. Für die instrumentierten Dienste ist damit der Verarbeitungspfad vom HTTP-Eingang bis zur Datenpersistierung in einem zusammenhängenden Trace rekonstruierbar, was Anforderung~A1 in Teilen adressiert.
+Der Agent instrumentiert automatisch HTTP-Anfragen (Spring WebFlux, Netty), R2DBC-Datenbankzugriffe, RabbitMQ-Interaktionen und Logback-Logausgaben. Im Ergebnis erzeugt jeder eingehende HTTP-Request einen Root-Span, der untergeordnete Spans für Datenbankoperationen enthält. Für die instrumentierten Dienste ist damit der Verarbeitungspfad vom HTTP-Eingang bis zur Datenpersistierung in einem zusammenhängenden Trace rekonstruierbar, was Anforderung~A1 in Teilen adressiert. Abbildung~\ref{fig:trace-span-waterfall} visualisiert diese Hierarchie exemplarisch anhand eines Backend-Traces, bei dem sich die Gesamtlatenz in ihre Einzelschritte aufschlüsseln lässt.
 
 \begin{figure}[ht]
 \centering
@@ -60,7 +60,8 @@ Der Agent instrumentiert automatisch HTTP-Anfragen (Spring WebFlux, Netty), R2DB
 \caption[Span-Waterfall eines Backend-Traces (\texttt{POST /livepoll/find}) mit 13~Spans und 15{,}4\,ms Gesamtdauer.]{Span-Waterfall eines Backend-Traces (\texttt{POST /livepoll/find}) mit 13~Spans und einer Gesamtdauer von 15{,}4\,ms. \small Quelle: Eigene Darstellung.}
 \label{fig:trace-span-waterfall}
 \end{figure}
-Der Service Graph in Grafana visualisiert die Kommunikationsbeziehungen zwischen den instrumentierten Diensten und zeigt im Prototyp drei Knoten (\texttt{fragjetzt-backend}, \texttt{fragjetzt-ws-gateway} und \texttt{fragjetzt-postgres}) mit ihren jeweiligen Anfrageraten und Antwortzeiten.
+
+Darüber hinaus visualisiert der Service Graph in Grafana (siehe Abbildung~\ref{fig:tempo-service-graph}) die Kommunikationsbeziehungen zwischen den instrumentierten Diensten. Im Prototyp zeigt dieser aktuell drei Knoten (\texttt{fragjetzt-backend}, \texttt{fragjetzt-ws-gateway} und \texttt{fragjetzt-postgres}) mit ihren jeweiligen Anfrageraten und Antwortzeiten.
 
 \begin{figure}[ht]
 \centering
@@ -71,7 +72,7 @@ Der Service Graph in Grafana visualisiert die Kommunikationsbeziehungen zwischen
 
 \subsection{Infrastrukturexporter und Scrape-Konfiguration}
 
-Prometheus scrapt sechs Targets im 15-Sekunden-Intervall. Die Infrastruktur-Exporter liefern Metriken, die direkt auf die Sättigungsindikatoren der Signal-Matrix aus Kapitel~6.4 abbilden und damit Anforderung~A5 auf Metrikebene im Prototyp adressieren. Ergänzend empfängt Prometheus über den OTLP-Receiver Applikationsmetriken vom OTel Collector. Tempo generiert aus den eingehenden Traces automatisch Span-Metriken und schreibt diese per Remote Write an Prometheus zurück. Aus diesen Span-Metriken werden der Service Graph und die Traffic- sowie Fehlerratenpanels im Dashboard gespeist.
+Prometheus scrapt sechs Targets im 15-Sekunden-Intervall. Die Infrastruktur-Exporter liefern Metriken, die direkt auf die Sättigungsindikatoren der Signal-Matrix aus Kapitel~6.3 abbilden und damit Anforderung~A5 auf Metrikebene im Prototyp adressieren. Ergänzend empfängt Prometheus über den OTLP-Receiver Applikationsmetriken vom OTel Collector. Tempo generiert aus den eingehenden Traces automatisch Span-Metriken und schreibt diese per Remote Write an Prometheus zurück. Aus diesen Span-Metriken werden der Service Graph und die Traffic- sowie Fehlerratenpanels im Dashboard gespeist.
 
 
 \subsection{Logging-Anbindung}
@@ -96,9 +97,7 @@ Ein Request an einen nicht existierenden Endpunkt erzeugte einen 404-Statuscode.
 
 \section{Umsetzung des Golden-Signals-Dashboards}
 
-Das Dashboard enthält 17~Panels in fünf Sektionen. Die Panelstruktur bildet die Signal-Matrix aus Kapitel~6.4 ab.
-
-Die Sektion \emph{Latency} zeigt Backend-Antwortzeiten als Perzentil-Zeitreihen (p50, p95, p99) und eine aufgeschlüsselte Latenzansicht pro Endpunkt, basierend auf \texttt{http\_server\_request\_duration\_seconds\_bucket}. Die Sektion \emph{Traffic} stellt die Anfragerate pro Dienst aus Span-Metriken sowie die meistfrequentierten Endpunkte als gestapeltes Balkendiagramm dar. Die Sektion \emph{Errors} kombiniert eine Span-basierte Fehlerrate pro Service mit einem Stat-Panel für die HTTP-5xx-Quote und einer Tabelle der fehlerhäufigsten Span-Operationen. Die Sektion \emph{Saturation} umfasst JVM-Heap-Auslastung, Thread-Zähler und CPU-Nutzung als Gauge-Panel mit Schwellenwertfärbung. Die \emph{Infrastruktur}-Sektion zeigt PostgreSQL-Verbindungen, RabbitMQ-Queue-Tiefen, Host-Ressourcen, GC-Pausen und den Service Graph aus Tempo.
+Das Dashboard enthält 17~Panels in fünf Sektionen, die in fünf Sektionen unterteilt sind und die Signal-Matrix aus Kapitel~6.3 visuell umsetzen. Die Sektionen \emph{Latency} und \emph{Traffic} sind beispielhaft in Abbildung~\ref{fig:grafana-dashboard-latency-traffic} dargestellt. Im Bereich \emph{Latency} werden die Backend-Antwortzeiten als Perzentil-Zeitreihen (p50, p95, p99) sowie eine aufgeschlüsselte Latenzansicht pro Endpunkt, basierend auf der Metrik \texttt{http\_server\_request\_duration\_seconds\_bucket} visualisiert. Die Sektion \emph{Traffic} stellt die Anfragerate pro Dienst aus Span-Metriken sowie die meistfrequentierten Endpunkte als gestapeltes Balkendiagramm dar. Die Sektion \emph{Errors} kombiniert eine Span-basierte Fehlerrate pro Service mit einem numerischen Indikator für die HTTP-5xx-Quote. Wie in Abbildung~\ref{fig:grafana-dashboard-errors} ersichtlich, werden zusätzlich die fehlerhäufigsten Span-Operationen tabellarisch aufgeführt. Die Sektion \emph{Saturation} umfasst JVM-Heap-Auslastung, Thread-Zähler und CPU-Nutzung als Kapazitätsanzeige mit Schwellenwertfärbung. Die \emph{Infrastruktur}-Sektion zeigt PostgreSQL-Verbindungen, RabbitMQ-Queue-Tiefen, Host-Ressourcen, Garbage-Collection-Pausen und den Service Graph aus Tempo.
 
 \begin{figure}[ht]
 \centering
@@ -114,18 +113,18 @@ Die Sektion \emph{Latency} zeigt Backend-Antwortzeiten als Perzentil-Zeitreihen 
 \label{fig:grafana-dashboard-errors}
 \end{figure}
 
-Sämtliche Panels verwenden \texttt{\$\_\_rate\_interval} als dynamisches Zeitfenster für Rate-Berechnungen. Die vollständige JSON-Definition befindet sich in Anhang~ref{app:grafana-json}.
+Sämtliche Panels verwenden \texttt{\$\_\_rate\_interval} als dynamisches Zeitfenster für Rate-Berechnungen. Die vollständige JSON-Definition befindet sich in Anhang~\ref{app:dashboard}.
 
 
 \section{Alerting-Regeln und Beispiel-Runbooks}
 
-Die Alerting-Logik aus Kapitel~6.6 wird exemplarisch in drei Grafana-Alerting-Regeln überführt, die Anforderung~A4 adressieren.
+Die Alerting-Logik aus Kapitel~6.5 wird exemplarisch in drei Grafana-Alerting-Regeln überführt, die Anforderung~A4 adressieren.
 
 Die erste Regel (\emph{Critical}) löst aus, wenn die HTTP-5xx-Fehlerrate des Backends über fünf Minuten den Schwellenwert von 5\,\% überschreitet. Die zweite Regel (\emph{Warning}) reagiert auf eine PostgreSQL-Verbindungsauslastung über 70\,\% des konfigurierten Limits von 100~Verbindungen. Die dritte Regel (\emph{Warning}) überwacht die Backend-Latenz im p95-Bereich und alarmiert bei einer anhaltenden Überschreitung von 500\,ms über drei Minuten.
 
-Die Evaluationsfenster von drei bis fünf Minuten fungieren als Debounce-Mechanismus, der transiente Spitzen toleriert \parencite[S.~176]{vinnakota2025creating}. Jede Regel enthält in ihrer Annotation-Konfiguration einen Link zum zugehörigen Runbook sowie zum relevanten Dashboard-Panel. Die drei Regeln wurden im Prototyp angelegt und konfiguriert. Ihre Verifikation erfolgte durch gezielte Belastungsszenarien auf dem Staging-Server und wird in Kapitel~8 dokumentiert.
+Die Evaluationsfenster von drei bis fünf Minuten fungieren als Debounce-Mechanismus, der transiente Spitzen toleriert \parencite[S.~176]{vinnakota2025creating}. Jede Regel enthält in ihrer Annotation-Konfiguration einen Link zum zugehörigen Runbook. Die drei Regeln wurden im Prototyp angelegt und konfiguriert. Ihre Verifikation erfolgte durch gezielte Belastungsszenarien auf dem Staging-Server und wird in Kapitel~8 dokumentiert.
 
-Ergänzend wurden drei Runbooks als strukturierte Dokumente erstellt, die der Fünf-Felder-Struktur (Symptom, Kontext, Diagnose, Behebung, Eskalation) aus Kapitel~6.6 folgen. Das erste behandelt den Alarm ``Erhöhte Backend-Latenz'', das zweite den Alarm ``Backend-Fehlerrate über Schwellenwert'' und das dritte den Alarm ``Infrastruktur-Sättigung'' Die Runbooks befinden sich im Anhang~ref{app:runbooks}.
+Ergänzend wurden drei Runbooks als strukturierte Dokumente erstellt, die der Fünf-Felder-Struktur (Symptom, Kontext, Diagnose, Behebung, Eskalation) aus Kapitel~6.5 folgen. Das erste behandelt den Alarm ``Erhöhte Backend-Latenz'', das zweite den Alarm ``Backend-Fehlerrate über Schwellenwert'' und das dritte den Alarm ``Infrastruktur-Sättigung'' Die Runbooks befinden sich im Anhang~\ref{app:runbooks}.
 
 
 \section{Herausforderungen und Lösungen bei der Umsetzung}
@@ -139,7 +138,7 @@ Tempo wurde initial mit einem Speicherlimit von 256\,MB konfiguriert. Unter der 
 
 \subsection{Netzwerktopologie und Dienstkommunikation}
 
-Tempo generiert aus eingehenden Traces Span-Metriken, die über Remote Write an Prometheus übermittelt werden und den Service Graph in Grafana speisen. Im initialen Deployment scheiterte dieser Export an der Netzwerktrennung zwischen den Compose-Projekten. Die Lösung bestand darin, Prometheus in beiden Docker-Netzwerken verfügbar zu machen. Anders als in Kubernetes, wo Pods standardmäßig über ein flaches Netzwerk kommunizieren, erfordern separate Compose-Projekte explizite Netzwerkkonfigurationen.
+Tempo generiert aus eingehenden Traces Span-Metriken, die über Remote Write an Prometheus übermittelt werden und den Service Graph in Grafana speisen. Im initialen Deployment scheiterte dieser Export an der Netzwerktrennung zwischen den Compose-Projekten. Die Lösung bestand darin, Prometheus in beiden Docker-Netzwerken verfügbar zu machen.
 
 
 \subsection{Signalqualität und Rauschunterdrückung}

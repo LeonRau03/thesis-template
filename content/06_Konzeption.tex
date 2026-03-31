@@ -20,7 +20,7 @@ Jeder Dienst von frag.jetzt wird als eigenständige Beobachtungseinheit behandel
 An jedem der in Abschnitt~3.2 identifizierten Dienstübergänge muss Trace-Kontext propagiert werden, damit kausal zusammenhängende Aktivitäten über Dienstgrenzen hinweg korrelierbar bleiben \parencite[S.~32]{bissig2024unified}. Ohne diese Verknüpfung bleiben Logs und Metriken isolierte Datenpunkte \parencite[S.~14--15]{sundstrom2025finding}. Das Prinzip greift Anforderung~A1 und den Korrelationsaspekt von A3 auf.
  
 \paragraph{P3: Rollenorientierte Aufbereitung.}
-Unterschiedliche Stakeholder stellen unterschiedliche Fragen an dasselbe Laufzeitverhalten \parencite[S.~54]{bissig2024unified}. Abschnitt~6.5 überführt dieses Prinzip in drei konkrete Sichtebenen.
+Unterschiedliche Stakeholder stellen unterschiedliche Fragen an dasselbe Laufzeitverhalten \parencite[S.~54]{bissig2024unified}. Abschnitt~6.4 überführt dieses Prinzip in drei konkrete Sichtebenen.
  
 \paragraph{P4: Schrittweise Erweiterbarkeit.}
 Da frag.jetzt Observability erstmals einführt und knappe Ressourcen eine eigenständige Herausforderung darstellen \parencite[S.~9--10]{Niedermaier2019onObservability}, wird die Strategie als erweiterbarer Ausgangspunkt angelegt. Die Instrumentierung über OpenTelemetry stellt sicher, dass Backend-Komponenten austauschbar bleiben \parencite[S.~502]{gudimetla2025transitioning}.
@@ -41,14 +41,14 @@ Die Observability-Architektur folgt einem vierstufigen Schichtenmodell, wie es \
 
 \subsection{Instrumentierungsschicht}
  
-Aus der Architektur von frag.jetzt ergibt sich eine differenzierte Instrumentierungsstrategie. Backend, WebSocket Gateway und AI Provider sind als Eigenentwicklungen über Auto-Instrumentierung mit selektiver manueller Ergänzung beobachtbar. Die Quellcodeanalyse in Kapitel~3 hat gezeigt, dass keine dieser Komponenten bislang Telemetrie emittiert (R3). Demgegenüber agieren die externen LLM-Provider als Black-Box-Abhängigkeiten, bei denen mindestens die Ein- und Ausgangsseite jedes Aufrufs instrumentiert werden muss \parencite[S.~31]{bissig2024unified}.
+Aus der Architektur von frag.jetzt ergibt sich eine differenzierte Instrumentierungsstrategie. Konzeptionell sind Backend, WebSocket Gateway und AI Provider als Eigenentwicklungen grundsätzlich über Auto-Instrumentierung mit selektiver manueller Ergänzung beobachtbar. Die Quellcodeanalyse in Kapitel 3 hat gezeigt, dass keine dieser Komponenten bislang Telemetrie emittiert (R3). Im prototypischen Umfang dieser Arbeit werden jedoch nur die JVM-basierten Dienste Backend und WS-Gateway instrumentiert; die Instrumentierung des AI Providers bleibt einem späteren Ausbauschritt vorbehalten. Demgegenüber agieren die externen LLM-Provider als Black-Box-Abhängigkeiten, bei denen mindestens die Ein- und Ausgangsseite jedes Aufrufs instrumentiert werden müsste \parencite[S.~31]{bissig2024unified}.
  
-OpenTelemetry übernimmt die Rolle der standardisierten Instrumentierungsschicht (vgl.~Abschnitt~5.2). Die entscheidenden Übergabepunkte für die Kontextpropagation sind die Verbindungen zwischen Frontend und Reverse-Proxy, zwischen Reverse-Proxy und Backend, zwischen Backend und Datenbank sowie zwischen Backend und AI Provider. Eine besondere Herausforderung stellt die Echtzeitkommunikation über den Message Broker dar, da dort eine manuelle Injektion des Trace-Kontexts in das Nachrichtenformat erforderlich wird \parencite[S.~25]{sundstrom2025finding}. Ergänzend werden Container-Metriken und datenbankspezifische Indikatoren über spezialisierte Exporter erhoben, die Prometheus-kompatible Endpunkte bereitstellen.
+OpenTelemetry übernimmt die Rolle der standardisierten Instrumentierungsschicht (vgl.~Abschnitt~5.1). Die entscheidenden Übergabepunkte für die Kontextpropagation sind die Verbindungen zwischen Frontend und Reverse-Proxy, zwischen Reverse-Proxy und Backend, zwischen Backend und Datenbank sowie zwischen Backend und AI Provider. Eine besondere Herausforderung stellt die Echtzeitkommunikation über den Message Broker dar, da dort eine manuelle Injektion des Trace-Kontexts in das Nachrichtenformat erforderlich wird \parencite[S.~25]{sundstrom2025finding}. Ergänzend werden Container-Metriken und datenbankspezifische Indikatoren über spezialisierte Exporter erhoben, die Prometheus-kompatible Endpunkte bereitstellen.
  
  
 \subsection{Sammel- und Verarbeitungsschicht}
  
-Der OpenTelemetry Collector fungiert als zentrale Routing-Komponente, die Instrumentierung und Backend entkoppelt \parencite[S.~107]{sakinala2025observability}; \parencite[S.~502]{gudimetla2025transitioning}. Für frag.jetzt wird der Collector als pushbasierte Empfangskomponente für anwendungsseitige Traces und Metriken konfiguriert, weil ein Push-Modell bei einer zukünftigen Erweiterung keine Umstellung erfordert \parencite[S.~39]{bissig2024unified}. Infrastrukturmetriken folgen dagegen dem etablierten Pull-Modell über Prometheus-Scraping. Bei dem für frag.jetzt erwarteten geringen Datenvolumen kann zunächst auf Sampling verzichtet werden. Eine Anpassung ist erst dann vorgesehen, wenn das Telemetrievolumen die Speicherkapazität des Hosts belastet.
+Der OpenTelemetry Collector fungiert als zentrale Routing-Komponente, die Instrumentierung und Backend entkoppelt \parencite[S.~107]{sakinala2025observability}. Für frag.jetzt wird der Collector als pushbasierte Empfangskomponente für anwendungsseitige Traces und Metriken konfiguriert, weil ein Push-Modell bei einer zukünftigen Erweiterung keine Umstellung erfordert \parencite[S.~39]{bissig2024unified}. Infrastrukturmetriken folgen dagegen dem etablierten Pull-Modell über Prometheus-Scraping. Bei dem für frag.jetzt erwarteten geringen Datenvolumen kann zunächst auf Sampling verzichtet werden. Eine Anpassung ist erst dann vorgesehen, wenn das Telemetrievolumen die Speicherkapazität des Hosts belastet.
  
  
 \subsection{Speicherschicht}
@@ -75,37 +75,11 @@ Die Ableitung der Beobachtungsgrößen folgt dem in Abschnitt~4.2 beschriebenen 
 \subsection{PWA-Frontend}
 \label{sec:gs-frontend}
  
-Das Angular-Frontend unterscheidet sich grundlegend von den serverseitigen Komponenten, weil die Ausführung im Browser stattfindet und die Infrastruktur nicht direkt kontrollierbar ist. Aus Nutzersicht manifestiert sich Latenz als wahrgenommene Ladezeit, zu der neben der Server-Antwortzeit auch clientseitige Faktoren wie Netzwerkqualität und Rendering beitragen. Basisindikatoren sind die Dauer von API-Aufrufen und die Ende-zu-Ende-Ladezeit beim Betreten eines Raums. Browserbasierte Metriken wie First Contentful Paint über das OpenTelemetry-Browser-SDK sind als optionale Erweiterung zu verstehen.
+Das Angular-Frontend unterscheidet sich grundlegend von den serverseitigen Komponenten, weil die Ausführung im Browser stattfindet und die Infrastruktur nicht direkt kontrollierbar ist. Aus Nutzersicht manifestiert sich Latenz als wahrgenommene Ladezeit, zu der neben der Server-Antwortzeit auch clientseitige Faktoren wie Netzwerkqualität und Rendering beitragen. Basisindikatoren sind die Dauer von API-Aufrufen und die Ende-zu-Ende-Ladezeit beim Betreten eines Raums.
  
 Die Nachfrageintensität lässt sich über aktive WebSocket-Verbindungen und HTTP-Anfragen pro Zeiteinheit messen. Fehlerindikatoren umfassen fehlgeschlagene API-Aufrufe (4xx/5xx), unbehandelte JavaScript-Exceptions und WebSocket-Verbindungsabbrüche. Klassische Sättigungsmetriken wie CPU und Speicher beziehen sich auf das Endgerät und liegen außerhalb des Einflussbereichs des Betriebsteams. Da die Grenzen der Frontend-Beobachtbarkeit eng gesteckt sind, liegt der instrumentierungstechnische Schwerpunkt auf den serverseitigen Komponenten.
  
- 
-\subsection{Spring-Boot-Backend}
-\label{sec:gs-backend}
- 
-Das Backend ist die zentrale Verarbeitungskomponente und der in Kapitel~3 identifizierte kritische Punkt. Der primäre Latenzindikator ist die Antwortdauer je REST-Endpunkt als Histogramm (p50, p95, p99), weil Durchschnittswerte die Erfahrung langsam bedienter Nutzer verbergen können \parencite[S.~60]{ewaschukMonitoringDistributedSystems}. Ebenso muss die Latenz erfolgreicher und fehlgeschlagener Anfragen getrennt erfasst werden, da schnell zurückgegebene Fehler den Gesamtdurchschnitt verzerren. Ergänzend werden die Latenzen ausgehender Aufrufe an PostgreSQL, den Message Broker und den AI Provider separat erhoben. Das reaktive Programmiermodell auf Basis von WebFlux erfordert dabei besondere Aufmerksamkeit, da die Messung auf Span-Ebene innerhalb der reaktiven Kette erfolgen muss \parencite[S.~25]{sundstrom2025finding}.
- 
-Die Anfragerate pro Endpunkt bildet den Traffic ab. Für die geschäftskritischen Abläufe aus Abschnitt~3.3 ist eine gesonderte Erfassung sinnvoll. Fehler werden auf mehreren Ebenen erfasst: HTTP-5xx-Statuscodes, unbehandelte Exceptions und fehlgeschlagene Downstream-Aufrufe. Da kein externer Aufruf einen Timeout besitzt (R1), äußern sich Timeout-bedingte Fehler als hängende Anfragen, was die Latenzüberwachung umso dringlicher macht. Die Sättigung wird über Container-Metriken und den R2DBC-Connection-Pool gemessen. \textcite[S.~60--61]{ewaschukMonitoringDistributedSystems} empfiehlt, Sättigung indirekt über steigende Latenz am 99.\,Perzentil zu erkennen, weil Latenzzunahmen häufig ein Frühindikator für Ressourcenerschöpfung sind.
- 
- 
-\subsection{PostgreSQL}
-\label{sec:gs-postgresql}
- 
-Die Datenbank ist an allen drei geschäftskritischen Nutzungspfaden beteiligt. Die Vote-Trigger und die Comment-Nummern-Generierung (Abschnitt~3.3) erzeugen potenzielle Engpässe. Der zentrale Latenzindikator ist die Abfrageausführungszeit, wobei lang laufende Abfragen auf fehlende Indizes oder Row-Level Contention hindeuten. Die Transaktionsrate und die aktive Verbindungszahl bilden den Traffic ab. Relevante Fehlersignale umfassen Deadlocks, fehlgeschlagene Transaktionen und Verbindungsablehnungen. Die Sättigung wird über das Verhältnis genutzter zu maximal verfügbarer Verbindungen, die Buffer-Cache-Hit-Rate und die Disk-I/O-Auslastung gemessen. Ein sinkender Cache-Hit-Anteil deutet darauf hin, dass die Arbeitsspeicherkonfiguration nicht mehr zum Datenvolumen passt.
- 
- 
-\subsection{Externe KI-Dienste}
-\label{sec:gs-ki}
- 
-Die Beobachtung der externen KI-Dienste beschränkt sich auf die Schnittstelle zwischen AI Provider und den angebundenen Modellen, da der Quellcode der LLM-Provider nicht verfügbar ist \parencite[S.~31]{bissig2024unified}. Die LLM-Antwortzeit wird als Histogramm pro Provider und Modell erfasst. Da kein Timeout konfiguriert ist (R1), kann ein einzelner hängender Aufruf den AI Provider blockieren und über die Aufrufkette das Backend beeinflussen. Der Traffic wird als Anzahl der LLM-Aufrufe pro Zeiteinheit je Funktionstyp gemessen. Fehlersignale sind HTTP-Fehlerantworten der Provider-APIs (insbesondere 429 Rate Limit Exceeded), Timeouts und Parsing-Fehler. Neun von 19~LLM-Providern sind explizit mit \texttt{max\_retries=0} konfiguriert, sodass ein fehlgeschlagener Aufruf unmittelbar durchschlägt. Da die LLM-Provider keinen Einblick in ihre Ressourcenauslastung gewähren, wird Sättigung über Proxy-Indikatoren wie steigende Antwortzeiten und zunehmende Rate-Limit-Fehler abgebildet.
- 
- 
-\section{Serviceübergreifende Signal-Matrix}
-\label{sec:signal-matrix}
- 
-Tabelle~\ref{tab:signal-matrix} verdichtet die vorangehenden Ableitungen in einer Gesamtübersicht. Sie bildet die Grundlage für das rollenbasierte Dashboard-Design (Abschnitt~6.5) und definiert den Rahmen für das Alerting-Konzept (Abschnitt~6.6), weil nicht jede Messgröße Alarmrelevant ist.
- 
-\begin{table}[htb]
+\begin{table}[!htb]
 \centering
 \caption[Serviceübergreifende Signal-Matrix mit Zuordnung von Dienst, Golden Signal, Messgröße, Erhebungszweck und primärer Stakeholder-Rolle.]{Serviceübergreifende Signal-Matrix mit Zuordnung von Dienst, Golden Signal, Messgröße, Erhebungszweck und primärer Stakeholder-Rolle. \small Quelle: Eigene Darstellung.}
 \label{tab:signal-matrix}
@@ -139,12 +113,35 @@ Frontend  & Saturation & Antwortzeit-Trend, Retry-Häufigkeit                & �
 \bottomrule
 \end{tabularx}
 \end{table}
+
+\clearpage
+ 
+\subsection{Spring-Boot-Backend}
+\label{sec:gs-backend}
+ 
+Das Backend ist die zentrale Verarbeitungskomponente und der in Kapitel~3 identifizierte kritische Punkt. Der primäre Latenzindikator ist die Antwortdauer je REST-Endpunkt als Histogramm (p50, p95, p99), weil Durchschnittswerte die Erfahrung langsam bedienter Nutzer verbergen können \parencite[S.~60]{ewaschukMonitoringDistributedSystems}. Ebenso muss die Latenz erfolgreicher und fehlgeschlagener Anfragen getrennt erfasst werden, da schnell zurückgegebene Fehler den Gesamtdurchschnitt verzerren. Ergänzend werden die Latenzen ausgehender Aufrufe an PostgreSQL, den Message Broker und den AI Provider separat erhoben. Das reaktive Programmiermodell auf Basis von WebFlux erfordert dabei besondere Aufmerksamkeit, da die Messung auf Span-Ebene innerhalb der reaktiven Kette erfolgen muss \parencite[S.~25]{sundstrom2025finding}.
+ 
+Die Anfragerate pro Endpunkt bildet den Traffic ab. Für die geschäftskritischen Abläufe aus Abschnitt~3.3 ist eine gesonderte Erfassung sinnvoll. Fehler werden auf mehreren Ebenen erfasst: HTTP-5xx-Statuscodes, unbehandelte Exceptions und fehlgeschlagene Downstream-Aufrufe. Da kein externer Aufruf einen Timeout besitzt (R1), äußern sich Timeout-bedingte Fehler als hängende Anfragen, was die Latenzüberwachung umso dringlicher macht. Die Sättigung wird über Container-Metriken und den R2DBC-Connection-Pool gemessen. \textcite[S.~60--61]{ewaschukMonitoringDistributedSystems} empfiehlt, Sättigung indirekt über steigende Latenz am 99.\,Perzentil zu erkennen, weil Latenzzunahmen häufig ein Frühindikator für Ressourcenerschöpfung sind.
+ 
+ 
+\subsection{PostgreSQL}
+\label{sec:gs-postgresql}
+ 
+Die Datenbank ist an allen drei geschäftskritischen Nutzungspfaden beteiligt. Die Vote-Trigger und die Comment-Nummern-Generierung (Abschnitt~3.3) erzeugen potenzielle Engpässe. Der zentrale Latenzindikator ist die Abfrageausführungszeit, wobei lang laufende Abfragen auf fehlende Indizes oder Row-Level Contention hindeuten. Die Transaktionsrate und die aktive Verbindungszahl bilden den Traffic ab. Relevante Fehlersignale umfassen Deadlocks, fehlgeschlagene Transaktionen und Verbindungsablehnungen. Die Sättigung wird über das Verhältnis genutzter zu maximal verfügbarer Verbindungen, die Buffer-Cache-Hit-Rate und die Disk-I/O-Auslastung gemessen. Ein sinkender Cache-Hit-Anteil deutet darauf hin, dass die Arbeitsspeicherkonfiguration nicht mehr zum Datenvolumen passt.
+ 
+ 
+\subsection{Externe KI-Dienste}
+\label{sec:gs-ki}
+ 
+Die Beobachtung der externen KI-Dienste beschränkt sich auf die Schnittstelle zwischen AI Provider und den angebundenen Modellen, da der Quellcode der LLM-Provider nicht verfügbar ist \parencite[S.~31]{bissig2024unified}. Die LLM-Antwortzeit wird als Histogramm pro Provider und Modell erfasst. Da kein Timeout konfiguriert ist (R1), kann ein einzelner hängender Aufruf den AI Provider blockieren und über die Aufrufkette das Backend beeinflussen. Der Traffic wird als Anzahl der LLM-Aufrufe pro Zeiteinheit je Funktionstyp gemessen. Fehlersignale sind HTTP-Fehlerantworten der Provider-APIs (insbesondere 429 Rate Limit Exceeded), Timeouts und Parsing-Fehler. Neun von 19~LLM-Providern sind explizit mit \texttt{max\_retries=0} konfiguriert, sodass ein fehlgeschlagener Aufruf unmittelbar durchschlägt. Da die LLM-Provider keinen Einblick in ihre Ressourcenauslastung gewähren, wird Sättigung über Proxy-Indikatoren wie steigende Antwortzeiten und zunehmende Rate-Limit-Fehler abgebildet.
+ 
+Tabelle~\ref{tab:signal-matrix} bildet die Grundlage für das rollenbasierte Dashboard-Design (Kap~6.4) und definiert den Rahmen für das Alerting-Konzept (Kap~6.5), weil nicht jede Messgröße Alarmrelevant ist.
  
  
 \section{Rollenbasiertes Informations- und Dashboard-Konzept}
 \label{sec:dashboard-konzept}
  
-Für frag.jetzt wird eine hierarchische Informationsarchitektur in drei Sichtebenen umgesetzt, deren Zuschnitt sich aus den Stakeholder-Gruppen und der Signal-Matrix ableitet \parencite[S.~108]{sakinala2025observability}.
+Für frag.jetzt wird eine hierarchische Informationsarchitektur in drei Sichtebenen umgesetzt, deren Zuschnitt sich aus den Stakeholder-Gruppen und der Signal-Matrix ableitet.
  
 \paragraph{Übersichtssicht (Product Owner / Management).}
 Diese Ebene beantwortet die Frage, ob frag.jetzt aus Nutzersicht funktioniert. Sie zeigt verdichtete Indikatoren wie aktive Raumsitzungen, globale Fehlerrate und Gesamtlatenz der Kernabläufe. Detailinformationen sind nur über Verlinkung erreichbar.
@@ -176,12 +173,12 @@ Steigt die Antwortzeit eines Kernendpunkts über einen definierten Grenzwert, et
 Eine Fehlerrate oberhalb eines definierten Anteils löst eine Warnung aus. Die explizite Trennung von client- (4xx) und serverseitigen (5xx) Fehlern verhindert, dass ungültige Eingaben denselben Alarm wie interne Serverfehler erzeugen.
  
 \paragraph{Sättigungsalarme (Warning).}
-Ressourcenmetriken wie CPU-Auslastung und Datenbankverbindungspool-Nutzung werden als vorausschauende Warnung konfiguriert. \textcite[S.~60--61]{ewaschukMonitoringDistributedSystems} empfiehlt, Sättigung indirekt über steigende Latenz am 99.\,Perzentil zu erkennen.
+Ressourcenmetriken wie CPU-Auslastung und Auslastung des Connection-Pools werden als vorausschauende Warnung konfiguriert. \textcite[S.~60--61]{ewaschukMonitoringDistributedSystems} empfiehlt, Sättigung indirekt über steigende Latenz am 99.\,Perzentil zu erkennen.
  
  
 \subsection{Runbook-Verknüpfung}
  
-Jeder Critical-Alarm wird mit einem Runbook verknüpft, das Problembeschreibung, betroffene Komponente, Diagnoseschritte, Erstmaßnahmen und Eskalationspfad enthält. Für den Prototyp werden exemplarische Runbooks für den Kaskadeneffekt durch KI-Service-Timeouts (R1) und Datenbankengpässe bei Massenabstimmungen (R2) erstellt.
+Jeder Alarm wird mit einem Runbook verknüpft, das Problembeschreibung, betroffene Komponente, Diagnoseschritte, Erstmaßnahmen und Eskalationspfad enthält. Für den Prototyp werden exemplarische Runbooks für erhöhte Backend-Latenz, erhöhte Fehlerquote und Infrastruktur-Sättigung erstellt.
  
 \medskip
  

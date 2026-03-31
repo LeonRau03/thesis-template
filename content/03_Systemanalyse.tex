@@ -4,7 +4,7 @@
 
 \chapter{Systemanalyse und Anforderungsdefinition: \enquote{frag.jetzt}}
 
-Die folgende Systemanalyse umfasst eine detaillierte Untersuchung des Quellcodes, der Deployment-Konfigurationen sowie der Abhängigkeitsstruktur der fünf Repositories des frag.jetzt-Ökosystems.\footnote{Quellcode abrufbar unter \url{https://gitlab.arsnova.eu/arsnova/}.}\nocite{fragjetztRepo} Zur effizienten Navigation und Exploration der Codebasis wurden dabei unterstützend das KI-Werkzeug \emph{GitHub Copilot} herangezogen.\footnote{Die hierfür verwendeten Prompts sind in Anhang~\ref{sec:anhang-copilot-prompts} dokumentiert.} Ziel der Untersuchung ist die Identifikation observability-relevanter Architekturmerkmale, Risikopunkte und bestehender Instrumentierungslücken als Grundlage für die Anforderungsdefinition.
+Die folgende Systemanalyse umfasst eine detaillierte Untersuchung des Quellcodes, der Deployment-Konfigurationen sowie der Abhängigkeitsstruktur der fünf Repositories des frag.jetzt-Ökosystems.\footnote{Quellcode abrufbar unter \url{https://gitlab.arsnova.eu/arsnova/}.}\nocite{fragjetztRepo}\nocite{prometheuscAdvisorDocs}\nocite{grafanaDocs} Zur effizienten Navigation und Exploration der Codebasis wurden dabei unterstützend das KI-Werkzeug \emph{GitHub Copilot} herangezogen.\footnote{Die hierfür verwendeten Prompts sind in Anhang~\ref{sec:anhang-copilot-prompts} dokumentiert.} Ziel der Untersuchung ist die Identifikation observability-relevanter Architekturmerkmale, Risikopunkte und bestehender Instrumentierungslücken als Grundlage für die Anforderungsdefinition.
 
 
 \section{Fachlicher Kontext und Nutzungsszenario}
@@ -72,6 +72,7 @@ Die Vote-Trigger führen bei jedem Schreibvorgang einen zusätzlichen \texttt{SE
 
 \subsection{R3: Backend als kritischste Schwachstelle ohne Observability.}
 Das Backend verarbeitet den Großteil der Nutzerinteraktionen, besitzt jedoch keine Infrastruktur zur Observability. Da weder Endpunkte wie Actuator noch Metriken, Tracing oder strukturierte Logs implementiert sind, können Fehlerzustände systemseitig nicht proaktiv erfasst werden. Sie fallen meist erst durch konkrete Fehlfunktionen bei den Endanwendern auf.
+
 \subsection{R4: WebSocket-Verbindungsverlust.}
 Für RabbitMQ existieren keine Health-Checks. Ein Broker-Ausfall unterbricht alle Echtzeit-Updates, bleibt aber ohne Überwachung der Queue-Tiefe und Subscription-Anzahl zunächst unbemerkt.
 

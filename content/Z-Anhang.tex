@@ -234,7 +234,7 @@ networks:
 % Sorgt bei run-in-\paragraph fuer einen sauberen Zeilenumbruch vor Listings.
 \newcommand{\promqlheading}[1]{\paragraph{#1}\leavevmode\par\vspace{0.25\baselineskip}}
 
-Die folgenden drei Alerting-Regeln wurden in Grafana Alerting konfiguriert und bilden die prototypische Umsetzung des in Abschnitt~6.6 konzipierten Alerting-Frameworks. Alle Regeln verwenden Multi-Signal-Logik, bei der ein primäres Fehlersignal erst in Kombination mit einer Mindest-Traffic-Rate als handlungsrelevant gewertet wird (vgl.\ Abschnitt~7.4).
+Die folgenden drei Alerting-Regeln wurden in Grafana Alerting konfiguriert und bilden die prototypische Umsetzung des in Abschnitt~6.5 konzipierten Alerting-Frameworks. Alle Regeln verwenden Multi-Signal-Logik, bei der ein primäres Fehlersignal erst in Kombination mit einer Mindest-Traffic-Rate als handlungsrelevant gewertet wird (vgl.\ Abschnitt~7.4).
 
 
 \section{Alert~1: User-facing Latency Degradation}
@@ -391,7 +391,7 @@ Evaluation Group: \texttt{infrastructure}, Evaluation Interval: 1\,min, Pending 
 \chapter{Runbooks}
 \label{app:runbooks}
 
-Die folgenden Runbooks folgen der in Abschnitt~6.6 beschriebenen Fünf-Felder-Struktur und ergänzen die Alerting-Regeln aus Anhang~\ref{app:alerting-rules} um strukturierte Handlungsanweisungen. Jedes Runbook gliedert sich in Symptombeschreibung, relevante Beobachtungssignale, Sofortmaßnahmen, Diagnosepfade und Eskalationsregeln.
+Die folgenden Runbooks folgen der in Abschnitt~6.5 beschriebenen Fünf-Felder-Struktur und ergänzen die Alerting-Regeln aus Anhang~\ref{app:alerting-rules} um strukturierte Handlungsanweisungen. Jedes Runbook gliedert sich in Symptombeschreibung, relevante Beobachtungssignale, Sofortmaßnahmen, Diagnosepfade und Eskalationsregeln.
 
 
 % ---------------------------------------------------------------------------

@@ -67,7 +67,7 @@ Die bidirektionale Korrelation zwischen Logs und Traces konnte auf dem Staging-S
 \begin{figure}[htb]
 \centering
 \includegraphics[width=\textwidth]{images/fig_log_to_trace_correlation.png}
-\caption[Log-to-Trace-Korrelation in Loki: Ein Logeintrag mit klickbarem TraceID-Link (links) navigiert zum zugehörigen Trace-Waterfall in Tempo (rechts).]{Log-to-Trace-Korrelation in Loki: Ein Logeintrag mit klickbarem TraceID-Link (links) navigiert zum zugehörigen Trace-Waterfall in Tempo (rechts). \small Quelle: Eigene Darstellung (Screenshot, Staging-Server).}
+\caption[Log-to-Trace-Korrelation in Loki: Ein Logeintrag mit klickbarem TraceID-Link (links) navigiert zum zugehörigen Trace-Waterfall in Tempo (rechts).]{Log-to-Trace-Korrelation in Loki: Ein Logeintrag mit klickbarem TraceID-Link (links) navigiert zum zugehörigen Trace-Waterfall in Tempo (rechts). \small Quelle: Eigene Darstellung.}
 \label{fig:log-to-trace}
 \end{figure}
 
@@ -78,12 +78,12 @@ Da die Kernfunktion der Korrelierbarkeit nachgewiesen wurde, wird A3 als \emph{e
 
 \emph{Prüffrage: Reagieren Alarme auf nutzerwirksame Zustände und enthalten sie ausreichend Kontext für eine Erstreaktion?}
 
-Der Latenz-Alert wurde durch künstlich erzeugten CPU-Druck auf den Backend-Container im Zustand \emph{Firing} ausgelöst. Abbildung~\ref{fig:alert-firing} zeigt den Alarm mit Symptombeschreibung, Prüfpfad und Runbook-Link in den Annotations. Die Multi-Signal-Logik bewährte sich: In Leerlaufphasen ohne aktive Requests verhinderte die Mindest-Traffic-Rate von 0,1\,req/s, dass der Alert fälschlicherweise auslöste.
+Der Latenz-Alert wurde durch künstlich erzeugten CPU-Druck auf den Backend-Container im Zustand \emph{Firing} ausgelöst. Abbildung~\ref{fig:alert-firing} zeigt den Alarm mit Symptombeschreibung, Prüfpfad und beispielhaftem Runbook-Link in den Annotations. Die Multi-Signal-Logik bewährte sich. In Leerlaufphasen ohne aktive Requests verhinderte die Mindest-Traffic-Rate von 0,1\,req/s, dass der Alert fälschlicherweise auslöste.
 
 \begin{figure}[htb]
 \centering
 \includegraphics[width=\textwidth]{images/fig_firing_latency_alert.png}
-\caption[Latenz-Alert im Zustand \emph{Firing} nach 6~Minuten. Die Annotations enthalten Symptombeschreibung, Prüfpfad und Runbook-Link.]{Latenz-Alert im Zustand \emph{Firing} nach 6~Minuten. Die Annotations enthalten Symptombeschreibung, Prüfpfad und Runbook-Link. \small Quelle: Eigene Darstellung (Screenshot, Staging-Server).}
+\caption[Latenz-Alert im Zustand \emph{Firing} nach 6~Minuten. Die Annotations enthalten Symptombeschreibung, Prüfpfad und Runbook-Link.]{Latenz-Alert im Zustand \emph{Firing} nach 6~Minuten. Die Annotations enthalten Symptombeschreibung, Prüfpfad und Runbook-Link. \small Quelle: Eigene Darstellung.}
 \label{fig:alert-firing}
 \end{figure}
 
@@ -101,7 +101,7 @@ Die Infrastruktur-Sektion des Dashboards beantwortet diese Frage positiv. Abbild
 \begin{figure}[htb]
 \centering
 \includegraphics[width=\textwidth]{images/Grafana-Dashboard_Infrastructure.png}
-\caption[Infrastruktur-Sektion des Golden-Signals-Dashboards mit PostgreSQL-Verbindungen, RabbitMQ-Queue-Tiefe, Host-Ressourcen und Service Graph.]{Infrastruktur-Sektion des Golden-Signals-Dashboards mit PostgreSQL-Verbindungen, RabbitMQ-Queue-Tiefe, Host-Ressourcen und Service Graph. \small Quelle: Eigene Darstellung (Screenshot, Staging-Server).}
+\caption[Infrastruktur-Sektion des Golden-Signals-Dashboards mit PostgreSQL-Verbindungen, RabbitMQ-Queue-Tiefe, Host-Ressourcen und Service Graph.]{Infrastruktur-Sektion des Golden-Signals-Dashboards mit PostgreSQL-Verbindungen, RabbitMQ-Queue-Tiefe, Host-Ressourcen und Service Graph. \small Quelle: Eigene Darstellung.}
 \label{fig:infrastructure-dashboard}
 \end{figure}
 
@@ -109,14 +109,13 @@ Die Infrastruktur-Sektion des Dashboards beantwortet diese Frage positiv. Abbild
 \section{Übergreifende Bewertungsdimensionen}
 
 \paragraph{Stakeholder-Tauglichkeit.}
-Für die DevOps-Perspektive ist der Prototyp funktional nutzbar: Dashboard, Alerting-Regeln und Runbooks liefern eine zusammenhängende Diagnoseinfrastruktur. Für die Entwicklungsperspektive ermöglicht Grafana Explore die direkte Abfrage von Traces, Logs und Metriken mit bidirektionaler Korrelation, ein dediziertes Entwickler-Dashboard wurde jedoch nicht umgesetzt. Für die Product-Owner-Perspektive fehlt im Prototyp eine eigene Sicht, die technisch aus den vorhandenen Datenquellen ableitbar wäre.
+Für die DevOps-Perspektive ist der Prototyp funktional nutzbar. Dashboard, Alerting-Regeln und Runbooks liefern eine zusammenhängende Diagnoseinfrastruktur. Für die Entwicklungsperspektive ermöglicht Grafana Explore die direkte Abfrage von Traces, Logs und Metriken mit bidirektionaler Korrelation, ein dediziertes Entwickler-Dashboard wurde jedoch nicht umgesetzt. Für die Product-Owner-Perspektive fehlt im Prototyp eine eigene Sicht, die technisch aus den vorhandenen Datenquellen ableitbar wäre.
 
 \paragraph{Abdeckung der Risikopunkte.}
-Von den sechs identifizierten Risikopunkten werden R2 (DB-Contention), R3 (Intransparenz ohne Tracing) und R5 (Ressourcenverdrängung) durch den Prototyp direkt adressiert. R3 wurde durch die Einführung von Distributed Tracing beseitigt. R1 (fehlende Timeouts) und R4 (Backend als Single Point of Failure) bleiben als architektonische Defizite bestehen, die über Beobachtbarkeit sichtbar, aber nicht lösbar sind.
+Von den sechs identifizierten Risikopunkten werden R2 (DB-Engpässe), R3 (Intransparenz des Backends) und R5 (Ressourcenverdrängung) durch den Prototyp direkt adressiert. R3 wurde durch die Einführung von Distributed Tracing im instrumentierten Backend-Pfad substanziell reduziert. R4 (WebSocket-Verbindungsverlust) wird auf Beobachtungsebene teilweise adressiert, weil RabbitMQ-Queue-Tiefen und das WS-Gateway sichtbar gemacht werden. Der zugrunde liegende Ausfallpfad bleibt jedoch bestehen. R1 (fehlende Timeouts und Resilienz) sowie R6 (Single-Host-Topologie als systemweiter Ausfallpfad) bleiben als architektonische Defizite bestehen, die zwar durch Observability sichtbar, aber nicht durch den Prototyp selbst behoben werden.
 
 \paragraph{Umsetzungsrealismus.}
-Die Gesamtdauer von der initialen Stack-Konfiguration bis zum funktionierenden Dashboard betrug wenige Arbeitstage. Der laufende Betrieb des Observability-Stacks erfordert allerdings ein eigenes Ressourcenbudget, das bei der Kapazitätsplanung des Hosts berücksichtigt werden muss.
-
+Die praktische Implementierung des Observability-Stacks erwies sich als architektonisch komplexer und zeitaufwendiger als initial angenommen. Insbesondere die korrekte Konfiguration der Telemetrie-Pipeline, die feingranulare Abstimmung der verschiedenen Speicher-Backends sowie das Ressourcenmanagement auf dem Single-Host-System erforderten einen erheblichen iterativen Aufwand. Diese unvorhergesehene Komplexität war der primäre Grund für die in Abschnitt~7.1 vorgenommene Abgrenzung des Prototyps. Um eine funktionsfähige und stabile Kerninfrastruktur zu gewährleisten, musste der Implementierungsumfang bewusst reduziert werden. Dies führt dazu, dass nicht alle gestellten Anforderungen im Rahmen dieser Arbeit vollständig erfüllt werden konnten.
 
 \section{Grenzen und methodische Einschränkungen}
 
@@ -126,7 +125,7 @@ Die Evaluation unterliegt fünf Einschränkungen.
 
 \emph{Zweitens, Stabilität des Observability-Stacks unter Last.} Tempo wurde während der Belastungstests durch Speichererschöpfung beendet (OOM-Kill), woraufhin auch der OTel Collector den Betrieb einstellte. Infrastrukturmetriken über die Prometheus-Exporter blieben unberührt. Der Vorfall verdeutlicht, dass der Observability-Stack selbst eine Fehlerquelle darstellt, deren Auswirkungen auf einem Single-Host-System die Beobachtbarkeit des Gesamtsystems beeinträchtigen.
 
-\emph{Drittens, eingeschränkte Aussagekraft der Rate-Berechnung.} Die PromQL-Variable \texttt{\$\_\_rate\_interval} lieferte bei kurzen Betrachtungszeiträumen inkonsistente Ergebnisse für die HTTP-5xx-Rate. In längeren Zeitfenstern (ab circa 12~Stunden) waren die Werte korrekt. Diese Einschränkung betrifft die Dashboard-Darstellung, nicht die Alerting-Regeln mit festen Zeitfenstern.
+\emph{Drittens, eingeschränkte Aussagekraft der Rate-Berechnung.} Bei kurzen Betrachtungszeiträumen lieferte die PromQL-Variable \texttt{\$\_\_rate\_interval} inkonsistente Ergebnisse für die HTTP-5xx-Rate. In längeren Zeitfenstern (ab circa 12~Stunden) waren die Werte korrekt. Diese Einschränkung betrifft die Dashboard-Darstellung, nicht die Alerting-Regeln mit festen Zeitfenstern.
 
 \emph{Viertens, fehlende Produktivdaten.} Alle Tests wurden mit synthetischer Last durchgeführt. Reale Nutzungsmuster, insbesondere die Lastspitzen während Lehrveranstaltungen, konnten nicht abgebildet werden. Die Schwellenwerte müssten im Produktivbetrieb anhand realer Lastprofile kalibriert werden.
 
